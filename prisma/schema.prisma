@@ -1,0 +1,455 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Users {
+  id                 Int               @id @default(autoincrement())
+  email              String            @unique
+  name               String?
+  last_name          String?
+  password           String?
+  created_at         DateTime          @default(now())
+  updated_at         DateTime?
+  emailVerified      DateTime?
+  sessions_expires   DateTime?
+  user_has           Users_has_roles[]
+  sender_messages    Chat_messages[]   @relation("sender")
+  recipient_messages Chat_messages[]   @relation("recipient")
+  appointments       Appointments[]    @relation("user")
+  user_code          Users_has_codes[]
+  sender_task        Tasks[]           @relation("creator")
+  assigned_task      Tasks[]           @relation("assigned")
+  client_seller      Clients[]         @relation("seller")
+}
+
+model Users_has_codes {
+  id                      Int              @id @default(autoincrement())
+  user_id                 Int              @unique
+  code_id                 Int
+  forgot_password_code_id Int?
+  user                    Users            @relation(fields: [user_id], references: [id])
+  code                    Activation_codes @relation(fields: [code_id], references: [id])
+}
+
+model Activation_codes {
+  id                           Int               @id @default(autoincrement())
+  code                         String            @unique
+  activation_code_expired      DateTime
+  forgot_password_code         String?           @unique
+  forgot_password_code_expired DateTime?
+  code_user                    Users_has_codes[]
+}
+
+model Roles {
+  id        Int                     @id @default(autoincrement())
+  role      String
+  roles_has Roles_has_permissions[]
+  users_has Users_has_roles[]
+}
+
+model Permissions {
+  id             Int                     @id @default(autoincrement())
+  permission     String
+  permission_has Roles_has_permissions[]
+}
+
+model Roles_has_permissions {
+  id            Int         @id @default(autoincrement())
+  role_id       Int
+  permission_id Int
+  role          Roles       @relation(fields: [role_id], references: [id])
+  permission    Permissions @relation(fields: [permission_id], references: [id])
+}
+
+model Users_has_roles {
+  id      Int   @id @default(autoincrement())
+  role_id Int
+  user_id Int
+  role    Roles @relation(fields: [role_id], references: [id])
+  user    Users @relation(fields: [user_id], references: [id])
+}
+
+model Customers_age {
+  id        Int         @id @default(autoincrement())
+  gender    String
+  customers Customers[]
+}
+
+model Customers_status {
+  id        Int         @id @default(autoincrement())
+  status    String
+  customers Customers[]
+}
+
+model Customers_gender {
+  id        Int         @id @default(autoincrement())
+  gender    String
+  customers Customers[]
+}
+
+model Customers {
+  id               Int              @id @default(autoincrement())
+  name             String
+  last_name        String
+  address          String
+  phone_number     String
+  email            String
+  age_id           Int
+  gender_id        Int
+  status_id        Int
+  customer_age     Customers_age    @relation(fields: [age_id], references: [id])
+  customer_gender  Customers_gender @relation(fields: [gender_id], references: [id])
+  customers_status Customers_status @relation(fields: [status_id], references: [id])
+}
+
+model Chat_messages_status {
+  id     Int    @id @default(autoincrement())
+  status String
+}
+
+model Chat_messages {
+  id                Int      @id @default(autoincrement())
+  messages          String
+  sent_date         DateTime
+  sender_user_id    Int
+  recipient_user_id Int
+  sender            Users    @relation("sender", fields: [sender_user_id], references: [id])
+  recipient         Users    @relation("recipient", fields: [recipient_user_id], references: [id])
+}
+
+model Appointments_status {
+  id           Int            @id @default(autoincrement())
+  status       String
+  appointments Appointments[] @relation("appointment_status")
+}
+
+model Appointments {
+  id                  Int                 @id @default(autoincrement())
+  start_date          DateTime
+  end_date            DateTime
+  status_id           Int
+  customer_id         Int
+  user_id             Int
+  mobile_phone        String
+  vehicle_id          Int
+  vehicle             Vehicles            @relation("vehicle", fields: [vehicle_id], references: [id])
+  appointments_status Appointments_status @relation("appointment_status", fields: [status_id], references: [id])
+  customers           Clients             @relation("customer", fields: [customer_id], references: [id])
+  users               Users               @relation("user", fields: [user_id], references: [id])
+}
+
+model Vehicle_brands {
+  id       Int        @id @default(autoincrement())
+  brand    String
+  vehicles Vehicles[] @relation("vehicle_brand")
+}
+
+model Vehicle_colors {
+  id       Int        @id @default(autoincrement())
+  color    String
+  vehicles Vehicles[] @relation("vehicle_color")
+}
+
+model Vehicle_models {
+  id       Int        @id @default(autoincrement())
+  model    String
+  vehicles Vehicles[] @relation("vehicle_model")
+}
+
+model Vehicle_manufacture_years {
+  id       Int        @id @default(autoincrement())
+  year     String
+  vehicles Vehicles[] @relation("vehicle_manufacture_year")
+}
+
+model Vehicle_fuel_tank_capacities {
+  id       Int        @id @default(autoincrement())
+  capacity String
+  vehicles Vehicles[] @relation("vehicle_fuel_tank_capacity")
+}
+
+model Vehicle_identification_numbers {
+  id       Int        @id @default(autoincrement())
+  vin      String
+  vehicles Vehicles[] @relation("vehicle_identification_number")
+}
+
+model Vehicle_body_types {
+  id       Int        @id @default(autoincrement())
+  type     String
+  vehicles Vehicles[] @relation("vehicle_body_type")
+}
+
+model Vehicle_standard_features {
+  id               Int        @id @default(autoincrement())
+  air_conditioning Boolean
+  audio_system     Boolean
+  security_system  Boolean
+  vehicles         Vehicles[] @relation("vehicle_standard_features")
+}
+
+model Vehicle_transmissions {
+  id           Int        @id @default(autoincrement())
+  transmission String
+  vehicles     Vehicles[] @relation("vehicle_transmission")
+}
+
+model Vehicle_prices {
+  id       Int        @id @default(autoincrement())
+  price    String
+  vehicles Vehicles[] @relation("vehicle_price")
+}
+
+model Vehicle_fuel_tank_types {
+  id       Int        @id @default(autoincrement())
+  type     String
+  vehicles Vehicles[] @relation("vehicle_fuel_tank_type")
+}
+
+model Vehicle_tech_features {
+  id                       Int        @id @default(autoincrement())
+  entertainment_system     Boolean
+  connectivity             Boolean
+  driving_assistant_system Boolean
+  vehicles                 Vehicles[] @relation("vehicle_tech_features")
+}
+
+model Vehicle_conditions {
+  id       Int        @id @default(autoincrement())
+  new      Boolean
+  vehicles Vehicles[] @relation("vehicle_condition")
+}
+
+model Vehicle_mileages {
+  id       Int        @id @default(autoincrement())
+  mileage  String
+  vehicles Vehicles[] @relation("vehicle_mileage")
+}
+
+model Vehicle_motors {
+  id                  Int        @id @default(autoincrement())
+  type                String
+  engine_displacement String
+  power               String
+  vehicles            Vehicles[] @relation("vehicle_motor")
+}
+
+model Vehicle_types {
+  id Int @id @default(autoincrement())
+  type String
+  vehicles Vehicles[] @relation("vehicle_type")
+}
+
+model Vehicles {
+  id                             Int                            @id @default(autoincrement())
+  brand_id                       Int
+  color_id                       Int
+  entry_stock                    DateTime?
+  model_id                       Int
+  manufacture_year_id            Int
+  fuel_tank_capacity_id          Int
+  identification_id              Int
+  body_type_id                   Int
+  standard_features_id           Int
+  transmission_id                Int
+  price_id                       Int
+  fuel_tank_type_id              Int
+  tech_features_id               Int
+  condition_id                   Int
+  mileage_id                     Int
+  motor_id                       Int
+  vehicle_type_id                Int
+  appointment                    Appointments[]                 @relation("vehicle")
+  vehicle_brands                 Vehicle_brands                 @relation("vehicle_brand", fields: [brand_id], references: [id])
+  vehicle_colors                 Vehicle_colors                 @relation("vehicle_color", fields: [color_id], references: [id])
+  vehicle_models                 Vehicle_models                 @relation("vehicle_model", fields: [model_id], references: [id])
+  vehicle_manufacture_years      Vehicle_manufacture_years      @relation("vehicle_manufacture_year", fields: [manufacture_year_id], references: [id])
+  vehicle_fuel_tank_capacities   Vehicle_fuel_tank_capacities   @relation("vehicle_fuel_tank_capacity", fields: [fuel_tank_capacity_id], references: [id])
+  vehicle_identification_numbers Vehicle_identification_numbers @relation("vehicle_identification_number", fields: [identification_id], references: [id])
+  vehicle_body_types             Vehicle_body_types             @relation("vehicle_body_type", fields: [body_type_id], references: [id])
+  vehicle_standard_features      Vehicle_standard_features      @relation("vehicle_standard_features", fields: [standard_features_id], references: [id])
+  vehicle_transmissions          Vehicle_transmissions          @relation("vehicle_transmission", fields: [transmission_id], references: [id])
+  vehicle_prices                 Vehicle_prices                 @relation("vehicle_price", fields: [price_id], references: [id])
+  vehicle_fuel_tank_types        Vehicle_fuel_tank_types        @relation("vehicle_fuel_tank_type", fields: [fuel_tank_type_id], references: [id])
+  vehicle_tech_features          Vehicle_tech_features          @relation("vehicle_tech_features", fields: [tech_features_id], references: [id])
+  vehicle_conditions             Vehicle_conditions             @relation("vehicle_condition", fields: [condition_id], references: [id])
+  vehicle_mileages               Vehicle_mileages               @relation("vehicle_mileage", fields: [mileage_id], references: [id])
+  vehicle_motors                 Vehicle_motors                 @relation("vehicle_motor", fields: [motor_id], references: [id])
+  vehicle_type                   Vehicle_types                  @relation("vehicle_type", fields: [vehicle_type_id], references: [id])
+  interested_vehicle             Clients[]                      @relation("interested_vehicle")
+}
+
+model Tasks {
+  id          Int         @id @default(autoincrement())
+  title       String
+  description String
+  assigned_to Int
+  created_by  Int
+  created_at  DateTime    @default(now())
+  status      Int
+  updated_at  DateTime?
+  finished_at DateTime?
+  creator     Users       @relation("creator", fields: [created_by], references: [id])
+  assigned    Users       @relation("assigned", fields: [assigned_to], references: [id])
+  task_status Task_status @relation("task_status", fields: [status], references: [id])
+}
+
+model Task_status {
+  id     Int     @id @default(autoincrement())
+  status String
+  tasks  Tasks[] @relation("task_status")
+}
+
+model Lead_types {
+  id               Int       @id @default(autoincrement())
+  type             String
+  client_lead_type Clients[] @relation("lead_type")
+}
+
+model Lead_sources {
+  id                 Int       @id @default(autoincrement())
+  source             String
+  client_lead_source Clients[] @relation("lead_source")
+}
+
+model Contact_methods {
+  id                    Int       @id @default(autoincrement())
+  method                String
+  client_contact_method Clients[] @relation("contact_method")
+}
+
+model Languages {
+  id              Int                     @id @default(autoincrement())
+  language        String
+  client_language Clients_has_languages[] @relation("language")
+}
+
+model Clients_has_languages {
+  id          Int       @id @default(autoincrement())
+  language_id Int
+  client_id   Int
+  language    Languages @relation("language", fields: [language_id], references: [id])
+  client      Clients   @relation("client", fields: [client_id], references: [id])
+}
+
+model Files {
+  id          Int                 @id @default(autoincrement())
+  file        String
+  client_file Clients_has_files[] @relation("file")
+}
+
+model Clients_has_files {
+  id        Int     @id @default(autoincrement())
+  file_id   Int
+  client_id Int
+  file      Files   @relation("file", fields: [file_id], references: [id])
+  client    Clients @relation("client", fields: [client_id], references: [id])
+}
+
+model Inquiry_types {
+  id             Int       @id @default(autoincrement())
+  type           String
+  client_inquiry Clients[] @relation("inquiry_type")
+}
+
+model Genders {
+  id            Int       @id @default(autoincrement())
+  gender        String
+  client_gender Clients[] @relation("gender")
+}
+
+model Client_types{
+  id          Int @id @default(autoincrement())
+  type        String
+  client_type Clients[] @relation("client_type")
+}
+
+model Notes {
+  id Int @id @default(autoincrement())
+  note String 
+  created_by Int
+  created_at DateTime
+  client_note Clients[] @relation("note")
+}
+
+model Ad_id {
+  id Int @id @default(autoincrement())
+  ad String
+  ad_id Clients[] @relation("ad_id")
+}
+
+model Client_has_cobuyer {
+  id Int @id @default(autoincrement())
+  client_id Int
+  cobuyer_id Int
+  client   Clients @relation("client", fields: [client_id], references: [id])
+  cobuyer  Clients @relation("cobuyer", fields: [cobuyer_id], references: [id])
+}
+
+model Client_status {
+  id Int @id @default(autoincrement())
+  status String
+  client_status Clients[] @relation("client_status")
+}
+
+model Clients {
+  id                Int                     @id @default(autoincrement())
+  name_lastname     String  
+  home_phone        String
+  work_phone        String
+  mobile_phone      String
+  email             String                  @unique
+  social_security   String
+  born_date         DateTime
+  contact_time      DateTime?
+  current_address   String
+  previous_address  String?
+  mailing_address   String?
+  current_job       String?
+  created_at        DateTime                @default(now())
+  previous_job      String?
+  other_income      String?
+  reference         String?
+  referrer          String?
+  cash_down         String?
+  duplicate         String?
+  gender_id         Int?
+  seller_id         Int?
+  contact_method_id Int?
+  lead_source_id    Int
+  lead_type_id      Int
+  inquiry_type_id   Int?
+  client_type_id    Int?
+  intereseted_vehicle_id Int?
+  note_id Int?
+  ad_id Int?
+  cobuyer Boolean?
+  client_status_id   Int?
+  appointment        Appointments[]          @relation("customer")
+  language           Clients_has_languages[] @relation("client")
+  file               Clients_has_files[]     @relation("client")
+  client_has_cobuyer Client_has_cobuyer[]    @relation("client")
+  cobuyer_client     Client_has_cobuyer[]    @relation("cobuyer")
+  contact_method     Contact_methods?        @relation("contact_method", fields: [contact_method_id], references: [id])
+  lead_source        Lead_sources            @relation("lead_source", fields: [lead_source_id], references: [id])
+  lead_type          Lead_types              @relation("lead_type", fields: [lead_type_id], references: [id])
+  inquiry_type       Inquiry_types?          @relation("inquiry_type", fields: [inquiry_type_id], references: [id])
+  gender             Genders?                @relation("gender", fields: [gender_id], references: [id])
+  seller             Users?                  @relation("seller", fields: [seller_id], references: [id])
+  client_type        Client_types?           @relation("client_type", fields: [client_type_id], references: [id])
+  interested_vehicle Vehicles?               @relation("interested_vehicle", fields: [intereseted_vehicle_id], references: [id])
+  note               Notes?                  @relation("note", fields: [note_id], references: [id])
+  ad                 Ad_id?                  @relation("ad_id", fields: [ad_id], references: [id])
+  client_status      Client_status?          @relation("client_status", fields: [client_status_id], references: [id])
+}
