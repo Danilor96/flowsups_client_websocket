@@ -291,7 +291,7 @@ io.on('connection', (socket) => {
             lead_type_id: parseInt(lead_type),
             lead_source_id:parseInt(lead_source),
             client_type_id: parseInt(type_of_client),
-            client_status_id:1
+            client_status_id:1            
           },
         });        
 
