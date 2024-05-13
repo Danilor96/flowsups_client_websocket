@@ -311,9 +311,7 @@ io.on('connection', (socket) => {
         );
 
         return
-      }      
-
-      console.log(splitAddress[splitAddress.length-1]);      
+      }            
 
       if (splitAddress[splitAddress.length-1] == 'undefined') {
         io.to(sendTo(responseTo)).emit(
@@ -406,9 +404,19 @@ io.on('connection', (socket) => {
 
   })  
 
+  // emit message to update client list
+
+  socket.on('updateClientsList',(data)=>{
+    console.log(data);
+
+    io.emit('doUpdateClientsListInCostumerList', data)
+
+  })
+
   socket.on('disconnect', () => {
     delete connectedUsers[socket.id];
-    console.log('User disconnected');
+    console.log('User disconnected');    
+
   });
 });
 
