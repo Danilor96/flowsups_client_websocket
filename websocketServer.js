@@ -1,12 +1,19 @@
+import express from 'express'
 import { createServer } from 'http'
 import { Server } from 'socket.io'
 import { PrismaClient } from  '@prisma/client'
 import { z } from 'zod'
 import { env } from 'process';
+import twilio from 'twilio';
+const accountSid = process.env.TWILIO_ACCOUNT_SID;
+const authToken = process.env.TWILIO_AUTH_TOKEN;
+const twilioPhoneNumber = process.env.TWILIO_PHONE_NUMBER;
 
+const app = express()
+const server = createServer(app);
+const client = twilio(accountSid, authToken);
 const prisma = new PrismaClient();
-const httpServer = createServer();
-const io = new Server(httpServer, {
+const io = new Server(server, {
   cors: {
     origin: env.CORS_ORIGIN,
   },
@@ -189,6 +196,12 @@ io.on('connection', (socket) => {
   socket.on('pass_new_client_data', async (data) => {
     if (data) {
       const clientSchema = z.object({
+        first_name: z
+        .string({invalid_type_error: 'Please, enter a valid value'})
+        .min(1, 'Please, enter a name'),
+        last_name: z
+        .string({invalid_type_error: 'Please, enter a valid value'})
+        .min(1, 'Please, enter a last name'),
         name_lastname: z
           .string({ invalid_type_error: 'Please, enter a valid value' })
           .min(1, 'Please, enter a name and lastname'),
@@ -209,7 +222,7 @@ io.on('connection', (socket) => {
           .min(1, 'Please, enter a email'),
         current_address: z
           .string({ invalid_type_error: 'Please, enter a valid value' })
-          .min(1, 'Please, enter a current address'),
+          .min(11, 'Please, enter a current address'),
         social_security: z
           .string({ invalid_type_error: 'Please, enter a valid value' })
           .min(1, 'Please, enter a social security'),
@@ -238,7 +251,9 @@ io.on('connection', (socket) => {
         lead_type: data.lead_type,
         lead_source: data.lead_source,
         type_of_client: data.type_of_client,
-      });                  
+        first_name: data.first_name,
+        last_name: data.last_name
+      });      
 
       if (!validatedData.success) {
         io.to(sendTo(responseTo)).emit(
@@ -260,6 +275,8 @@ io.on('connection', (socket) => {
         social_security,
         type_of_client,
         work_phone,
+        first_name,
+        last_name
       } = validatedData.data;
 
       const duplicateEmail = await prisma.clients.findUnique({
@@ -268,15 +285,61 @@ io.on('connection', (socket) => {
         }
       })
 
-      if (duplicateEmail) {
+      prisma.$disconnect()      
+
+      let mssgE, mssgA
+
+      const splitAddress = current_address.split(',')      
+
+      if (duplicateEmail || splitAddress.length < 3) {
+        
+        if (duplicateEmail) {
+                  
+          mssgE = 'email already registered'
+        }
+
+        if (splitAddress.length < 3) {
+          mssgA = 'Please, enter at least a Street name, a City name and a State separated by comma.'
+        }
+
         io.to(sendTo(responseTo)).emit(
           'server_errors_response_to_client',
-          {email:['email already registered']},
+          {
+            email:[mssgE],
+            current_address:[mssgA],            
+          },
+        );
+
+        return
+      }      
+
+      console.log(splitAddress[splitAddress.length-1]);      
+
+      if (splitAddress[splitAddress.length-1] == 'undefined') {
+        io.to(sendTo(responseTo)).emit(
+          'server_errors_response_to_client',
+          {            
+            current_address:['Please, enter a valid current State. You can use (...) button to open for help'],            
+          },
         );
         return
-      }
+      }      
 
       try {        
+
+        const address = await prisma.client_address.create({
+          data:{
+            city:splitAddress[1],
+            street:splitAddress[0],
+            States:{
+              connect:{
+                id: parseInt(splitAddress[splitAddress.length-1])         
+              }
+            }
+          }
+        })
+
+        prisma.$disconnect()
 
         const data = await prisma.clients.create({
           data: {
@@ -291,9 +354,14 @@ io.on('connection', (socket) => {
             lead_type_id: parseInt(lead_type),
             lead_source_id:parseInt(lead_source),
             client_type_id: parseInt(type_of_client),
-            client_status_id:1            
+            client_status_id:1,
+            first_name,
+            last_name,
+            client_address_id:address.id
           },
-        });        
+        });
+
+        prisma.$disconnect()
 
         io.to(sendTo(responseTo)).emit('server_message_response_to_client', {
           message: 'Data processed!',
@@ -309,6 +377,35 @@ io.on('connection', (socket) => {
     }
   });  
 
+  // call streaming
+
+  socket.on('call',(phoneNumber) => {    
+
+    client.calls.create({      
+      to: phoneNumber,
+      from:twilioPhoneNumber,
+      url:'https://m17qvw3s-3001.use2.devtunnels.ms/getCalls'
+    }).then(call => {
+      console.log(call);
+    }).catch(error => {
+      console.log(error);
+    })
+
+  })
+
+  app.post('/getCalls', (req,res) =>{    
+
+    const twiml = new VoiceResponse();
+    const phoneNumber = req.body.phoneNumber;
+
+    const dial = twiml.dial();
+    dial.conference({startConferenceOnEnter:true}, 'MyConference');
+
+    res.type('text/xml')
+    res.send(twiml.toString())
+
+  })  
+
   socket.on('disconnect', () => {
     delete connectedUsers[socket.id];
     console.log('User disconnected');
@@ -317,6 +414,6 @@ io.on('connection', (socket) => {
 
 const port = env.WEBSOCKET_PORT
 
-httpServer.listen(port, () => {  
+server.listen(port, () => {  
   console.log(`Server running on port ${port}`);
 });
