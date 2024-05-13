@@ -404,10 +404,9 @@ io.on('connection', (socket) => {
 
   })  
 
-  // emit message to update client list
+  // emit message to update client list  
 
-  socket.on('updateClientsList',(data)=>{
-    console.log(data);
+  socket.on('updateClientsList',(data)=>{        
 
     io.emit('doUpdateClientsListInCostumerList', data)
 
