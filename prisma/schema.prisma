@@ -420,7 +420,7 @@ model Clients {
   email                                                            String               @unique
   gender_id                                                        Int?
   home_phone                                                       String
-  mobile_phone                                                     String
+  mobile_phone                                                     String               @unique
   seller_id                                                        Int?
   social_security                                                  String
   work_phone                                                       String
@@ -440,6 +440,7 @@ model Clients {
   suffix                                                           String?
   client_address_id                                                Int
   client_language_id                                               Int?
+  deleted                                                          Boolean?
   appointment                                                      Appointments[]       @relation("customer")
   Client_has_cobuyer_Client_has_cobuyer_buyer_client_idToClients   Client_has_cobuyer[] @relation("Client_has_cobuyer_buyer_client_idToClients")
   Client_has_cobuyer_Client_has_cobuyer_cobuyer_client_idToClients Client_has_cobuyer[] @relation("Client_has_cobuyer_cobuyer_client_idToClients")
@@ -544,4 +545,10 @@ model Vehicle_status {
   id       Int        @id @default(autoincrement())
   status   String
   Vehicles Vehicles[]
+}
+
+model Client_calls {
+  id        Int @id @default(autoincrement())
+  client_id Int
+  seller_id Int
 }

@@ -5,6 +5,8 @@ import { PrismaClient } from  '@prisma/client'
 import { z } from 'zod'
 import { env } from 'process';
 import twilio from 'twilio';
+import MessagingResponse from 'twilio/lib/twiml/MessagingResponse.js';
+
 const accountSid = process.env.TWILIO_ACCOUNT_SID;
 const authToken = process.env.TWILIO_AUTH_TOKEN;
 const twilioPhoneNumber = process.env.TWILIO_PHONE_NUMBER;
@@ -285,14 +287,29 @@ io.on('connection', (socket) => {
         }
       })
 
-      prisma.$disconnect()      
+      prisma.$disconnect()
 
-      let mssgE, mssgA
+      const duplicatePhoneNumber = await prisma.clients.findUnique({
+        where:{
+          mobile_phone: mobile_phone
+        }
+      })
+
+      prisma.$disconnect()
+
+      let mssgE, mssgA, mssMp
 
       const splitAddress = current_address.split(',')      
+      
 
-      if (duplicateEmail || splitAddress.length < 3) {
+      if (duplicateEmail || duplicatePhoneNumber || splitAddress.length < 3) {
         
+        if (duplicatePhoneNumber) {
+          
+          mssMp = 'mobile phone already registered'
+
+        }
+
         if (duplicateEmail) {
                   
           mssgE = 'email already registered'
@@ -306,7 +323,8 @@ io.on('connection', (socket) => {
           'server_errors_response_to_client',
           {
             email:[mssgE],
-            current_address:[mssgA],            
+            current_address:[mssgA],
+            mobile_phone:[mssMp]         
           },
         );
 
@@ -393,16 +411,38 @@ io.on('connection', (socket) => {
 
   app.post('/getCalls', (req,res) =>{    
 
-    const twiml = new VoiceResponse();
-    const phoneNumber = req.body.phoneNumber;
+    res.contentType('xml');
+    res.send(
+      `<Response>
+        <Connect>
+          <Stream url="wss://m17qvw3s-3001.use2.devtunnels.ms/getCalls"></Stream>
+        </Connect>
+        <Say>Call ended</Say>
+      </Response>`
+    )
 
-    const dial = twiml.dial();
-    dial.conference({startConferenceOnEnter:true}, 'MyConference');
+    // const twiml = new VoiceResponse();
+    // const phoneNumber = req.body.phoneNumber;
 
-    res.type('text/xml')
-    res.send(twiml.toString())
+    // const dial = twiml.dial();
+    // dial.conference({startConferenceOnEnter:true}, 'MyConference');
+
+    // res.type('text/xml')
+    // res.send(twiml.toString())
 
   })  
+
+  app.post('/getMessage', (req,res) =>{
+
+    console.log(req.body)
+
+    const twiml = new MessagingResponse();
+    
+    twiml.message('Message received.')
+
+    res.send(twiml.toString())
+
+  })
 
   // emit message to update client list  
 
