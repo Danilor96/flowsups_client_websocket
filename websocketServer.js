@@ -6,6 +6,10 @@ import { z } from 'zod'
 import { env } from 'process';
 import twilio from 'twilio';
 import MessagingResponse from 'twilio/lib/twiml/MessagingResponse.js';
+import pkgd from 'twilio/lib/twiml/VoiceResponse.js'
+import pkg from 'twilio/lib/base/BaseTwilio.js'
+const {Client} = pkg
+const {Dial} = pkgd
 
 const accountSid = process.env.TWILIO_ACCOUNT_SID;
 const authToken = process.env.TWILIO_AUTH_TOKEN;
@@ -410,27 +414,26 @@ io.on('connection', (socket) => {
   })
 
   app.post('/getCalls', (req,res) =>{    
-
+        
     res.contentType('xml');
     res.send(
       `<Response>
-        <Connect>
-          <Stream url="wss://m17qvw3s-3001.use2.devtunnels.ms/getCalls"></Stream>
-        </Connect>
-        <Say>Call ended</Say>
+        <Dial>
+          <Client>
+            FlowsupsClientDetail
+          </Client>
+        </Dial>
       </Response>`
+          // <Stream url="wss://m17qvw3s-3001.use2.devtunnels.ms/getCalls"></Stream>
     )
 
-    // const twiml = new VoiceResponse();
-    // const phoneNumber = req.body.phoneNumber;
+  })
 
-    // const dial = twiml.dial();
-    // dial.conference({startConferenceOnEnter:true}, 'MyConference');
+  socket.on('callMessage',(callMessage)=>{
 
-    // res.type('text/xml')
-    // res.send(twiml.toString())
+    io.emit('callMessage', callMessage)
 
-  })  
+  })
 
   app.post('/getMessage', (req,res) =>{
 
@@ -442,6 +445,23 @@ io.on('connection', (socket) => {
 
     res.send(twiml.toString())
 
+  })
+
+  app.post('/token', async (req,res)=>{
+    const Identity = 'FlowsupsClientDetail'
+    const AccessToken = twilio.jwt.AccessToken;
+    const VoiceGrant = AccessToken.VoiceGrant
+
+    const token = new AccessToken(
+      process.env.TWILIO_ACCOUNT_SID,
+      process.env.TWILIO_API_KEY,
+      process.env.TWILIO_API_SECRET,
+      { identity: Identity}
+    )
+        
+    const grant = new VoiceGrant({ incomingAllow: true })
+    token.addGrant(grant)
+    res.send({ token: token.toJwt() })
   })
 
   // emit message to update client list  
