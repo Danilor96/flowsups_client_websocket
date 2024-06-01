@@ -4,12 +4,13 @@ import { Server } from 'socket.io'
 import { PrismaClient } from  '@prisma/client'
 import { z } from 'zod'
 import { env } from 'process';
+import bodyParser from 'body-parser'
+import cors from 'cors'
 import twilio from 'twilio';
 import MessagingResponse from 'twilio/lib/twiml/MessagingResponse.js';
 import pkgd from 'twilio/lib/twiml/VoiceResponse.js'
 import pkg from 'twilio/lib/base/BaseTwilio.js'
-const {Client} = pkg
-const {Dial} = pkgd
+import { tokenGenerator, voiceResponse } from './handle.js'
 
 const accountSid = process.env.TWILIO_ACCOUNT_SID;
 const authToken = process.env.TWILIO_AUTH_TOKEN;
@@ -21,9 +22,18 @@ const client = twilio(accountSid, authToken);
 const prisma = new PrismaClient();
 const io = new Server(server, {
   cors: {
-    origin: env.CORS_ORIGIN,
+    origin: 'http://localhost:3000',
+    optionsSuccessStatus: 200
   },
 });
+
+app.use(cors({
+  origin: 'http://localhost:3000',
+  optionsSuccessStatus: 200
+}))
+
+app.use(bodyParser.urlencoded({ extended: false }));
+app.use(bodyParser.json());
 
 const connectedUsers = {};
 
@@ -197,206 +207,6 @@ io.on('connection', (socket) => {
     }
   });
 
-  // create a new client block
-
-  socket.on('pass_new_client_data', async (data) => {
-    if (data) {
-      const clientSchema = z.object({
-        first_name: z
-        .string({invalid_type_error: 'Please, enter a valid value'})
-        .min(1, 'Please, enter a name'),
-        last_name: z
-        .string({invalid_type_error: 'Please, enter a valid value'})
-        .min(1, 'Please, enter a last name'),
-        name_lastname: z
-          .string({ invalid_type_error: 'Please, enter a valid value' })
-          .min(1, 'Please, enter a name and lastname'),
-        born_date: z
-          .string({ invalid_type_error: 'Please, enter a valid value' })
-          .min(1, 'Please, enter a date'),
-        mobile_phone: z
-          .string({ invalid_type_error: 'Please, enter a valid value' })
-          .min(1, 'Please, enter a mobile phone'),
-        home_phone: z
-          .string({ invalid_type_error: 'Please, enter a valid value' })
-          .min(1, 'Please, enter a home phone'),
-        work_phone: z
-          .string({ invalid_type_error: 'Please, enter a valid value' })
-          .min(1, 'Please, enter a work phone'),
-        email: z
-          .string({ invalid_type_error: 'Please, enter a valid value' })
-          .min(1, 'Please, enter a email'),
-        current_address: z
-          .string({ invalid_type_error: 'Please, enter a valid value' })
-          .min(11, 'Please, enter a current address'),
-        social_security: z
-          .string({ invalid_type_error: 'Please, enter a valid value' })
-          .min(1, 'Please, enter a social security'),
-        lead_type: z
-          .string({ invalid_type_error: 'Please, enter a valid value' })
-          .min(1, 'Please, select a lead type'),
-        lead_source: z
-          .string({ invalid_type_error: 'Please, enter a valid value' })
-          .min(1, 'Please, select a lead source'),
-        type_of_client: z
-          .string({ invalid_type_error: 'Please, enter a valid value' })
-          .min(1, 'Please, select a client type'),
-      });
-
-      const responseTo = await data.created_by
-
-      const validatedData = clientSchema.safeParse({
-        name_lastname: data.name_lastname,
-        born_date: data.born_date,
-        mobile_phone: data.phone_number,
-        home_phone: data.home_phone_number,
-        work_phone: data.work_phone_number,
-        email: data.email,
-        current_address: data.current_address,
-        social_security: data.social_security,
-        lead_type: data.lead_type,
-        lead_source: data.lead_source,
-        type_of_client: data.type_of_client,
-        first_name: data.first_name,
-        last_name: data.last_name
-      });      
-
-      if (!validatedData.success) {
-        io.to(sendTo(responseTo)).emit(
-          'server_errors_response_to_client',
-          validatedData.error.flatten().fieldErrors,
-        );
-        return;
-      }
-
-      const {
-        born_date,
-        current_address,
-        email,
-        home_phone,
-        lead_source,
-        lead_type,
-        mobile_phone,
-        name_lastname,
-        social_security,
-        type_of_client,
-        work_phone,
-        first_name,
-        last_name
-      } = validatedData.data;
-
-      const duplicateEmail = await prisma.clients.findUnique({
-        where:{
-          email: email
-        }
-      })
-
-      prisma.$disconnect()
-
-      const duplicatePhoneNumber = await prisma.clients.findUnique({
-        where:{
-          mobile_phone: mobile_phone
-        }
-      })
-
-      prisma.$disconnect()
-
-      let mssgE, mssgA, mssMp
-
-      const splitAddress = current_address.split(',')      
-      
-
-      if (duplicateEmail || duplicatePhoneNumber || splitAddress.length < 3) {
-        
-        if (duplicatePhoneNumber) {
-          
-          mssMp = 'mobile phone already registered'
-
-        }
-
-        if (duplicateEmail) {
-                  
-          mssgE = 'email already registered'
-        }
-
-        if (splitAddress.length < 3) {
-          mssgA = 'Please, enter at least a Street name, a City name and a State separated by comma.'
-        }
-
-        io.to(sendTo(responseTo)).emit(
-          'server_errors_response_to_client',
-          {
-            email:[mssgE],
-            current_address:[mssgA],
-            mobile_phone:[mssMp]         
-          },
-        );
-
-        return
-      }            
-
-      if (splitAddress[splitAddress.length-1] == 'undefined') {
-        io.to(sendTo(responseTo)).emit(
-          'server_errors_response_to_client',
-          {            
-            current_address:['Please, enter a valid current State. You can use (...) button to open for help'],            
-          },
-        );
-        return
-      }      
-
-      try {        
-
-        const address = await prisma.client_address.create({
-          data:{
-            city:splitAddress[1],
-            street:splitAddress[0],
-            States:{
-              connect:{
-                id: parseInt(splitAddress[splitAddress.length-1])         
-              }
-            }
-          }
-        })
-
-        prisma.$disconnect()
-
-        const data = await prisma.clients.create({
-          data: {
-            name_lastname,
-            born_date:new Date(born_date),
-            mobile_phone,
-            home_phone,
-            work_phone,
-            email,
-            current_address,
-            social_security,
-            lead_type_id: parseInt(lead_type),
-            lead_source_id:parseInt(lead_source),
-            client_type_id: parseInt(type_of_client),
-            client_status_id:1,
-            first_name,
-            last_name,
-            client_address_id:address.id
-          },
-        });
-
-        prisma.$disconnect()
-
-        io.to(sendTo(responseTo)).emit('server_message_response_to_client', {
-          message: 'Data processed!',
-          status: 200,
-        });
-      } catch (error) {
-        console.log(error);
-        io.to(sendTo(responseTo)).emit(
-          'server_errors_response_to_client',
-          error
-        );        
-      }      
-    }
-  });  
-
   // call streaming
 
   socket.on('call',(phoneNumber) => {    
@@ -414,7 +224,9 @@ io.on('connection', (socket) => {
   })
 
   app.post('/getCalls', (req,res) =>{    
-        
+    
+    console.log('pasé por aquí');
+
     res.contentType('xml');
     res.send(
       `<Response>
@@ -424,9 +236,9 @@ io.on('connection', (socket) => {
           </Client>
         </Dial>
       </Response>`
-          // <Stream url="wss://m17qvw3s-3001.use2.devtunnels.ms/getCalls"></Stream>
     )
-
+    
+    // <Stream url="wss://m17qvw3s-3001.use2.devtunnels.ms/getCalls"></Stream>
   })
 
   socket.on('callMessage',(callMessage)=>{
@@ -447,23 +259,30 @@ io.on('connection', (socket) => {
 
   })
 
-  app.post('/token', async (req,res)=>{
-    const Identity = 'FlowsupsClientDetail'
-    const AccessToken = twilio.jwt.AccessToken;
-    const VoiceGrant = AccessToken.VoiceGrant
+  app.get('/token', (req,res)=>{
+    
+    res.send(tokenGenerator())
 
-    const token = new AccessToken(
-      process.env.TWILIO_ACCOUNT_SID,
-      process.env.TWILIO_API_KEY,
-      process.env.TWILIO_API_SECRET,
-      { identity: Identity}
-    )
-        
-    const grant = new VoiceGrant({ incomingAllow: true })
-    token.addGrant(grant)
-    res.send({ token: token.toJwt() })
   })
 
+  app.post('/voice', (req, res)=>{
+
+    res.contentType('xml');
+    res.send(
+      `<Response>
+        <Dial callerId="+12243134447">        
+          <Client>
+            FlowsupsClientDetail
+          </Client>
+        </Dial>
+      </Response>`
+    )
+    
+  })
+  
+  // res.set("Content-Type", "text/xml");
+  // res.send(voiceResponse(req.body));
+  
   // emit message to update client list  
 
   socket.on('updateClientsList',(data)=>{        
