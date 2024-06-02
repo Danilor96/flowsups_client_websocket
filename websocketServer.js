@@ -22,13 +22,13 @@ const client = twilio(accountSid, authToken);
 const prisma = new PrismaClient();
 const io = new Server(server, {
   cors: {
-    origin: 'http://localhost:3000',
+    origin: process.env.CORS_ORIGIN,
     optionsSuccessStatus: 200
   },
 });
 
 app.use(cors({
-  origin: 'http://localhost:3000',
+  origin: process.env.CORS_ORIGIN,
   optionsSuccessStatus: 200
 }))
 
