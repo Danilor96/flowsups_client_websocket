@@ -29,20 +29,15 @@ export const tokenGenerator = () => {
 } 
 
 export const voiceResponse = () => {
-
-  return (
-    `<Dial callerId="+12243134447">
-      <Number>
-        +584141299156
-      </Number>
-    </Dial>`
-  )
+    
+    return (
+      `<Response>
+        <Dial callerId="+12243134447">        
+          <Client>
+            FlowsupsClientDetail
+          </Client>
+        </Dial>
+      </Response>`
+    )
     
 }
-//             <Client>
-//               FlowsupsClientDetail
-//             </Client>
-
-function isAValidPhoneNumber(number) {
-    return /^[\d\+\-\(\) ]+$/.test(number);
-  }

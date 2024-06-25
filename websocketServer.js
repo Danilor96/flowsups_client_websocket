@@ -207,6 +207,8 @@ io.on('connection', (socket) => {
     }
   });
 
+  
+
   // call streaming
 
   socket.on('call',(phoneNumber) => {    
@@ -247,15 +249,28 @@ io.on('connection', (socket) => {
 
   })
 
-  app.post('/getMessage', (req,res) =>{
+  app.post('/getMessage', async (req,res) =>{    
 
-    console.log(req.body)
+    const data = await prisma.client_sms.create({
+      data:{
+        message: req.body.Body,        
+        date_sent: new Date(),
+        sent_by_user: false,
+        status: {
+          connect: {
+            id: 2,
+          },
+        },        
+        client_message:{
+          connect:{
+            mobile_phone: req.body.From
+          }
+        }
+      }
 
-    const twiml = new MessagingResponse();
-    
-    twiml.message('Message received.')
+    })
 
-    res.send(twiml.toString())
+    io.emit('getClientMessage',`${data.client_id}`)
 
   })
 
@@ -265,18 +280,10 @@ io.on('connection', (socket) => {
 
   })
 
-  app.post('/voice', (req, res)=>{
+  app.post('/voice', (req, res)=>{    
 
     res.contentType('xml');
-    res.send(
-      `<Response>
-        <Dial callerId="+12243134447">        
-          <Client>
-            FlowsupsClientDetail
-          </Client>
-        </Dial>
-      </Response>`
-    )
+    res.send(voiceResponse())
     
   })
   
@@ -296,6 +303,15 @@ io.on('connection', (socket) => {
     console.log('User disconnected');    
 
   });
+
+  // notifications
+
+  socket.on('update_manager_tasks',(data) => {
+
+    io.emit('get_manager_tasks','do update notification')
+
+  })
+
 });
 
 const port = env.WEBSOCKET_PORT
@@ -303,3 +319,48 @@ const port = env.WEBSOCKET_PORT
 server.listen(port, () => {  
   console.log(`Server running on port ${port}`);
 });
+
+// [Object: null prototype] {
+//   ToCountry: 'US',
+//   ToState: 'IL',
+//   SmsMessageSid: 'SM07acfcfaa4a5c24582ea1066afd19212',
+//   NumMedia: '0',
+//   ToCity: '',
+//   FromZip: '33122',
+//   SmsSid: 'SM07acfcfaa4a5c24582ea1066afd19212',
+//   FromState: 'FL',
+//   SmsStatus: 'received',
+//   FromCity: 'MIAMI',
+//   Body: 'Buenaa tardes Daniel',
+//   FromCountry: 'US',
+//   To: '+12243134447',
+//   MessagingServiceSid: 'MG2af85f8f032d6dcb9e1b4b0488a0705f',
+//   ToZip: '',
+//   NumSegments: '1',
+//   MessageSid: 'SM07acfcfaa4a5c24582ea1066afd19212',
+//   AccountSid: 'AC725ec3b58d7c9fae3a6ce5f152939774',
+//   From: '+17863375076',
+//   ApiVersion: '2010-04-01'
+// }
+// [Object: null prototype] {
+//   ToCountry: 'US',
+//   ToState: 'IL',
+//   SmsMessageSid: 'SM998ce0869ab3d487af66e58f7d540e23',
+//   NumMedia: '0',
+//   ToCity: '',
+//   FromZip: '33122',
+//   SmsSid: 'SM998ce0869ab3d487af66e58f7d540e23',
+//   FromState: 'FL',
+//   SmsStatus: 'received',
+//   FromCity: 'MIAMI',
+//   Body: 'Si listo klego',
+//   FromCountry: 'US',
+//   To: '+12243134447',
+//   MessagingServiceSid: 'MG2af85f8f032d6dcb9e1b4b0488a0705f',
+//   ToZip: '',
+//   NumSegments: '1',
+//   MessageSid: 'SM998ce0869ab3d487af66e58f7d540e23',
+//   AccountSid: 'AC725ec3b58d7c9fae3a6ce5f152939774',
+//   From: '+17863375076',
+//   ApiVersion: '2010-04-01'
+// }
