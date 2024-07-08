@@ -5,6 +5,7 @@ import { PrismaClient } from  '@prisma/client'
 import { z } from 'zod'
 import { env } from 'process';
 import bodyParser from 'body-parser'
+import bodyParserXml from 'body-parser-xml'
 import cors from 'cors'
 import twilio from 'twilio';
 import MessagingResponse from 'twilio/lib/twiml/MessagingResponse.js';
@@ -32,8 +33,38 @@ app.use(cors({
   optionsSuccessStatus: 200
 }))
 
+bodyParserXml(bodyParser)
+
 app.use(bodyParser.urlencoded({ extended: false }));
 app.use(bodyParser.json());
+app.use(bodyParser.xml({
+  limit: '1MB',   
+  xmlParseOptions: {
+    normalize: true,     
+    normalizeTags: true, 
+    explicitArray: false 
+  }
+}));
+
+app.post('/getZapier',(req,res)=>{
+
+  console.log(req.body.adf.prospect.customer.contact.name[0]._);
+  console.log(req.body.adf.prospect.customer.contact.name[1]._);
+  console.log(req.body.adf.prospect.customer.contact.email);
+  console.log(req.body.adf.prospect.customer.contact.phone);
+  console.log(req.body.adf.prospect.customer.comments);
+  console.log(req.body.adf.prospect.vehicle.$.interest);
+  console.log(req.body.adf.prospect.vehicle.$.status);
+  console.log(req.body.adf.prospect.vehicle.make);
+  console.log(req.body.adf.prospect.vehicle.model);
+  console.log(req.body.adf.prospect.vehicle.year);
+  console.log(req.body.adf.prospect.vehicle.odometer._);
+  console.log(req.body.adf.prospect.vehicle.odometer.$.units);
+  console.log(req.body.adf.prospect.vehicle.trim);  
+
+  res.send('Llegó')
+
+})
 
 const connectedUsers = {};
 
