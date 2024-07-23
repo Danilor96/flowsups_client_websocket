@@ -12,6 +12,7 @@ import MessagingResponse from 'twilio/lib/twiml/MessagingResponse.js';
 import pkgd from 'twilio/lib/twiml/VoiceResponse.js'
 import pkg from 'twilio/lib/base/BaseTwilio.js'
 import { tokenGenerator, voiceResponse } from './handle.js'
+import cron from 'node-cron'
 
 const accountSid = process.env.TWILIO_ACCOUNT_SID;
 const authToken = process.env.TWILIO_AUTH_TOKEN;
@@ -238,7 +239,48 @@ io.on('connection', (socket) => {
     }
   });
 
-  
+  // checking all pending tasks, appointments and statuses
+  cron.schedule('0 0 * * 1-5', async ()=>{
+
+    const todayDate = new Date()
+
+    const tasks = await prisma.tasks.updateMany({
+      where: {
+        deadline: {
+          lt: todayDate,
+        },
+        AND: {
+          task_status: {
+            id: 1,
+          },
+        },
+      },
+      data: {
+        status: 4
+      },
+    });
+
+    const appt = await prisma.clients.updateMany({
+      where: {
+        appointment: {
+          every: {
+            end_date: {
+              lt: todayDate,
+            },
+            AND: {
+              status_id: 1,
+            },
+          },
+        },
+      },
+      data: {
+        client_status_id: 8,
+      },
+    });
+
+    await prisma.$disconnect()
+
+  })
 
   // call streaming
 
