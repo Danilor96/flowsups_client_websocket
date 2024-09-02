@@ -8,11 +8,11 @@ datasource db {
 }
 
 model Users {
-  id                                                   Int                         @id @default(autoincrement())
-  email                                                String                      @unique
+  id                                                   Int                             @id @default(autoincrement())
+  email                                                String                          @unique
   name                                                 String?
   password                                             String?
-  created_at                                           DateTime                    @default(now())
+  created_at                                           DateTime                        @default(now())
   updated_at                                           DateTime?
   emailVerified                                        DateTime?
   sessions_expires                                     DateTime?
@@ -20,15 +20,15 @@ model Users {
   img                                                  String?
   mobile_phone                                         String?
   status_id                                            Int?
-  username                                             String?                     @unique
-  appointments                                         Appointments[]              @relation("user")
-  recipient_messages                                   Chat_messages[]             @relation("recipient")
-  sender_messages                                      Chat_messages[]             @relation("sender")
+  username                                             String?                         @unique
+  appointments                                         Appointments[]                  @relation("user")
+  recipient_messages                                   Chat_messages[]                 @relation("recipient")
+  sender_messages                                      Chat_messages[]                 @relation("sender")
   Client_calls                                         Client_calls[]
   Client_has_lead                                      Client_has_lead[]
-  Client_has_lead_Client_has_lead_created_by_idToUsers Client_has_lead[]           @relation("Client_has_lead_created_by_idToUsers")
+  Client_has_lead_Client_has_lead_created_by_idToUsers Client_has_lead[]               @relation("Client_has_lead_created_by_idToUsers")
   Client_sms                                           Client_sms[]
-  client_seller                                        Clients[]                   @relation("seller")
+  client_seller                                        Clients[]                       @relation("seller")
   Clients_has_files                                    Clients_has_files[]
   Events                                               Events[]
   Notes                                                Notes[]
@@ -36,10 +36,11 @@ model Users {
   Notifications_preferences                            Notifications_preferences[]
   Roles                                                Roles[]
   Sms_template                                         Sms_template[]
-  assigned_task                                        Tasks[]                     @relation("assigned")
-  Tasks_Tasks_completed_byToUsers                      Tasks[]                     @relation("Tasks_completed_byToUsers")
-  sender_task                                          Tasks[]                     @relation("creator")
-  User_status                                          User_status?                @relation(fields: [status_id], references: [id], onDelete: Cascade)
+  Sms_template_variables_tagged                        Sms_template_variables_tagged[]
+  assigned_task                                        Tasks[]                         @relation("assigned")
+  Tasks_Tasks_completed_byToUsers                      Tasks[]                         @relation("Tasks_completed_byToUsers")
+  sender_task                                          Tasks[]                         @relation("creator")
+  User_status                                          User_status?                    @relation(fields: [status_id], references: [id], onDelete: Cascade)
   user_code                                            Users_has_codes?
   user_has                                             Users_has_roles?
 }
@@ -169,63 +170,43 @@ model Appointments {
   Tasks                Tasks?
 }
 
-model Vehicle_brands {
-  id                     Int                      @id @default(autoincrement())
-  brand                  String
-  Client_vehicle_tradein Client_vehicle_tradein[]
-  vehicles               Vehicles[]               @relation("vehicle_brand")
-}
-
 model Vehicle_colors {
   id                                                                         Int                       @id @default(autoincrement())
   color                                                                      String
   Client_vehicle_tradein_Client_vehicle_tradein_ext_color_idToVehicle_colors Client_vehicle_tradein[]  @relation("Client_vehicle_tradein_ext_color_idToVehicle_colors")
   Client_vehicle_tradein_Client_vehicle_tradein_int_color_idToVehicle_colors Client_vehicle_tradein[]  @relation("Client_vehicle_tradein_int_color_idToVehicle_colors")
   Client_vehicle_wishlist                                                    Client_vehicle_wishlist[]
-  vehicles                                                                   Vehicles[]                @relation("vehicle_color")
+  Vehicles_Vehicles_exterior_color_idToVehicle_colors                        Vehicles[]                @relation("Vehicles_exterior_color_idToVehicle_colors")
+  Vehicles_Vehicles_interior_color_idToVehicle_colors                        Vehicles[]                @relation("Vehicles_interior_color_idToVehicle_colors")
 }
 
 model Vehicle_models {
   id                     Int                      @id @default(autoincrement())
-  model                  String
+  model                  String                   @unique
   Client_vehicle_tradein Client_vehicle_tradein[]
   vehicles               Vehicles[]               @relation("vehicle_model")
 }
 
 model Vehicle_manufacture_years {
   id                      Int                       @id @default(autoincrement())
-  year                    String
+  year                    String                    @unique
   Client_vehicle_tradein  Client_vehicle_tradein[]
   Client_vehicle_wishlist Client_vehicle_wishlist[]
   vehicles                Vehicles[]                @relation("vehicle_manufacture_year")
 }
 
-model Vehicle_fuel_tank_capacities {
-  id       Int        @id @default(autoincrement())
-  capacity String
-  vehicles Vehicles[] @relation("vehicle_fuel_tank_capacity")
-}
-
 model Vehicle_identification_numbers {
   id                     Int                      @id @default(autoincrement())
-  vin                    String
+  vin                    String                   @unique
   Client_vehicle_tradein Client_vehicle_tradein[]
-  vehicles               Vehicles[]               @relation("vehicle_identification_number")
+  vehicles               Vehicles?                @relation("vehicle_identification_number")
 }
 
 model Vehicle_body_types {
   id                      Int                       @id @default(autoincrement())
-  type                    String
+  type                    String                    @unique
   Client_vehicle_wishlist Client_vehicle_wishlist[]
   vehicles                Vehicles[]                @relation("vehicle_body_type")
-}
-
-model Vehicle_standard_features {
-  id               Int        @id @default(autoincrement())
-  air_conditioning Boolean
-  audio_system     Boolean
-  security_system  Boolean
-  vehicles         Vehicles[] @relation("vehicle_standard_features")
 }
 
 model Vehicle_transmissions {
@@ -247,14 +228,6 @@ model Vehicle_fuel_tank_types {
   vehicles Vehicles[] @relation("vehicle_fuel_tank_type")
 }
 
-model Vehicle_tech_features {
-  id                       Int        @id @default(autoincrement())
-  entertainment_system     Boolean
-  connectivity             Boolean
-  driving_assistant_system Boolean
-  vehicles                 Vehicles[] @relation("vehicle_tech_features")
-}
-
 model Vehicle_conditions {
   id        Int        @id @default(autoincrement())
   condition String
@@ -264,17 +237,11 @@ model Vehicle_conditions {
 model Vehicle_mileages {
   id                      Int                       @id @default(autoincrement())
   mileage                 String
+  milleage_type_id        Int
   Client_vehicle_tradein  Client_vehicle_tradein[]
   Client_vehicle_wishlist Client_vehicle_wishlist[]
+  Vehicle_milleage_type   Vehicle_milleage_type     @relation(fields: [milleage_type_id], references: [id], onDelete: Cascade)
   vehicles                Vehicles[]                @relation("vehicle_mileage")
-}
-
-model Vehicle_motors {
-  id                  Int        @id @default(autoincrement())
-  type                String
-  engine_displacement String
-  power               String
-  vehicles            Vehicles[] @relation("vehicle_motor")
 }
 
 model Vehicle_types {
@@ -285,47 +252,66 @@ model Vehicle_types {
 }
 
 model Vehicles {
-  id                             Int                            @id @default(autoincrement())
-  brand_id                       Int
-  color_id                       Int
-  model_id                       Int
-  manufacture_year_id            Int
-  fuel_tank_capacity_id          Int
-  identification_id              Int
-  body_type_id                   Int
-  standard_features_id           Int
-  transmission_id                Int
-  price_id                       Int
-  fuel_tank_type_id              Int
-  tech_features_id               Int
-  condition_id                   Int
-  mileage_id                     Int
-  motor_id                       Int
-  entry_stock                    DateTime?
-  vehicle_type_id                Int
-  vehicle_status_id              Int
-  vehicle_plate_id               Int
-  Client_vehicle_wishlist        Client_vehicle_wishlist[]
-  interested_vehicle             Clients[]                      @relation("interested_vehicle")
-  Deposits                       Deposits[]
-  vehicle_body_types             Vehicle_body_types             @relation("vehicle_body_type", fields: [body_type_id], references: [id])
-  vehicle_brands                 Vehicle_brands                 @relation("vehicle_brand", fields: [brand_id], references: [id])
-  vehicle_colors                 Vehicle_colors                 @relation("vehicle_color", fields: [color_id], references: [id])
-  vehicle_conditions             Vehicle_conditions             @relation("vehicle_condition", fields: [condition_id], references: [id])
-  vehicle_fuel_tank_capacities   Vehicle_fuel_tank_capacities   @relation("vehicle_fuel_tank_capacity", fields: [fuel_tank_capacity_id], references: [id])
-  vehicle_fuel_tank_types        Vehicle_fuel_tank_types        @relation("vehicle_fuel_tank_type", fields: [fuel_tank_type_id], references: [id])
-  vehicle_identification_numbers Vehicle_identification_numbers @relation("vehicle_identification_number", fields: [identification_id], references: [id])
-  vehicle_manufacture_years      Vehicle_manufacture_years      @relation("vehicle_manufacture_year", fields: [manufacture_year_id], references: [id])
-  vehicle_mileages               Vehicle_mileages               @relation("vehicle_mileage", fields: [mileage_id], references: [id])
-  vehicle_models                 Vehicle_models                 @relation("vehicle_model", fields: [model_id], references: [id])
-  vehicle_motors                 Vehicle_motors                 @relation("vehicle_motor", fields: [motor_id], references: [id])
-  vehicle_prices                 Vehicle_prices                 @relation("vehicle_price", fields: [price_id], references: [id])
-  vehicle_standard_features      Vehicle_standard_features      @relation("vehicle_standard_features", fields: [standard_features_id], references: [id])
-  vehicle_tech_features          Vehicle_tech_features          @relation("vehicle_tech_features", fields: [tech_features_id], references: [id])
-  vehicle_transmissions          Vehicle_transmissions          @relation("vehicle_transmission", fields: [transmission_id], references: [id])
-  Vehicle_license_plates         Vehicle_license_plates         @relation(fields: [vehicle_plate_id], references: [id], onDelete: Cascade)
-  Vehicle_status                 Vehicle_status                 @relation(fields: [vehicle_status_id], references: [id])
-  vehicle_type                   Vehicle_types                  @relation("vehicle_type", fields: [vehicle_type_id], references: [id])
+  id                                                        Int                            @id @default(autoincrement())
+  model_id                                                  Int
+  manufacture_year_id                                       Int?
+  identification_id                                         Int                            @unique
+  transmission_id                                           Int
+  price_id                                                  Int?
+  fuel_tank_type_id                                         Int
+  condition_id                                              Int
+  mileage_id                                                Int?
+  entry_stock                                               DateTime?
+  vehicle_type_id                                           Int
+  vehicle_status_id                                         Int
+  vehicle_plate_id                                          Int?
+  drive_train_id                                            Int
+  engine_id                                                 Int
+  exterior_color_id                                         Int
+  interior_color_id                                         Int
+  make_id                                                   Int
+  odometer_make_id                                          Int
+  trim_id                                                   Int
+  image_id                                                  Int?
+  cylinder                                                  String
+  doors                                                     String
+  gvw                                                       String
+  hwy                                                       String
+  motor                                                     String
+  mpg_city                                                  String
+  weight                                                    String
+  body_type_id                                              Int
+  odometer                                                  String
+  key_info_id                                               Int?
+  title_license_id                                          Int?
+  vehicle_purchase_info_id                                  Int?
+  vehicle_general_info_id                                   Int?
+  Client_vehicle_wishlist                                   Client_vehicle_wishlist[]
+  interested_vehicle                                        Clients[]                      @relation("interested_vehicle")
+  Deposits                                                  Deposits[]
+  vehicle_body_types                                        Vehicle_body_types             @relation("vehicle_body_type", fields: [body_type_id], references: [id], onDelete: Cascade)
+  vehicle_conditions                                        Vehicle_conditions             @relation("vehicle_condition", fields: [condition_id], references: [id])
+  Vehicle_drive_train                                       Vehicle_drive_train            @relation(fields: [drive_train_id], references: [id], onDelete: Cascade)
+  Vehicle_engine                                            Vehicle_engine                 @relation(fields: [engine_id], references: [id], onDelete: Cascade)
+  Vehicle_colors_Vehicles_exterior_color_idToVehicle_colors Vehicle_colors                 @relation("Vehicles_exterior_color_idToVehicle_colors", fields: [exterior_color_id], references: [id])
+  vehicle_fuel_tank_types                                   Vehicle_fuel_tank_types        @relation("vehicle_fuel_tank_type", fields: [fuel_tank_type_id], references: [id])
+  vehicle_identification_numbers                            Vehicle_identification_numbers @relation("vehicle_identification_number", fields: [identification_id], references: [id], onDelete: Cascade)
+  Vehicle_image                                             Vehicle_image?                 @relation(fields: [image_id], references: [id], onDelete: Cascade)
+  Vehicle_colors_Vehicles_interior_color_idToVehicle_colors Vehicle_colors                 @relation("Vehicles_interior_color_idToVehicle_colors", fields: [interior_color_id], references: [id])
+  Vehicle_details_key_info                                  Vehicle_details_key_info?      @relation(fields: [key_info_id], references: [id], onDelete: Cascade)
+  Vehicle_make                                              Vehicle_make                   @relation(fields: [make_id], references: [id])
+  vehicle_manufacture_years                                 Vehicle_manufacture_years?     @relation("vehicle_manufacture_year", fields: [manufacture_year_id], references: [id])
+  vehicle_mileages                                          Vehicle_mileages?              @relation("vehicle_mileage", fields: [mileage_id], references: [id])
+  vehicle_models                                            Vehicle_models                 @relation("vehicle_model", fields: [model_id], references: [id])
+  vehicle_prices                                            Vehicle_prices?                @relation("vehicle_price", fields: [price_id], references: [id])
+  Vehicle_details_title_license                             Vehicle_details_title_license? @relation(fields: [title_license_id], references: [id], onDelete: Cascade)
+  vehicle_transmissions                                     Vehicle_transmissions          @relation("vehicle_transmission", fields: [transmission_id], references: [id])
+  Vehicle_trim                                              Vehicle_trim                   @relation(fields: [trim_id], references: [id], onDelete: Cascade)
+  General_info                                              General_info?                  @relation(fields: [vehicle_general_info_id], references: [id], onDelete: Cascade)
+  Vehicle_license_plates                                    Vehicle_license_plates?        @relation(fields: [vehicle_plate_id], references: [id], onDelete: Cascade)
+  Vehicle_details_purchase_info                             Vehicle_details_purchase_info? @relation(fields: [vehicle_purchase_info_id], references: [id], onDelete: Cascade)
+  Vehicle_status                                            Vehicle_status                 @relation(fields: [vehicle_status_id], references: [id])
+  vehicle_type                                              Vehicle_types                  @relation("vehicle_type", fields: [vehicle_type_id], references: [id])
 }
 
 model Tasks {
@@ -453,9 +439,10 @@ model Client_has_cobuyer {
 }
 
 model Client_status {
-  id            Int       @id @default(autoincrement())
-  status        String
-  client_status Clients[] @relation("client_status")
+  id                Int                 @id @default(autoincrement())
+  status            String
+  client_status     Clients[]           @relation("client_status")
+  Customer_settings Customer_settings[]
 }
 
 model Clients {
@@ -507,6 +494,7 @@ model Clients {
   born_date_hash                                                        String?
   consent_approved                                                      Boolean?                  @default(false)
   country_phone_code_id                                                 Int?
+  lost_date                                                             DateTime?
   appointment                                                           Appointments[]            @relation("customer")
   Client_calls                                                          Client_calls[]
   Client_has_cobuyer_Client_has_cobuyer_buyer_client_idToClients        Client_has_cobuyer?       @relation("Client_has_cobuyer_buyer_client_idToClients")
@@ -663,9 +651,11 @@ model Call_statuses {
 }
 
 model Client_id_state {
-  id         Int          @id @default(autoincrement())
-  id_state   String
-  Credit_app Credit_app[]
+  id                                                                                            Int                             @id @default(autoincrement())
+  id_state                                                                                      String
+  Credit_app                                                                                    Credit_app[]
+  Vehicle_details_title_license_Vehicle_details_title_license_license_state_idToClient_id_state Vehicle_details_title_license[] @relation("Vehicle_details_title_license_license_state_idToClient_id_state")
+  Vehicle_details_title_license_Vehicle_details_title_license_title_state_idToClient_id_state   Vehicle_details_title_license[] @relation("Vehicle_details_title_license_title_state_idToClient_id_state")
 }
 
 model Client_id_type {
@@ -700,7 +690,7 @@ model Client_vehicle_tradein {
   Vehicle_tradein_comments                                           Vehicle_tradein_comments?      @relation(fields: [comment_id], references: [id], onDelete: Cascade)
   Vehicle_colors_Client_vehicle_tradein_ext_color_idToVehicle_colors Vehicle_colors                 @relation("Client_vehicle_tradein_ext_color_idToVehicle_colors", fields: [ext_color_id], references: [id], onDelete: Cascade)
   Vehicle_colors_Client_vehicle_tradein_int_color_idToVehicle_colors Vehicle_colors                 @relation("Client_vehicle_tradein_int_color_idToVehicle_colors", fields: [int_color_id], references: [id], onDelete: Cascade)
-  Vehicle_brands                                                     Vehicle_brands                 @relation(fields: [make_id], references: [id], onDelete: Cascade)
+  Vehicle_brands                                                     Vehicle_make                   @relation(fields: [make_id], references: [id], onDelete: Cascade)
   Vehicle_mileages                                                   Vehicle_mileages               @relation(fields: [mileage_id], references: [id], onDelete: Cascade)
   Vehicle_models                                                     Vehicle_models                 @relation(fields: [model_id], references: [id], onDelete: Cascade)
   Vehicle_trims                                                      Vehicle_trims                  @relation(fields: [trim_id], references: [id], onDelete: Cascade)
@@ -990,21 +980,15 @@ model Sms_status {
 }
 
 model Sms_template {
-  id                Int               @id @default(autoincrement())
+  id                Int                   @id @default(autoincrement())
   name              String
   template          String
   category_id       Int
   created_by        Int
   creted_date       DateTime
-  published         Boolean           @default(false)
-  Template_category Template_category @relation(fields: [category_id], references: [id], onDelete: Cascade)
-  Users             Users             @relation(fields: [created_by], references: [id], onDelete: Cascade)
-}
-
-model Template_category {
-  id           Int            @id @default(autoincrement())
-  category     String
-  Sms_template Sms_template[]
+  published         Boolean               @default(false)
+  Template_category Sms_template_category @relation(fields: [category_id], references: [id], onDelete: Cascade)
+  Users             Users                 @relation(fields: [created_by], references: [id], onDelete: Cascade)
 }
 
 model Type_notification {
@@ -1035,4 +1019,329 @@ model Vehicle_trims {
   id                     Int                      @id @default(autoincrement())
   trim                   String
   Client_vehicle_tradein Client_vehicle_tradein[]
+}
+
+model Automated_review {
+  id                                  Int     @id @default(autoincrement())
+  invitation                          String
+  enable_automated_review_invitations Boolean @default(false)
+}
+
+model Custom_be_back_reasons {
+  id     Int    @id @default(autoincrement())
+  reason String
+}
+
+model Custom_lost_reasons {
+  id     Int    @id @default(autoincrement())
+  reason String
+}
+
+model Custom_no_sale_reasons {
+  id     Int    @id @default(autoincrement())
+  reason String
+}
+
+model Customer_settings {
+  id                                 Int                      @id @default(autoincrement())
+  ignore_first_name                  Boolean                  @default(false)
+  active_lost_customer               Boolean                  @default(false)
+  show_followup                      Boolean                  @default(false)
+  complete_all_open_tasks            Boolean                  @default(false)
+  lead_lost_after                    Int
+  set_active_lost_customer_status_to Int
+  followup_task_visibility           Int
+  Followup_task_visibility           Followup_task_visibility @relation(fields: [followup_task_visibility], references: [id], onDelete: Cascade)
+  Client_status                      Client_status            @relation(fields: [set_active_lost_customer_status_to], references: [id], onDelete: Cascade)
+}
+
+model Detail_acq_mill_type {
+  id                            Int                             @id @default(autoincrement())
+  type                          String
+  Vehicle_details_purchase_info Vehicle_details_purchase_info[]
+}
+
+model Detail_condition {
+  id           Int            @id @default(autoincrement())
+  condition    String
+  General_info General_info[]
+}
+
+model Detail_source {
+  id                            Int                             @id @default(autoincrement())
+  source                        String
+  Vehicle_details_purchase_info Vehicle_details_purchase_info[]
+}
+
+model Email_forward_incoming_leads {
+  id   Int    @id @default(autoincrement())
+  lead String
+}
+
+model Email_name_displayed {
+  id            Int             @id @default(autoincrement())
+  name          String
+  Voice_and_sms Voice_and_sms[]
+}
+
+model Email_to_lead {
+  id   Int    @id @default(autoincrement())
+  lead String
+}
+
+model Emission_status {
+  id                   Int                    @id @default(autoincrement())
+  status               String
+  Emission_status_data Emission_status_data[]
+}
+
+model Emission_status_data {
+  id              Int             @id @default(autoincrement())
+  status_id       Int
+  date            DateTime
+  Emission_status Emission_status @relation(fields: [status_id], references: [id], onDelete: Cascade)
+  General_info    General_info[]
+}
+
+model Followup_task_visibility {
+  id                Int                 @id @default(autoincrement())
+  followup          String
+  Customer_settings Customer_settings[]
+}
+
+model General_info {
+  id                     Int                     @id @default(autoincrement())
+  sales_type_id          Int?
+  stock_no               String
+  date_in_stock          DateTime
+  ready_to_shell         DateTime
+  location               String
+  condition_id           Int?
+  inspection_status_id   Int?
+  emission_status_id     Int?
+  Detail_condition       Detail_condition?       @relation(fields: [condition_id], references: [id], onDelete: Cascade)
+  Emission_status_data   Emission_status_data?   @relation(fields: [emission_status_id], references: [id], onDelete: Cascade)
+  Inspection_status_data Inspection_status_data? @relation(fields: [inspection_status_id], references: [id], onDelete: Cascade)
+  Sales_type_category    Sales_type_category?    @relation(fields: [sales_type_id], references: [id], onDelete: Cascade)
+  Vehicles               Vehicles[]
+}
+
+model Incoming_calls_options {
+  id            Int             @id @default(autoincrement())
+  option        String
+  Voice_and_sms Voice_and_sms[]
+}
+
+model Inspection_status {
+  id                     Int                      @id @default(autoincrement())
+  status                 String
+  Inspection_status_data Inspection_status_data[]
+}
+
+model Inspection_status_data {
+  id                Int               @id @default(autoincrement())
+  status_id         Int
+  date              DateTime
+  id_of_status      String
+  inspected_by      String
+  General_info      General_info[]
+  Inspection_status Inspection_status @relation(fields: [status_id], references: [id], onDelete: Cascade)
+}
+
+model Payment_method {
+  id                       Int                        @id @default(autoincrement())
+  method                   String
+  Vehicle_details_key_info Vehicle_details_key_info[]
+}
+
+model Sales_type_category {
+  id           Int            @id @default(autoincrement())
+  type         String
+  General_info General_info[]
+}
+
+model Sms_limit_warning_recipients {
+  id        Int    @id @default(autoincrement())
+  recipient String
+}
+
+model Sms_template_category {
+  id           Int            @id @default(autoincrement())
+  category     String
+  Sms_template Sms_template[]
+}
+
+model Sms_template_variables {
+  id                              Int                             @id @default(autoincrement())
+  variable                        String
+  category_id                     Int
+  Sms_template_variables_category Sms_template_variables_category @relation(fields: [category_id], references: [id], onDelete: Cascade)
+  Sms_template_variables_tagged   Sms_template_variables_tagged[]
+}
+
+model Sms_template_variables_category {
+  id                     Int                      @id @default(autoincrement())
+  category               String
+  Sms_template_variables Sms_template_variables[]
+}
+
+model Sms_template_variables_tagged {
+  id                       Int                    @id @default(autoincrement())
+  sms_template_variable_id Int
+  user_id                  Int
+  Sms_template_variables   Sms_template_variables @relation(fields: [sms_template_variable_id], references: [id], onDelete: Cascade)
+  Users                    Users                  @relation(fields: [user_id], references: [id], onDelete: Cascade)
+}
+
+model Title_brand {
+  id                            Int                             @id @default(autoincrement())
+  brand                         String
+  Vehicle_details_title_license Vehicle_details_title_license[]
+}
+
+model Title_status {
+  id                            Int                             @id @default(autoincrement())
+  status                        String
+  Vehicle_details_title_license Vehicle_details_title_license[]
+}
+
+model Tracking_code {
+  id   Int    @id @default(autoincrement())
+  code String
+}
+
+model Unknown_adf_elements {
+  id      Int    @id @default(autoincrement())
+  element String
+}
+
+model Vehicle_body_type {
+  id   Int    @id @default(autoincrement())
+  type String @unique
+}
+
+model Vehicle_details_key_info {
+  id                Int            @id @default(autoincrement())
+  decal_no          String
+  ignition_code     String
+  door_key_code     String
+  valet_key_code    String
+  duplicate_key     Boolean
+  lienholder        String
+  lien_account_no   String
+  payoff_amount     String
+  due_date          DateTime
+  date_paid_off     DateTime
+  payment_method_id Int
+  per_diem          String
+  memo              String
+  Payment_method    Payment_method @relation(fields: [payment_method_id], references: [id], onDelete: Cascade)
+  Vehicles          Vehicles[]
+}
+
+model Vehicle_details_purchase_info {
+  id                   Int                  @id @default(autoincrement())
+  buyer                String
+  acq_mill_in          String
+  acq_mill_type_id     Int
+  how_did_you_pay      String?
+  purchase_date        DateTime
+  purchase_detail      String?
+  purchase_from        String?
+  source_id            Int
+  Detail_acq_mill_type Detail_acq_mill_type @relation(fields: [acq_mill_type_id], references: [id], onDelete: Cascade)
+  Detail_source        Detail_source        @relation(fields: [source_id], references: [id], onDelete: Cascade)
+  Vehicles             Vehicles[]
+}
+
+model Vehicle_details_title_license {
+  id                                                                              Int             @id @default(autoincrement())
+  title_owner                                                                     String
+  ros_title                                                                       String
+  title_state_id                                                                  Int
+  title_status_id                                                                 Int
+  title_brand_id                                                                  Int
+  license_no                                                                      String
+  license_state_id                                                                Int
+  license_expiration                                                              DateTime
+  additional                                                                      String?
+  adversiting                                                                     String?
+  asking_price                                                                    String
+  bid_increment                                                                   String
+  buy_now_price                                                                   String
+  cost_adds                                                                       String?
+  floor_price                                                                     String
+  min_deposit                                                                     String?
+  min_down                                                                        String?
+  msrp                                                                            String?
+  packs                                                                           String?
+  special_price                                                                   String?
+  start_bid                                                                       String
+  start_bid_2                                                                     String
+  vehicle_cost                                                                    String
+  whole_price                                                                     String
+  special_price_end_date                                                          DateTime?
+  special_price_start_date                                                        DateTime?
+  buyer_fee                                                                       String?
+  lot_fee                                                                         String?
+  Client_id_state_Vehicle_details_title_license_license_state_idToClient_id_state Client_id_state @relation("Vehicle_details_title_license_license_state_idToClient_id_state", fields: [license_state_id], references: [id], onDelete: Cascade)
+  Title_brand                                                                     Title_brand     @relation(fields: [title_brand_id], references: [id], onDelete: Cascade)
+  Client_id_state_Vehicle_details_title_license_title_state_idToClient_id_state   Client_id_state @relation("Vehicle_details_title_license_title_state_idToClient_id_state", fields: [title_state_id], references: [id], onDelete: Cascade)
+  Title_status                                                                    Title_status    @relation(fields: [title_status_id], references: [id], onDelete: Cascade)
+  Vehicles                                                                        Vehicles[]
+}
+
+model Vehicle_drive_train {
+  id          Int        @id @default(autoincrement())
+  drive_train String
+  Vehicles    Vehicles[]
+}
+
+model Vehicle_engine {
+  id       Int        @id @default(autoincrement())
+  engine   String     @unique
+  Vehicles Vehicles[]
+}
+
+model Vehicle_image {
+  id       Int        @id @default(autoincrement())
+  path     String
+  Vehicles Vehicles[]
+}
+
+model Vehicle_make {
+  id                     Int                      @id @default(autoincrement())
+  brand                  String                   @unique
+  Client_vehicle_tradein Client_vehicle_tradein[]
+  Vehicles               Vehicles[]
+}
+
+model Vehicle_milleage_type {
+  id               Int                @id @default(autoincrement())
+  type             String
+  Vehicle_mileages Vehicle_mileages[]
+}
+
+model Vehicle_trim {
+  id       Int        @id @default(autoincrement())
+  trim     String     @unique
+  Vehicles Vehicles[]
+}
+
+model Voice_and_sms {
+  id                                         Int                    @id @default(autoincrement())
+  system_phone_for_publishing                String?
+  system_email_address_for_publishing        String?
+  email_verfified                            Boolean                @default(false)
+  forward_incoming_calls_to                  String?
+  forward_incoming_calls_option_id           Int
+  dealership_phone_number                    Boolean                @default(false)
+  disable_auto_emails_to_customer            Boolean                @default(false)
+  disable_sending_auto_sms_over_montly_limit Boolean                @default(false)
+  for_buying_vehicles_from_customers         Boolean                @default(false)
+  in_spanish                                 Boolean                @default(false)
+  include_dealership_address                 Boolean                @default(false)
+  email_name_displayed_id                    Int
+  Email_name_displayed                       Email_name_displayed   @relation(fields: [email_name_displayed_id], references: [id], onDelete: Cascade)
+  Incoming_calls_options                     Incoming_calls_options @relation(fields: [forward_incoming_calls_option_id], references: [id], onDelete: Cascade)
 }

@@ -30,7 +30,7 @@ const io = new Server(server, {
 });
 
 app.use(cors({
-  origin: process.env.CORS_ORIGIN,
+  origin: process.env.CORS_ORIGIN1,
   optionsSuccessStatus: 200
 }))
 
@@ -282,6 +282,42 @@ io.on('connection', (socket) => {
 
   })
 
+  // checking all customers last contacted day
+
+  cron.schedule('0 0 * * 1-5', async ()=>{
+
+    const todayDate = new Date();
+
+    const customers = await prisma.clients.findMany();
+
+    const customerSettings = await prisma.customer_settings.findFirst()
+
+    const daysUntilLost = customerSettings.lead_lost_after
+
+    for (let i = 0; i < customers.length; i++) {
+      const element = customers[i];
+      
+      const timeSinceLastActivity = element.last_activity.getTime() - todayDate.getTime()
+
+      const daysSinceLastActivity = Math.ceil(timeSinceLastActivity / (1000 * 3600 * 24))
+
+      if (daysSinceLastActivity >= daysUntilLost) {
+        
+        await prisma.clients.update({
+          where:{
+            id: element.id
+          },
+          data:{
+           client_status_id: 12,
+           lost_date: new Date(),
+          }
+        })
+
+      }
+    }
+
+  })
+
   // call streaming
 
   socket.on('call',(phoneNumber) => {    
@@ -324,6 +360,8 @@ io.on('connection', (socket) => {
 
   app.post('/getMessage', async (req,res) =>{    
 
+    // if the user has the status "new" then change it to "contacted"
+
     const data = await prisma.client_sms.create({
       data:{
         message: req.body.Body,        
@@ -333,7 +371,7 @@ io.on('connection', (socket) => {
           connect: {
             id: 2,
           },
-        },        
+        }, 
         client_message:{
           connect:{
             mobile_phone: req.body.From
