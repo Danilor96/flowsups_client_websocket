@@ -2,16 +2,11 @@ import express from 'express'
 import { createServer } from 'http'
 import { Server } from 'socket.io'
 import { PrismaClient } from  '@prisma/client'
-import { z } from 'zod'
 import { env } from 'process';
 import bodyParser from 'body-parser'
 import bodyParserXml from 'body-parser-xml'
 import cors from 'cors'
 import twilio from 'twilio';
-import MessagingResponse from 'twilio/lib/twiml/MessagingResponse.js';
-import pkgd from 'twilio/lib/twiml/VoiceResponse.js'
-import pkg from 'twilio/lib/base/BaseTwilio.js'
-import { tokenGenerator, voiceResponse } from './handle.js'
 import cron from 'node-cron'
 
 const accountSid = process.env.TWILIO_ACCOUNT_SID;
@@ -115,6 +110,13 @@ io.on('connection', (socket) => {
     socket.on('ask_for_tasks', async (askedUser) => {
       sendTasks(askedUser);
     });
+  });
+
+  // retrieve user notifications
+  socket.on('ask_for_notifications', (user) => {    
+
+    io.to(sendTo(user)).emit('get_user_notifications', true);    
+
   });
 
   //save new task and send task to assigned user
@@ -258,6 +260,12 @@ io.on('connection', (socket) => {
       data: {
         status: 4
       },
+    });    
+
+    const notificationTask = await prisma.notifications.create({
+      data:{
+        message: ''
+      }
     });
 
     const appt = await prisma.clients.updateMany({
@@ -279,7 +287,6 @@ io.on('connection', (socket) => {
     });
 
     await prisma.$disconnect()
-
   })
 
   // checking all customers last contacted day
@@ -316,7 +323,39 @@ io.on('connection', (socket) => {
       }
     }
 
+    await prisma.$disconnect();
   })
+
+  // create notifications messages
+
+  cron.schedule('0 0 * * 1-5', async () => {
+
+    const tasksData = await prisma.tasks.findMany({
+      where:{
+        status: 4,
+      }
+    })
+
+    for (let i = 0; i < tasksData.length; i++) {
+      const el = tasksData[i];
+      
+      if (el.assigned_to) {
+        
+        const notificationData = await prisma.notifications.create({
+          data: {
+            message: `Task ${el.title} has expired`,
+            type_id: 5,
+            customer_id: el.customer_id,
+            user_id: el.assigned_to
+          }
+        });
+        
+      }
+
+    }
+
+    await prisma.$disconnect();
+  });
 
   // call streaming
 
@@ -383,23 +422,7 @@ io.on('connection', (socket) => {
 
     io.emit('getClientMessage',`${data.client_id}`)
 
-  })
-
-  app.get('/token', (req,res)=>{
-    
-    res.send(tokenGenerator())
-
-  })
-
-  app.post('/voice', (req, res)=>{    
-
-    res.contentType('xml');
-    res.send(voiceResponse())
-    
-  })
-  
-  // res.set("Content-Type", "text/xml");
-  // res.send(voiceResponse(req.body));
+  })  
   
   // emit message to update client list  
 
