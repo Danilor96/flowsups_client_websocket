@@ -1,49 +1,49 @@
-import express from 'express'
-import { createServer } from 'http'
-import { Server } from 'socket.io'
-import { PrismaClient } from  '@prisma/client'
+import express from 'express';
+import { createServer } from 'http';
+import { Server } from 'socket.io';
+import { PrismaClient } from '@prisma/client';
 import { env } from 'process';
-import bodyParser from 'body-parser'
-import bodyParserXml from 'body-parser-xml'
-import cors from 'cors'
-import twilio from 'twilio';
-import cron from 'node-cron'
+import bodyParser from 'body-parser';
+import bodyParserXml from 'body-parser-xml';
+import cors from 'cors';
+import cron from 'node-cron';
 
 const accountSid = process.env.TWILIO_ACCOUNT_SID;
 const authToken = process.env.TWILIO_AUTH_TOKEN;
-const twilioPhoneNumber = process.env.TWILIO_PHONE_NUMBER;
 
-const app = express()
+const app = express();
 const server = createServer(app);
-const client = twilio(accountSid, authToken);
 const prisma = new PrismaClient();
 const io = new Server(server, {
   cors: {
     origin: [process.env.CORS_ORIGIN1, process.env.CORS_ORIGIN2],
-    optionsSuccessStatus: 200
+    optionsSuccessStatus: 200,
   },
 });
 
-app.use(cors({
-  origin: process.env.CORS_ORIGIN1,
-  optionsSuccessStatus: 200
-}))
+app.use(
+  cors({
+    origin: process.env.CORS_ORIGIN1,
+    optionsSuccessStatus: 200,
+  }),
+);
 
-bodyParserXml(bodyParser)
+bodyParserXml(bodyParser);
 
 app.use(bodyParser.urlencoded({ extended: false }));
 app.use(bodyParser.json());
-app.use(bodyParser.xml({
-  limit: '1MB',   
-  xmlParseOptions: {
-    normalize: true,     
-    normalizeTags: true, 
-    explicitArray: false 
-  }
-}));
+app.use(
+  bodyParser.xml({
+    limit: '1MB',
+    xmlParseOptions: {
+      normalize: true,
+      normalizeTags: true,
+      explicitArray: false,
+    },
+  }),
+);
 
-app.post('/getZapier',(req,res)=>{
-
+app.post('/getZapier', (req, res) => {
   console.log(req.body.adf.prospect.customer.contact.name[0]._);
   console.log(req.body.adf.prospect.customer.contact.name[1]._);
   console.log(req.body.adf.prospect.customer.contact.email);
@@ -56,11 +56,10 @@ app.post('/getZapier',(req,res)=>{
   console.log(req.body.adf.prospect.vehicle.year);
   console.log(req.body.adf.prospect.vehicle.odometer._);
   console.log(req.body.adf.prospect.vehicle.odometer.$.units);
-  console.log(req.body.adf.prospect.vehicle.trim);  
+  console.log(req.body.adf.prospect.vehicle.trim);
 
-  res.send('Llegó')
-
-})
+  res.send('Llegó');
+});
 
 const connectedUsers = {};
 
@@ -113,10 +112,8 @@ io.on('connection', (socket) => {
   });
 
   // retrieve user notifications
-  socket.on('ask_for_notifications', (user) => {    
-
-    io.to(sendTo(user)).emit('get_user_notifications', true);    
-
+  socket.on('ask_for_notifications', (user) => {
+    io.to(sendTo(user)).emit('get_user_notifications', true);
   });
 
   //save new task and send task to assigned user
@@ -242,9 +239,8 @@ io.on('connection', (socket) => {
   });
 
   // checking all pending tasks, appointments and statuses
-  cron.schedule('0 0 * * 1-5', async ()=>{
-
-    const todayDate = new Date()
+  cron.schedule('0 0 * * 1-5', async () => {
+    const todayDate = new Date();
 
     const tasks = await prisma.tasks.updateMany({
       where: {
@@ -258,14 +254,14 @@ io.on('connection', (socket) => {
         },
       },
       data: {
-        status: 4
+        status: 4,
       },
-    });    
+    });
 
     const notificationTask = await prisma.notifications.create({
-      data:{
-        message: ''
-      }
+      data: {
+        message: '',
+      },
     });
 
     const appt = await prisma.clients.updateMany({
@@ -286,171 +282,144 @@ io.on('connection', (socket) => {
       },
     });
 
-    await prisma.$disconnect()
-  })
+    await prisma.$disconnect();
+  });
 
   // checking all customers last contacted day
 
-  cron.schedule('0 0 * * 1-5', async ()=>{
-
+  cron.schedule('0 0 * * 1-5', async () => {
     const todayDate = new Date();
 
     const customers = await prisma.clients.findMany();
 
-    const customerSettings = await prisma.customer_settings.findFirst()
+    const customerSettings = await prisma.customer_settings.findFirst();
 
-    const daysUntilLost = customerSettings.lead_lost_after
+    const daysUntilLost = customerSettings.lead_lost_after;
 
     for (let i = 0; i < customers.length; i++) {
       const element = customers[i];
-      
-      const timeSinceLastActivity = element.last_activity.getTime() - todayDate.getTime()
 
-      const daysSinceLastActivity = Math.ceil(timeSinceLastActivity / (1000 * 3600 * 24))
+      const timeSinceLastActivity = element.last_activity.getTime() - todayDate.getTime();
+
+      const daysSinceLastActivity = Math.ceil(timeSinceLastActivity / (1000 * 3600 * 24));
 
       if (daysSinceLastActivity >= daysUntilLost) {
-        
         await prisma.clients.update({
-          where:{
-            id: element.id
+          where: {
+            id: element.id,
           },
-          data:{
-           client_status_id: 12,
-           lost_date: new Date(),
-          }
-        })
-
+          data: {
+            client_status_id: 12,
+            lost_date: new Date(),
+          },
+        });
       }
     }
 
     await prisma.$disconnect();
-  })
+  });
 
   // create notifications messages
 
   cron.schedule('0 0 * * 1-5', async () => {
-
     const tasksData = await prisma.tasks.findMany({
-      where:{
+      where: {
         status: 4,
-      }
-    })
+      },
+    });
 
     for (let i = 0; i < tasksData.length; i++) {
       const el = tasksData[i];
-      
+
       if (el.assigned_to) {
-        
         const notificationData = await prisma.notifications.create({
           data: {
             message: `Task ${el.title} has expired`,
             type_id: 5,
             customer_id: el.customer_id,
-            user_id: el.assigned_to
-          }
+            user_id: el.assigned_to,
+          },
         });
-        
       }
-
     }
 
     await prisma.$disconnect();
   });
 
-  // call streaming
-
-  socket.on('call',(phoneNumber) => {    
-
-    client.calls.create({      
-      to: phoneNumber,
-      from:twilioPhoneNumber,
-      url:'https://m17qvw3s-3001.use2.devtunnels.ms/getCalls'
-    }).then(call => {
-      console.log(call);
-    }).catch(error => {
-      console.log(error);
-    })
-
-  })
-
-  app.post('/getCalls', (req,res) =>{    
-    
-    console.log('pasé por aquí');
-
-    res.contentType('xml');
-    res.send(
-      `<Response>
-        <Dial>
-          <Client>
-            FlowsupsClientDetail
-          </Client>
-        </Dial>
-      </Response>`
-    )
-    
-    // <Stream url="wss://m17qvw3s-3001.use2.devtunnels.ms/getCalls"></Stream>
-  })
-
-  socket.on('callMessage',(callMessage)=>{
-
-    io.emit('callMessage', callMessage)
-
-  })
-
-  app.post('/getMessage', async (req,res) =>{    
-
+  app.post('/getMessage', async (req, res) => {
     // if the user has the status "new" then change it to "contacted"
 
-    const data = await prisma.client_sms.create({
-      data:{
-        message: req.body.Body,        
-        date_sent: new Date(),
-        sent_by_user: false,
-        status: {
-          connect: {
-            id: 2,
+    const from = req.body.From.replace(/\D/g, '');
+    const fromFormatted = from.slice(1, from.length);
+    const message = req.body.Body;
+
+    try {
+      await prisma.$transaction(async (prisma) => {
+        const clientIdAndStatus = await prisma.clients.findFirst({
+          where: {
+            mobile_phone: fromFormatted,
           },
-        }, 
-        client_message:{
-          connect:{
-            mobile_phone: req.body.From
-          }
+          select: {
+            client_status_id: true,
+            id: true,
+          },
+        });
+
+        const data = await prisma.client_sms.create({
+          data: {
+            message: message,
+            date_sent: new Date(),
+            sent_by_user: false,
+            client_id: clientIdAndStatus.id,
+            status_id: 2,
+          },
+        });
+
+        if (
+          clientIdAndStatus &&
+          clientIdAndStatus.client_status_id &&
+          clientIdAndStatus.client_status_id === 1
+        ) {
+          const userStatus = await prisma.clients.update({
+            where: {
+              mobile_phone: fromFormatted,
+            },
+            data: {
+              client_status_id: 2,
+            },
+          });
         }
-      }
+      });
 
-    })
+      await prisma.$disconnect();
 
-    io.emit('getClientMessage',`${data.client_id}`)
+      io.emit('getClientMessage', `${fromFormatted}`);
+    } catch (error) {
+      console.log(error);
+    }
+  });
 
-  })  
-  
-  // emit message to update client list  
+  // emit message to update client list
 
-  socket.on('updateClientsList',(data)=>{        
-
-    io.emit('doUpdateClientsListInCostumerList', data)
-
-  })
+  socket.on('updateClientsList', (data) => {
+    io.emit('doUpdateClientsListInCostumerList', data);
+  });
 
   socket.on('disconnect', () => {
     delete connectedUsers[socket.id];
-    console.log('User disconnected');    
-
+    console.log('User disconnected');
   });
 
   // notifications
 
-  socket.on('update_manager_tasks',(data) => {
-
-    io.emit('get_manager_tasks','do update notification')
-
-  })
-
+  socket.on('update_manager_tasks', (data) => {
+    io.emit('get_manager_tasks', 'do update notification');
+  });
 });
 
-const port = env.WEBSOCKET_PORT
+const port = env.WEBSOCKET_PORT;
 
-server.listen(port, () => {  
+server.listen(port, () => {
   console.log(`Server running on port ${port}`);
 });
 
