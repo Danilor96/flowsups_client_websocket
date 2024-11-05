@@ -349,9 +349,19 @@ io.on('connection', (socket) => {
   app.post('/getMessage', async (req, res) => {
     // if the user has the status "new" then change it to "contacted"
 
+    console.log({ req: req.body });
+
     const from = req.body.From.replace(/\D/g, '');
+
+    console.log({ from: from });
+
     const fromFormatted = from.slice(1, from.length);
+
+    console.log({ fromFormatted: fromFormatted });
+
     const message = req.body.Body;
+
+    console.log({ message: message });
 
     try {
       await prisma.$transaction(async (prisma) => {
@@ -397,6 +407,10 @@ io.on('connection', (socket) => {
     } catch (error) {
       console.log(error);
     }
+  });
+
+  socket.once('ask_for_update_data', (dataToUpdate) => {
+    io.emit('update_data', dataToUpdate);
   });
 
   // emit message to update client list
