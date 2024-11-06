@@ -375,15 +375,19 @@ io.on('connection', (socket) => {
           },
         });
 
-        const data = await prisma.client_sms.create({
-          data: {
-            message: message,
-            date_sent: new Date(),
-            sent_by_user: false,
-            client_id: clientIdAndStatus.id,
-            status_id: 2,
-          },
-        });
+        console.log(clientIdAndStatus);
+
+        if (clientIdAndStatus && clientIdAndStatus.id) {
+          const data = await prisma.client_sms.create({
+            data: {
+              message: message,
+              date_sent: new Date(),
+              sent_by_user: false,
+              client_id: clientIdAndStatus.id,
+              status_id: 2,
+            },
+          });
+        }
 
         if (
           clientIdAndStatus &&
@@ -403,14 +407,18 @@ io.on('connection', (socket) => {
 
       await prisma.$disconnect();
 
-      io.emit('getClientMessage', `${fromFormatted}`);
+      io.emit('update_data', 'customerMessage');
     } catch (error) {
       console.log(error);
     }
   });
 
-  socket.once('ask_for_update_data', (dataToUpdate) => {
-    io.emit('update_data', dataToUpdate);
+  socket.on('ask_for_update_data', (dataToUpdate, specificUser = false, userEmail = null) => {
+    if (specificUser && userEmail) {
+      io.to(sendTo(userEmail)).emit('update_data', dataToUpdate);
+    } else {
+      io.emit('update_data', dataToUpdate);
+    }
   });
 
   // emit message to update client list
