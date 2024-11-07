@@ -14,18 +14,18 @@
   "author": "",
   "license": "ISC",
   "dependencies": {
-    "@prisma/client": "^5.19.0",
+    "@prisma/client": "^5.22.0",
     "bcrypt": "5.1.1",
     "body-parser-xml": "^2.0.5",
-    "express": "4.19.2",
+    "express": "^4.21.1",
     "node-cron": "^3.0.3",
-    "socket.io": "4.7.5",
+    "socket.io": "^4.8.1",
     "tsx": "4.9.1",
     "twilio": "5.0.4",
     "zod": "3.23.6"
   },
   "devDependencies": {
     "nodemon": "3.1.0",
-    "prisma": "^5.17.0"
+    "prisma": "^5.22.0"
   }
 }
