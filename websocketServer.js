@@ -346,22 +346,16 @@ io.on('connection', (socket) => {
     await prisma.$disconnect();
   });
 
+  // get messages from customers
+
   app.post('/getMessage', async (req, res) => {
     // if the user has the status "new" then change it to "contacted"
 
-    console.log({ req: req.body });
-
     const from = req.body.From.replace(/\D/g, '');
 
-    console.log({ from: from });
-
-    const fromFormatted = from.slice(1, from.length);
-
-    console.log({ fromFormatted: fromFormatted });
+    const fromFormatted = from.slice(1);
 
     const message = req.body.Body;
-
-    console.log({ message: message });
 
     try {
       await prisma.$transaction(async (prisma) => {
@@ -374,8 +368,6 @@ io.on('connection', (socket) => {
             id: true,
           },
         });
-
-        console.log(clientIdAndStatus);
 
         if (clientIdAndStatus && clientIdAndStatus.id) {
           const data = await prisma.client_sms.create({
@@ -421,21 +413,9 @@ io.on('connection', (socket) => {
     }
   });
 
-  // emit message to update client list
-
-  socket.on('updateClientsList', (data) => {
-    io.emit('doUpdateClientsListInCostumerList', data);
-  });
-
   socket.on('disconnect', () => {
     delete connectedUsers[socket.id];
     console.log('User disconnected');
-  });
-
-  // notifications
-
-  socket.on('update_manager_tasks', (data) => {
-    io.emit('get_manager_tasks', 'do update notification');
   });
 });
 
@@ -444,48 +424,3 @@ const port = env.WEBSOCKET_PORT;
 server.listen(port, () => {
   console.log(`Server running on port ${port}`);
 });
-
-// [Object: null prototype] {
-//   ToCountry: 'US',
-//   ToState: 'IL',
-//   SmsMessageSid: 'SM07acfcfaa4a5c24582ea1066afd19212',
-//   NumMedia: '0',
-//   ToCity: '',
-//   FromZip: '33122',
-//   SmsSid: 'SM07acfcfaa4a5c24582ea1066afd19212',
-//   FromState: 'FL',
-//   SmsStatus: 'received',
-//   FromCity: 'MIAMI',
-//   Body: 'Buenaa tardes Daniel',
-//   FromCountry: 'US',
-//   To: '+12243134447',
-//   MessagingServiceSid: 'MG2af85f8f032d6dcb9e1b4b0488a0705f',
-//   ToZip: '',
-//   NumSegments: '1',
-//   MessageSid: 'SM07acfcfaa4a5c24582ea1066afd19212',
-//   AccountSid: 'AC725ec3b58d7c9fae3a6ce5f152939774',
-//   From: '+17863375076',
-//   ApiVersion: '2010-04-01'
-// }
-// [Object: null prototype] {
-//   ToCountry: 'US',
-//   ToState: 'IL',
-//   SmsMessageSid: 'SM998ce0869ab3d487af66e58f7d540e23',
-//   NumMedia: '0',
-//   ToCity: '',
-//   FromZip: '33122',
-//   SmsSid: 'SM998ce0869ab3d487af66e58f7d540e23',
-//   FromState: 'FL',
-//   SmsStatus: 'received',
-//   FromCity: 'MIAMI',
-//   Body: 'Si listo klego',
-//   FromCountry: 'US',
-//   To: '+12243134447',
-//   MessagingServiceSid: 'MG2af85f8f032d6dcb9e1b4b0488a0705f',
-//   ToZip: '',
-//   NumSegments: '1',
-//   MessageSid: 'SM998ce0869ab3d487af66e58f7d540e23',
-//   AccountSid: 'AC725ec3b58d7c9fae3a6ce5f152939774',
-//   From: '+17863375076',
-//   ApiVersion: '2010-04-01'
-// }
