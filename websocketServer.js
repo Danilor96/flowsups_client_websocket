@@ -357,12 +357,8 @@ io.on('connection', (socket) => {
 
     const message = req.body.Body;
 
-    console.log(message);
-
     try {
       await prisma.$transaction(async (prisma) => {
-        console.log(fromFormatted);
-
         const clientIdAndStatus = await prisma.clients.findFirst({
           where: {
             mobile_phone: fromFormatted,
@@ -372,8 +368,6 @@ io.on('connection', (socket) => {
             id: true,
           },
         });
-
-        console.log(clientIdAndStatus);
 
         if (clientIdAndStatus && clientIdAndStatus.id) {
           const data = await prisma.client_sms.create({
