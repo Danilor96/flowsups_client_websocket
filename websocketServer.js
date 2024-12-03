@@ -346,6 +346,76 @@ io.on('connection', (socket) => {
     await prisma.$disconnect();
   });
 
+  app.post('/getCurrentCallStatus', async (req, res) => {
+    const callSid = req.body.CallSid;
+    const parentCallSid = req.body.ParentCallSid;
+    const callStatus = req.body.CallStatus;
+    const to = req.body.To;
+    const callDuration = req.body.CallDuration ?? '0';
+
+    console.log(`Call SID: ${callSid}, Status: ${callStatus}. Parent Call SID: ${parentCallSid}`);
+
+    let callStatusId, socketEmit;
+
+    switch (callStatus) {
+      case 'initiated':
+        callStatusId = 1;
+        break;
+
+      case 'ringing':
+        break;
+
+      case 'in-progress':
+        callStatusId = 6;
+        socketEmit = 'callInProgress';
+        break;
+
+      case 'busy':
+        callStatusId = 2;
+        break;
+
+      case 'failed':
+        callStatusId = 4;
+        break;
+
+      case 'no-answer':
+        callStatusId = 3;
+        break;
+
+      case 'completed':
+        callStatusId = 1;
+        break;
+    }
+
+    const callExists = await prisma.client_calls.findUnique({
+      where: {
+        call_sid: parentCallSid,
+      },
+      select: {
+        id: true,
+      },
+    });
+
+    if (callExists) {
+      const callData = await prisma.client_calls.update({
+        where: {
+          id: callExists.id,
+        },
+        data: {
+          call_status_id: callStatusId,
+          call_duration: callDuration,
+        },
+      });
+    }
+
+    socketEmit &&
+      io.emit('update_data', socketEmit, {
+        callSid,
+      });
+
+    res.status(204).send();
+  });
+
   // get messages from customers
 
   app.post('/getMessage', async (req, res) => {
@@ -366,6 +436,11 @@ io.on('connection', (socket) => {
           select: {
             client_status_id: true,
             id: true,
+            seller: {
+              select: {
+                id: true,
+              },
+            },
           },
         });
 
@@ -395,6 +470,19 @@ io.on('connection', (socket) => {
             },
           });
         }
+
+        // create a new lead register
+
+        const lead = await prisma.client_has_lead.create({
+          data: {
+            created_at: new Date(),
+            assigned_to_id: clientIdAndStatus.seller.id || 1,
+            client_id: clientIdAndStatus.id,
+            status_id: 2,
+            created_by_id: clientIdAndStatus.seller.id || 1,
+            lead_id: 7,
+          },
+        });
       });
 
       await prisma.$disconnect();
@@ -405,13 +493,16 @@ io.on('connection', (socket) => {
     }
   });
 
-  socket.on('ask_for_update_data', (dataToUpdate, specificUser = false, userEmail = null) => {
-    if (specificUser && userEmail) {
-      io.to(sendTo(userEmail)).emit('update_data', dataToUpdate);
-    } else {
-      io.emit('update_data', dataToUpdate);
-    }
-  });
+  socket.on(
+    'ask_for_update_data',
+    (dataToUpdate, specificUser = false, userEmail = null, extraData = null) => {
+      if (specificUser && userEmail) {
+        io.to(sendTo(userEmail)).emit('update_data', dataToUpdate, extraData);
+      } else {
+        io.emit('update_data', dataToUpdate, extraData);
+      }
+    },
+  );
 
   socket.on('disconnect', () => {
     delete connectedUsers[socket.id];
