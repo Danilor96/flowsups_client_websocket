@@ -387,7 +387,9 @@ io.on('connection', (socket) => {
         break;
     }
 
-    const callExists = await prisma.client_calls.findUnique({
+    let callExists = null;
+
+    callExists = await prisma.client_calls.findUnique({
       where: {
         call_sid: parentCallSid,
       },
@@ -395,6 +397,17 @@ io.on('connection', (socket) => {
         id: true,
       },
     });
+
+    if (!callExists) {
+      callExists = await prisma.client_calls.findUnique({
+        where: {
+          call_sid: callSid,
+        },
+        select: {
+          id: true,
+        },
+      });
+    }
 
     if (callExists) {
       const callData = await prisma.client_calls.update({
@@ -411,6 +424,7 @@ io.on('connection', (socket) => {
     socketEmit &&
       io.emit('update_data', socketEmit, {
         callSid,
+        parentCallSid,
       });
 
     res.status(204).send();
