@@ -7,9 +7,15 @@ import bodyParser from 'body-parser';
 import bodyParserXml from 'body-parser-xml';
 import cors from 'cors';
 import cron from 'node-cron';
+import twilio from 'twilio';
 
 const accountSid = process.env.TWILIO_ACCOUNT_SID;
 const authToken = process.env.TWILIO_AUTH_TOKEN;
+
+const VoiceResponse = twilio.twiml.VoiceResponse;
+const twiml = new VoiceResponse();
+const dial = twiml.dial();
+const client = twilio(accountSid, authToken);
 
 const app = express();
 const server = createServer(app);
@@ -355,7 +361,7 @@ io.on('connection', (socket) => {
 
     console.log(`Call SID: ${callSid}, Status: ${callStatus}. Parent Call SID: ${parentCallSid}`);
 
-    let callStatusId, socketEmit;
+    let callStatusId, socketEmit, toClientAnswered;
 
     switch (callStatus) {
       case 'initiated':
@@ -368,6 +374,7 @@ io.on('connection', (socket) => {
       case 'in-progress':
         callStatusId = 6;
         socketEmit = 'callInProgress';
+        toClientAnswered = to.slice(7);
         break;
 
       case 'busy':
@@ -409,7 +416,7 @@ io.on('connection', (socket) => {
       });
     }
 
-    if (callExists) {
+    if (callExists && callStatusId) {
       const callData = await prisma.client_calls.update({
         where: {
           id: callExists.id,
@@ -425,9 +432,236 @@ io.on('connection', (socket) => {
       io.emit('update_data', socketEmit, {
         callSid,
         parentCallSid,
+        toClientAnswered,
       });
 
     res.status(204).send();
+  });
+
+  // get current conference status
+
+  app.post('/getCurrentConferenceStatus/:conferenceName', async (req, res) => {
+    try {
+      const conferenceSid = req.body.ConferenceSid;
+      const conferenceName = req.body.FriendlyName;
+      const conferenceStatus = req.body.StatusCallbackEvent;
+      const from = req.body.FriendlyName.split('_')[0];
+      const sequence = req.body.SequenceNumber;
+      const eventTimestamp = req.body.Timestamp;
+      const callSid = req.body.CallSid;
+      const conferenceParticipansList = await (await client.conferences(conferenceSid).fetch())
+        .participants()
+        .list();
+
+      if (sequence === '1') {
+        const customerData = await prisma.clients.findUnique({
+          where: {
+            mobile_phone: from,
+          },
+          select: {
+            id: true,
+            seller: {
+              select: {
+                id: true,
+              },
+            },
+          },
+        });
+
+        createCallStatusInDatabase(customerData?.id, customerData?.seller?.id, from, conferenceSid);
+      }
+
+      console.log(`Conference SID: ${conferenceSid}, Status: ${conferenceStatus}.`);
+
+      switch (conferenceStatus) {
+        case 'conference-end':
+          const startConfDate = await prisma.client_calls.findUnique({
+            where: {
+              call_sid: conferenceSid,
+            },
+            select: {
+              call_date: true,
+            },
+          });
+
+          const endConfTime = new Date(eventTimestamp).getTime();
+          const startConfTime = new Date(startConfDate.call_date).getTime();
+
+          const callDuration = (endConfTime - startConfTime) / 1000;
+
+          await prisma.client_calls.update({
+            where: {
+              call_sid: conferenceSid,
+            },
+            data: {
+              call_duration: callDuration.toString(),
+              call_status_id: 1,
+            },
+          });
+
+          io.emit('update_data', 'callDisconnect', {
+            endedConferenceName: conferenceName,
+          });
+          break;
+
+        case 'participant-join':
+          if (conferenceParticipansList.length > 1 && sequence >= 2 && sequence <= 3) {
+            const firstUserEmail = (
+              await client
+                .calls(conferenceParticipansList[conferenceParticipansList.length - 2].callSid)
+                .fetch()
+            ).from.split(':')[1];
+
+            const noFirtsUsersCallSid = conferenceParticipansList.map((el) => el.callSid);
+
+            if (firstUserEmail) {
+              io.emit('update_data', 'lastParticipant', {
+                userEmail: firstUserEmail,
+                callSidArray: noFirtsUsersCallSid,
+                inProgressConferenceName: conferenceName,
+              });
+            }
+          }
+
+          if (conferenceParticipansList.length > 1 && sequence > 3) {
+            const participants = [];
+
+            const regexCorreo = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+            conferenceParticipansList.forEach(async (participantInfo) => {
+              if (
+                conferenceParticipansList[conferenceParticipansList.length - 2].callSid !==
+                participantInfo.callSid
+              ) {
+                const participantFetched = await client.calls(participantInfo.callSid).fetch();
+
+                if (regexCorreo.test(participantFetched.from)) {
+                  participants.push(participantFetched.from);
+                }
+              }
+            });
+
+            if (participants.length > 0) {
+              io.emit('update_data', 'lastParticipant', {
+                callSidArray: participants,
+                inProgressConferenceName: conferenceName,
+              });
+            }
+          }
+
+          break;
+
+        case 'participant-leave':
+          if (conferenceParticipansList.length === 1) {
+            const currentConference = client.conferences(conferenceSid);
+
+            currentConference.update({ status: 'completed' });
+          }
+          break;
+
+        case 'conference-start':
+          break;
+      }
+    } catch (error) {
+      console.log(error);
+    }
+
+    res.status(204).send();
+  });
+
+  // create call status function
+
+  const createCallStatusInDatabase = async (customerId, userId, phoneNumber, callSid) => {
+    if (callSid) {
+      await prisma.client_calls.create({
+        data: {
+          client_id: customerId ? customerId : null,
+          seller_id: userId ? userId : null,
+          phone_number: phoneNumber ? phoneNumber : null,
+          call_sid: callSid,
+          call_date: new Date(),
+          call_duration: '0',
+          call_status_id: 6,
+          call_direction_id: 1,
+        },
+      });
+    }
+  };
+
+  // get incoming call from customers
+
+  app.post('/incomingCall', async (req, res) => {
+    try {
+      const from = req.body.From;
+      const to = req.body.To;
+      const conferenceName = `${from.slice(-10)}_conference`;
+
+      if (from && to && typeof from === 'string' && typeof to === 'string') {
+        // check if the phone number of the incoming call is related to a registered customer
+
+        const relateAssignedUserDevice = await prisma.clients.findFirst({
+          where: {
+            mobile_phone: from.slice(-10),
+          },
+          select: {
+            seller: {
+              select: {
+                email: true,
+              },
+            },
+          },
+        });
+
+        const usersConnectedArray = Object.values(connectedUsers);
+        const isConnected = (email) => {
+          usersConnectedArray.includes(email);
+        };
+
+        // create conference room
+
+        const conference = dial.conference(
+          {
+            startConferenceOnEnter: true,
+            endConferenceOnExit: true,
+            waitUrl: `https://j05rw7jb-3000.usw3.devtunnels.ms/api/waitConferenceUrl/${conferenceName}`,
+            waitMethod: 'POST',
+            statusCallback: `https://j05rw7jb-3001.usw3.devtunnels.ms/getCurrentConferenceStatus/${conferenceName}`,
+            statusCallbackEvent: ['start', 'announcement', 'end', 'leave', 'join'],
+            statusCallbackMethod: 'POST',
+          },
+          conferenceName,
+        );
+
+        if (
+          relateAssignedUserDevice &&
+          relateAssignedUserDevice.seller &&
+          relateAssignedUserDevice.seller.email &&
+          isConnected(relateAssignedUserDevice.seller.email)
+        ) {
+          io.to(sendTo(relateAssignedUserDevice.seller.email)).emit(
+            'update_data',
+            'joinConference',
+            {
+              conferenceName,
+            },
+          );
+        } else {
+          io.emit('update_data', 'joinConference', {
+            conferenceName,
+          });
+        }
+
+        res.type('text/xml');
+        res.send(twiml.toString());
+      }
+    } catch (error) {
+      console.log(error);
+
+      twiml.say('Thanks for using Flowsups. Good Bye!');
+
+      res.type('text/xml');
+      res.send(twiml.toString());
+    }
   });
 
   // get messages from customers
