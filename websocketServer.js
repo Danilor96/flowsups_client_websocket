@@ -356,7 +356,6 @@ io.on('connection', (socket) => {
     const callSid = req.body.CallSid;
     const parentCallSid = req.body.ParentCallSid;
     const callStatus = req.body.CallStatus;
-    const to = req.body.To;
     const callDuration = req.body.CallDuration ?? '0';
 
     console.log(`Call SID: ${callSid}, Status: ${callStatus}. Parent Call SID: ${parentCallSid}`);
@@ -374,7 +373,6 @@ io.on('connection', (socket) => {
       case 'in-progress':
         callStatusId = 6;
         socketEmit = 'callInProgress';
-        toClientAnswered = to.slice(7);
         break;
 
       case 'busy':
@@ -571,14 +569,17 @@ io.on('connection', (socket) => {
                 userEmail: firstUserEmail,
                 callSidArray: noFirtsUsersCallSid,
                 inProgressConferenceName: conferenceName,
+                conferenceSid: conferenceSid,
               });
             }
 
-            if (!regexCorreo.test(participantMobilePhone)) {
+            if (participantMobilePhone && !regexCorreo.test(participantMobilePhone)) {
               io.emit('update_data', 'lastParticipant', {
                 userEmail: '',
                 callSidArray: noFirtsUsersCallSid,
                 inProgressConferenceName: conferenceName,
+                conferenceSid: conferenceSid,
+                userMobilePhoneNumber: participantMobilePhone.slice(-10),
               });
             }
           }
