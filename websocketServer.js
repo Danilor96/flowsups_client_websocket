@@ -453,7 +453,9 @@ io.on('connection', (socket) => {
         .participants()
         .list();
 
+      // first conference action sequence
       if (sequence === '1') {
+        // save the conference attempt in the web data base
         const customerData = await prisma.clients.findUnique({
           where: {
             mobile_phone: from,
@@ -463,18 +465,56 @@ io.on('connection', (socket) => {
             seller: {
               select: {
                 id: true,
+                email: true,
               },
             },
           },
         });
 
         createCallStatusInDatabase(customerData?.id, customerData?.seller?.id, from, conferenceSid);
+
+        // advise the web users of the incoming call (conference)
+
+        const usersConnectedArray = Object.values(connectedUsers);
+
+        // function to check if the related web user is connected
+        const isConnected = (email) => {
+          usersConnectedArray.includes(email);
+        };
+
+        // check if the phone number of the incoming call is related to a registered customer
+
+        if (
+          customerData &&
+          customerData.seller &&
+          customerData.seller.email &&
+          isConnected(customerData.seller.email)
+        ) {
+          io.to(sendTo(relateAssignedUserDevice.seller.email)).emit(
+            'update_data',
+            'joinConference',
+            {
+              conferenceName,
+              conferenceSid,
+            },
+          );
+
+          // if there is no relation with the caller or if the
+          // related web user is no connected then transfer the call
+          // to all connected users
+        } else {
+          io.emit('update_data', 'joinConference', {
+            conferenceName,
+            conferenceSid,
+          });
+        }
       }
 
       console.log(`Conference SID: ${conferenceSid}, Status: ${conferenceStatus}.`);
 
       switch (conferenceStatus) {
         case 'conference-end':
+          // set the conference duration
           const startConfDate = await prisma.client_calls.findUnique({
             where: {
               call_sid: conferenceSid,
@@ -505,12 +545,24 @@ io.on('connection', (socket) => {
           break;
 
         case 'participant-join':
+          // check if the first two participants are just the caller customer and
+          // the first user that accept the call. Disconnect the rest of the web users from
+          // this call
+
+          const regexCorreo = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
           if (conferenceParticipansList.length > 1 && sequence >= 2 && sequence <= 3) {
             const firstUserEmail = (
               await client
                 .calls(conferenceParticipansList[conferenceParticipansList.length - 2].callSid)
                 .fetch()
             ).from.split(':')[1];
+
+            const participantMobilePhone = (
+              await client
+                .calls(conferenceParticipansList[conferenceParticipansList.length - 2].callSid)
+                .fetch()
+            ).to;
 
             const noFirtsUsersCallSid = conferenceParticipansList.map((el) => el.callSid);
 
@@ -521,12 +573,22 @@ io.on('connection', (socket) => {
                 inProgressConferenceName: conferenceName,
               });
             }
+
+            if (!regexCorreo.test(participantMobilePhone)) {
+              io.emit('update_data', 'lastParticipant', {
+                userEmail: '',
+                callSidArray: noFirtsUsersCallSid,
+                inProgressConferenceName: conferenceName,
+              });
+            }
           }
 
-          if (conferenceParticipansList.length > 1 && sequence > 3) {
-            const participants = [];
+          // check if there are a web user that accidentally has joined the conference and
+          // then disconnect it/them
 
-            const regexCorreo = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+          if (conferenceParticipansList.length > 2 && sequence > 3) {
+            const webParticipants = [];
+            let firstParticipantEmail = '';
 
             conferenceParticipansList.forEach(async (participantInfo) => {
               if (
@@ -536,14 +598,36 @@ io.on('connection', (socket) => {
                 const participantFetched = await client.calls(participantInfo.callSid).fetch();
 
                 if (regexCorreo.test(participantFetched.from)) {
-                  participants.push(participantFetched.from);
+                  webParticipants.push(participantFetched.from);
                 }
+              } else {
+                firstParticipantEmail = (await client.calls(participantInfo.callSid).fetch()).from;
               }
             });
 
-            if (participants.length > 0) {
+            // if participants are from web disconnect them
+
+            if (webParticipants.length > 0) {
               io.emit('update_data', 'lastParticipant', {
-                callSidArray: participants,
+                userEmail: firstParticipantEmail,
+                callSidArray: webParticipants,
+                inProgressConferenceName: conferenceName,
+              });
+            }
+
+            // if participants are from a mobile phone then disconnect the first joined web participant from current call
+            // (that means that there is a transfer in progress)
+
+            const thirdConferenceParticipant = await client
+              .calls(conferenceParticipansList[conferenceParticipansList.length - 3].callSid)
+              .fetch();
+
+            if (thirdConferenceParticipant && thirdConferenceParticipant.to) {
+              io.emit('update_data', 'lastParticipant', {
+                userEmail: '',
+                callSidArray: [
+                  conferenceParticipansList[conferenceParticipansList.length - 2].callSid,
+                ],
                 inProgressConferenceName: conferenceName,
               });
             }
@@ -564,6 +648,20 @@ io.on('connection', (socket) => {
       }
     } catch (error) {
       console.log(error);
+    }
+
+    res.status(204).send();
+  });
+
+  app.post('/getCurrentConferenceCallStatus/:conferenceName', async (req, res) => {
+    const callStatus = req.body.CallStatus;
+    const callSid = req.body.CallSid;
+    const conferenceName = req.params.conferenceName;
+
+    console.log(`Call: ${callSid}. Status: ${callStatus}`);
+
+    if (callStatus == 'ringing') {
+      io.emit('update_data', 'transferCompleted', { conferenceName });
     }
 
     res.status(204).send();
@@ -597,26 +695,6 @@ io.on('connection', (socket) => {
       const conferenceName = `${from.slice(-10)}_conference`;
 
       if (from && to && typeof from === 'string' && typeof to === 'string') {
-        // check if the phone number of the incoming call is related to a registered customer
-
-        const relateAssignedUserDevice = await prisma.clients.findFirst({
-          where: {
-            mobile_phone: from.slice(-10),
-          },
-          select: {
-            seller: {
-              select: {
-                email: true,
-              },
-            },
-          },
-        });
-
-        const usersConnectedArray = Object.values(connectedUsers);
-        const isConnected = (email) => {
-          usersConnectedArray.includes(email);
-        };
-
         // create conference room
 
         const conference = dial.conference(
@@ -631,25 +709,6 @@ io.on('connection', (socket) => {
           },
           conferenceName,
         );
-
-        if (
-          relateAssignedUserDevice &&
-          relateAssignedUserDevice.seller &&
-          relateAssignedUserDevice.seller.email &&
-          isConnected(relateAssignedUserDevice.seller.email)
-        ) {
-          io.to(sendTo(relateAssignedUserDevice.seller.email)).emit(
-            'update_data',
-            'joinConference',
-            {
-              conferenceName,
-            },
-          );
-        } else {
-          io.emit('update_data', 'joinConference', {
-            conferenceName,
-          });
-        }
 
         res.type('text/xml');
         res.send(twiml.toString());
