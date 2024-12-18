@@ -702,7 +702,7 @@ io.on('connection', (socket) => {
           {
             startConferenceOnEnter: true,
             endConferenceOnExit: true,
-            waitUrl: `https://flowsupsclient.vercel.app/api/waitConferenceUrl/${conferenceName}`,
+            waitUrl: `https://flowsups.vercel.app/api/waitConferenceUrl/${conferenceName}`,
             waitMethod: 'POST',
             statusCallback: `https://flowsups-client-websocket.onrender.com/getCurrentConferenceStatus/${conferenceName}`,
             statusCallbackEvent: ['start', 'announcement', 'end', 'leave', 'join'],
