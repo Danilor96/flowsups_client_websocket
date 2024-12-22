@@ -8,9 +8,13 @@ import bodyParserXml from 'body-parser-xml';
 import cors from 'cors';
 import cron from 'node-cron';
 import twilio from 'twilio';
+import { subMinutes, addMinutes, endOfToday } from 'date-fns';
 
 const accountSid = process.env.TWILIO_ACCOUNT_SID;
 const authToken = process.env.TWILIO_AUTH_TOKEN;
+
+const websocketPublicUrl = process.env.TWILIO_WEBSOCKET_URL;
+const nextPublicUrl = process.env.NEXT_API_URL;
 
 const VoiceResponse = twilio.twiml.VoiceResponse;
 const twiml = new VoiceResponse();
@@ -245,28 +249,38 @@ io.on('connection', (socket) => {
   });
 
   // checking all pending tasks, appointments and statuses
-  cron.schedule('0 0 * * 1-5', async () => {
-    const todayDate = new Date();
+  cron.schedule('* * * * 1-6', async () => {
+    const lateTasks = await prisma.tasks.findMany({
+      where: {
+        deadline: {
+          lt: new Date(),
+        },
+        status: 1,
+      },
+    });
+
+    if (lateTasks && lateTasks.length > 0) {
+      lateTasks.forEach(async (task) => {
+        const notificationTask = await prisma.notifications.create({
+          data: {
+            message: `Task '${task.description}' has expired`,
+            created_at: new Date(),
+            user_id: task.assigned_to,
+            type_id: 1,
+          },
+        });
+      });
+    }
 
     const tasks = await prisma.tasks.updateMany({
       where: {
         deadline: {
-          lt: todayDate,
+          lt: new Date(),
         },
-        AND: {
-          task_status: {
-            id: 1,
-          },
-        },
+        status: 1,
       },
       data: {
         status: 4,
-      },
-    });
-
-    const notificationTask = await prisma.notifications.create({
-      data: {
-        message: '',
       },
     });
 
@@ -289,6 +303,8 @@ io.on('connection', (socket) => {
     });
 
     await prisma.$disconnect();
+
+    io.emit('update_data', 'notifications');
   });
 
   // checking all customers last contacted day
@@ -687,6 +703,53 @@ io.on('connection', (socket) => {
     }
   };
 
+  // check how many times a customer made a call
+
+  const checkCustomerMadeCalls = async (phoneNumber) => {
+    // check if the customer has an active suspension
+
+    const activeSuspension = await prisma.suspension.findFirst({
+      where: {
+        mobile_phone: phoneNumber,
+        end_suspension_dat: {
+          gt: new Date(),
+        },
+      },
+    });
+
+    if (activeSuspension) {
+      return false;
+    }
+
+    // Check if the customer has any calls in the last 10 minutes
+
+    const tenMinutesAgo = subMinutes(new Date(), 10);
+
+    const incomingCalls = await prisma.client_calls.count({
+      where: {
+        call_direction_id: 1,
+        call_date: {
+          gte: tenMinutesAgo,
+        },
+        phone_number: phoneNumber,
+      },
+    });
+
+    if (incomingCalls >= 5) {
+      await prisma.suspension.create({
+        data: {
+          mobile_phone: phoneNumber,
+          start_suspension_date: new Date(),
+          end_suspension_dat: addMinutes(new Date(), 10),
+        },
+      });
+
+      return false;
+    }
+
+    return true;
+  };
+
   // get incoming call from customers
 
   app.post('/incomingCall', async (req, res) => {
@@ -695,21 +758,42 @@ io.on('connection', (socket) => {
       const to = req.body.To;
       const conferenceName = `${from.slice(-10)}_conference`;
 
-      if (from && to && typeof from === 'string' && typeof to === 'string') {
-        // create conference room
+      const callPermission = await checkCustomerMadeCalls(from.slice(-10));
 
-        const conference = dial.conference(
-          {
-            startConferenceOnEnter: true,
-            endConferenceOnExit: true,
-            waitUrl: `https://flowsups.vercel.app/api/waitConferenceUrl/${conferenceName}`,
-            waitMethod: 'POST',
-            statusCallback: `https://flowsups-client-websocket.onrender.com/getCurrentConferenceStatus/${conferenceName}`,
-            statusCallbackEvent: ['start', 'announcement', 'end', 'leave', 'join'],
-            statusCallbackMethod: 'POST',
-          },
-          conferenceName,
+      console.log(callPermission);
+
+      if (callPermission) {
+        if (from && to && typeof from === 'string' && typeof to === 'string') {
+          // create conference room
+
+          const conference = dial.conference(
+            {
+              startConferenceOnEnter: true,
+              endConferenceOnExit: true,
+              waitUrl: `${nextPublicUrl}/api/waitConferenceUrl/${conferenceName}`,
+              waitMethod: 'POST',
+              statusCallback: `${websocketPublicUrl}/getCurrentConferenceStatus/${conferenceName}`,
+              statusCallbackEvent: ['start', 'announcement', 'end', 'leave', 'join'],
+              statusCallbackMethod: 'POST',
+            },
+            conferenceName,
+          );
+
+          res.type('text/xml');
+          res.send(twiml.toString());
+        }
+      } else if (
+        !callPermission &&
+        from &&
+        to &&
+        typeof from === 'string' &&
+        typeof to === 'string'
+      ) {
+        twiml.say(
+          'You have an active suspension due to several call attempts. Please wait ten minutes to try again',
         );
+
+        twiml.hangup();
 
         res.type('text/xml');
         res.send(twiml.toString());
@@ -735,6 +819,8 @@ io.on('connection', (socket) => {
 
     const message = req.body.Body;
 
+    console.log(message);
+
     try {
       const clientIdStatusAppointments = await prisma.clients.findFirst({
         where: {
@@ -750,7 +836,10 @@ io.on('connection', (socket) => {
           },
           appointment: {
             where: {
-              waiting_aprove: false,
+              status_id: 1,
+              start_date: {
+                gt: new Date(),
+              },
             },
             select: {
               id: true,
@@ -810,15 +899,24 @@ io.on('connection', (socket) => {
       if (messageSplitted.every((word) => specialCharacters.includes(word))) {
         // check if the customer has a pending for confirmation appointment
 
+        console.log('Yes!');
+
         if (clientIdStatusAppointments.appointment) {
+          console.log({ Cita: clientIdStatusAppointments });
+
           clientIdStatusAppointments.appointment.forEach(async (el) => {
+            console.log(el);
+
             if (el.status_id === 1 && new Date(el.start_date) > new Date()) {
+              console.log('cumplió');
+
               await prisma.appointments.update({
                 where: {
                   id: el.id,
                 },
                 data: {
-                  appointments_status: 6,
+                  status_id: 6,
+                  client_accept_appointment: true,
                 },
               });
             }
