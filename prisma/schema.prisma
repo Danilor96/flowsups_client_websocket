@@ -18,9 +18,10 @@ model Users {
   sessions_expires                                                   DateTime?
   last_name                                                          String?
   img                                                                String?
-  mobile_phone                                                       String?
+  mobile_phone                                                       String?                         @unique
   status_id                                                          Int?
   username                                                           String?                         @unique
+  Appointments_Appointments_created_byToUsers                        Appointments[]                  @relation("Appointments_created_byToUsers")
   appointments                                                       Appointments[]                  @relation("user")
   recipient_messages                                                 Chat_messages[]                 @relation("recipient")
   sender_messages                                                    Chat_messages[]                 @relation("sender")
@@ -159,24 +160,26 @@ model Appointments_status {
 }
 
 model Appointments {
-  id                        Int                 @id @default(autoincrement())
-  status_id                 Int
-  customer_id               Int
-  user_id                   Int
-  end_date                  DateTime
-  start_date                DateTime
-  waiting_aprove            Boolean?
-  change_reason             String?
-  prevented_end_date        DateTime?
-  prevented_start_date      DateTime?
-  client_accept_appointment Boolean             @default(false)
-  created_at                DateTime            @default(now())
-  customers                 Clients             @relation("customer", fields: [customer_id], references: [id], onDelete: Cascade)
-  appointments_status       Appointments_status @relation("appointment_status", fields: [status_id], references: [id])
-  users                     Users               @relation("user", fields: [user_id], references: [id])
-  Client_has_lead           Client_has_lead[]
-  Notifications             Notifications?
-  Tasks                     Tasks?
+  id                                   Int                 @id @default(autoincrement())
+  status_id                            Int
+  customer_id                          Int
+  user_id                              Int
+  end_date                             DateTime
+  start_date                           DateTime
+  waiting_aprove                       Boolean?
+  change_reason                        String?
+  prevented_end_date                   DateTime?
+  prevented_start_date                 DateTime?
+  client_accept_appointment            Boolean             @default(false)
+  created_at                           DateTime            @default(now())
+  created_by                           Int
+  Users_Appointments_created_byToUsers Users               @relation("Appointments_created_byToUsers", fields: [created_by], references: [id])
+  customers                            Clients             @relation("customer", fields: [customer_id], references: [id], onDelete: Cascade)
+  appointments_status                  Appointments_status @relation("appointment_status", fields: [status_id], references: [id])
+  users                                Users               @relation("user", fields: [user_id], references: [id])
+  Client_has_lead                      Client_has_lead[]
+  Notifications                        Notifications?
+  Tasks                                Tasks?
 }
 
 model Vehicle_colors {
@@ -1559,4 +1562,11 @@ model Task_Notes {
   task_id       Int
   Users         Users    @relation(fields: [created_by_id], references: [id], onDelete: Cascade)
   Tasks         Tasks    @relation(fields: [task_id], references: [id], onDelete: Cascade)
+}
+
+model Suspension {
+  id                    Int      @id @default(autoincrement())
+  mobile_phone          String
+  start_suspension_date DateTime
+  end_suspension_dat    DateTime
 }
