@@ -819,8 +819,6 @@ io.on('connection', (socket) => {
 
     const message = req.body.Body;
 
-    console.log(message);
-
     try {
       const clientIdStatusAppointments = await prisma.clients.findFirst({
         where: {
@@ -892,24 +890,18 @@ io.on('connection', (socket) => {
 
       // check if the message contain 'Y' , 'N' or 'S'
 
-      const specialCharacters = ['Y', 'N', 'S'];
+      const specialCharactersToAccept = ['Y', 'S'];
+      const specialCharactersToCancel = ['N'];
 
       const messageSplitted = message.split(' ');
 
-      if (messageSplitted.every((word) => specialCharacters.includes(word))) {
+      // accept appointment
+      if (messageSplitted.every((word) => specialCharactersToAccept.includes(word))) {
         // check if the customer has a pending for confirmation appointment
 
-        console.log('Yes!');
-
         if (clientIdStatusAppointments.appointment) {
-          console.log({ Cita: clientIdStatusAppointments });
-
           clientIdStatusAppointments.appointment.forEach(async (el) => {
-            console.log(el);
-
             if (el.status_id === 1 && new Date(el.start_date) > new Date()) {
-              console.log('cumplió');
-
               await prisma.appointments.update({
                 where: {
                   id: el.id,
@@ -929,6 +921,27 @@ io.on('connection', (socket) => {
             data: {
               client_status_id: 6,
             },
+          });
+        }
+      }
+
+      // cancel appointment
+      if (messageSplitted.every((word) => specialCharactersToCancel.includes(word))) {
+        // check if the customer has a pending for confirmation appointment
+
+        if (clientIdStatusAppointments.appointment) {
+          clientIdStatusAppointments.appointment.forEach(async (el) => {
+            if (el.status_id === 1 && new Date(el.start_date) > new Date()) {
+              await prisma.appointments.update({
+                where: {
+                  id: el.id,
+                },
+                data: {
+                  status_id: 3,
+                  client_accept_appointment: true,
+                },
+              });
+            }
           });
         }
       }
