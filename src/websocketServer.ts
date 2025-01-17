@@ -1,6 +1,6 @@
 import express from 'express';
 import { createServer } from 'http';
-import { Server } from 'socket.io';
+import { Server, Socket } from 'socket.io';
 import { PrismaClient } from '@prisma/client';
 import { env } from 'process';
 import bodyParser from 'body-parser';
@@ -9,6 +9,8 @@ import cors from 'cors';
 import cron from 'node-cron';
 import twilio from 'twilio';
 import { subMinutes, addMinutes, endOfToday } from 'date-fns';
+import { saveAndAssignUnregisteredCustomersToRoundRobinUsers } from './libs/handleRoundRobin';
+import { Tasks } from './libs/definitions';
 
 const accountSid = process.env.TWILIO_ACCOUNT_SID;
 const authToken = process.env.TWILIO_AUTH_TOKEN;
@@ -26,7 +28,7 @@ const server = createServer(app);
 const prisma = new PrismaClient();
 const io = new Server(server, {
   cors: {
-    origin: [process.env.CORS_ORIGIN1, process.env.CORS_ORIGIN2],
+    origin: [process.env.CORS_ORIGIN1 || '', process.env.CORS_ORIGIN2 || ''],
     optionsSuccessStatus: 200,
   },
 });
@@ -71,17 +73,17 @@ app.post('/getZapier', (req, res) => {
   res.send('Llegó');
 });
 
-const connectedUsers = {};
+const connectedUsers: { [id: string]: string } = {};
 
-io.on('connection', (socket) => {
+io.on('connection', (socket: Socket) => {
   //function for specify a user in the websocket with email
-  const sendTo = (email) => {
+  const sendTo = (email: string) => {
     const userAsking = Object.keys(connectedUsers).find((id) => connectedUsers[id] == email);
-    return userAsking;
+    return userAsking ?? '';
   };
 
   //function to retrieve tasks of an user with their email
-  const sendTasks = async (assignedUserEmail) => {
+  const sendTasks = async (assignedUserEmail: string) => {
     const userTasks = await prisma.tasks.findMany({
       where: {
         assigned: {
@@ -106,13 +108,15 @@ io.on('connection', (socket) => {
 
     await prisma.$disconnect();
 
-    if (sendTo(assignedUserEmail) && userTasks) {
-      io.to(sendTo(assignedUserEmail)).emit('received_tasks', userTasks);
+    const sendTasksTo = sendTo(assignedUserEmail);
+
+    if (sendTasksTo && userTasks) {
+      io.to(sendTasksTo).emit('received_tasks', userTasks);
     }
   };
 
   //save logged users
-  socket.on('login', (user) => {
+  socket.on('login', (user: string) => {
     connectedUsers[socket.id] = user;
 
     //retrieve tasks to logged users
@@ -122,36 +126,40 @@ io.on('connection', (socket) => {
   });
 
   // retrieve user notifications
-  socket.on('ask_for_notifications', (user) => {
+  socket.on('ask_for_notifications', (user: string) => {
     io.to(sendTo(user)).emit('get_user_notifications', true);
   });
 
   //save new task and send task to assigned user
-  socket.on('save_task', async (data) => {
-    /* 1) */ const task = await prisma.tasks.create({
-      data: {
-        description: data.description,
-        title: data.title,
-        creator: {
-          connect: {
-            id: data.creator,
+  socket.on('save_task', async (data: Tasks) => {
+    /* 1) */ if (data.assigned_to) {
+      const task = await prisma.tasks.create({
+        data: {
+          description: data.description,
+          title: data.title,
+          deadline: data.deadline,
+          creator: {
+            connect: {
+              id: data.created_by,
+            },
+          },
+          assigned: {
+            connect: {
+              id: data.assigned_to,
+            },
+          },
+          task_status: {
+            connect: {
+              id: data.status,
+            },
           },
         },
-        assigned: {
-          connect: {
-            id: data.assigned,
-          },
-        },
-        task_status: {
-          connect: {
-            id: data.task_status,
-          },
-        },
-      },
-    });
-    await prisma.$disconnect();
+      });
 
-    /* 2) */ sendTasks(data.assignedEmail);
+      await prisma.$disconnect();
+
+      /* 2) */ sendTasks(data.assigned?.name || '');
+    }
   });
 
   //set a new task status, from the assigned user
@@ -209,47 +217,12 @@ io.on('connection', (socket) => {
     await prisma.$disconnect();
 
     sendTasks(data.activeUser);
-    io.emit('ask_for_all_tasks_of_an_user', {
-      selectedUser: creatorEmail.assigned.email,
-      activeUser: creatorEmail.creator.email,
-    });
-  });
-
-  //get all tasks of a specific user
-  socket.on('ask_for_all_tasks_of_an_user', async (data) => {
-    const specificTasks = await prisma.tasks.findMany({
-      where: {
-        assigned: {
-          email: data.selectedUser,
-        },
-        AND: {
-          creator: {
-            email: data.activeUser,
-          },
-        },
-      },
-      include: {
-        task_status: {
-          select: {
-            status: true,
-          },
-        },
-      },
-      orderBy: {
-        created_at: 'asc',
-      },
-    });
-
-    await prisma.$disconnect();
-
-    //retrieve all tasks of the specific user
-    if (specificTasks && sendTo(data.activeUser)) {
-      io.to(sendTo(data.activeUser)).emit('get_all_tasks_of_an_user', specificTasks);
-    }
   });
 
   // checking all pending tasks, appointments and statuses
   cron.schedule('* * * * 1-6', async () => {
+    const todayDate = new Date();
+
     const lateTasks = await prisma.tasks.findMany({
       where: {
         deadline: {
@@ -316,25 +289,27 @@ io.on('connection', (socket) => {
 
     const customerSettings = await prisma.customer_settings.findFirst();
 
-    const daysUntilLost = customerSettings.lead_lost_after;
+    const daysUntilLost = customerSettings?.lead_lost_after;
 
     for (let i = 0; i < customers.length; i++) {
       const element = customers[i];
 
-      const timeSinceLastActivity = element.last_activity.getTime() - todayDate.getTime();
+      if (element.last_activity && daysUntilLost) {
+        const timeSinceLastActivity = element.last_activity.getTime() - todayDate.getTime();
 
-      const daysSinceLastActivity = Math.ceil(timeSinceLastActivity / (1000 * 3600 * 24));
+        const daysSinceLastActivity = Math.ceil(timeSinceLastActivity / (1000 * 3600 * 24));
 
-      if (daysSinceLastActivity >= daysUntilLost) {
-        await prisma.clients.update({
-          where: {
-            id: element.id,
-          },
-          data: {
-            client_status_id: 12,
-            lost_date: new Date(),
-          },
-        });
+        if (daysSinceLastActivity >= daysUntilLost) {
+          await prisma.clients.update({
+            where: {
+              id: element.id,
+            },
+            data: {
+              client_status_id: 12,
+              lost_date: new Date(),
+            },
+          });
+        }
       }
     }
 
@@ -408,7 +383,9 @@ io.on('connection', (socket) => {
         break;
     }
 
-    let callExists = null;
+    let callExists: {
+      id: number;
+    } | null = null;
 
     callExists = await prisma.client_calls.findUnique({
       where: {
@@ -492,8 +469,8 @@ io.on('connection', (socket) => {
         const usersConnectedArray = Object.values(connectedUsers);
 
         // function to check if the related web user is connected
-        const isConnected = (email) => {
-          usersConnectedArray.includes(email);
+        const isConnected = (email: string) => {
+          return usersConnectedArray.includes(email);
         };
 
         // check if the phone number of the incoming call is related to a registered customer
@@ -504,19 +481,17 @@ io.on('connection', (socket) => {
           customerData.seller.email &&
           isConnected(customerData.seller.email)
         ) {
-          io.to(sendTo(relateAssignedUserDevice.seller.email)).emit(
-            'update_data',
-            'joinConference',
-            {
-              conferenceName,
-              conferenceSid,
-            },
-          );
+          io.to(sendTo(customerData.seller.email)).emit('update_data', 'joinConference', {
+            conferenceName,
+            conferenceSid,
+          });
 
           // if there is no relation with the caller or if the
           // related web user is no connected then transfer the call
-          // to all connected users
+          // to a round robin user
         } else {
+          await saveAndAssignUnregisteredCustomersToRoundRobinUsers(from);
+
           io.emit('update_data', 'joinConference', {
             conferenceName,
             conferenceSid,
@@ -538,24 +513,29 @@ io.on('connection', (socket) => {
             },
           });
 
-          const endConfTime = new Date(eventTimestamp).getTime();
-          const startConfTime = new Date(startConfDate.call_date).getTime();
+          if (startConfDate) {
+            const endConfTime = new Date(eventTimestamp).getTime();
 
-          const callDuration = (endConfTime - startConfTime) / 1000;
+            const startConfTime = new Date(startConfDate.call_date).getTime();
 
-          await prisma.client_calls.update({
-            where: {
-              call_sid: conferenceSid,
-            },
-            data: {
-              call_duration: callDuration.toString(),
-              call_status_id: 1,
-            },
-          });
+            const callDuration = (endConfTime - startConfTime) / 1000;
+
+            await prisma.client_calls.update({
+              where: {
+                call_sid: conferenceSid,
+              },
+              data: {
+                call_duration: callDuration.toString(),
+                call_status_id: 1,
+              },
+            });
+          }
 
           io.emit('update_data', 'callDisconnect', {
             endedConferenceName: conferenceName,
+            endedConferenceSid: conferenceSid,
           });
+
           break;
 
         case 'participant-join':
@@ -604,7 +584,7 @@ io.on('connection', (socket) => {
           // then disconnect it/them
 
           if (conferenceParticipansList.length > 2 && sequence > 3) {
-            const webParticipants = [];
+            const webParticipants: string[] = [];
             let firstParticipantEmail = '';
 
             conferenceParticipansList.forEach(async (participantInfo) => {
@@ -686,7 +666,12 @@ io.on('connection', (socket) => {
 
   // create call status function
 
-  const createCallStatusInDatabase = async (customerId, userId, phoneNumber, callSid) => {
+  const createCallStatusInDatabase = async (
+    customerId?: number,
+    userId?: number,
+    phoneNumber?: string,
+    callSid?: string,
+  ) => {
     if (callSid) {
       await prisma.client_calls.create({
         data: {
@@ -705,13 +690,13 @@ io.on('connection', (socket) => {
 
   // check how many times a customer made a call
 
-  const checkCustomerMadeCalls = async (phoneNumber) => {
+  const checkCustomerMadeCalls = async (phoneNumber: string) => {
     // check if the customer has an active suspension
 
     const activeSuspension = await prisma.suspension.findFirst({
       where: {
         mobile_phone: phoneNumber,
-        end_suspension_dat: {
+        end_suspension_date: {
           gt: new Date(),
         },
       },
@@ -740,7 +725,7 @@ io.on('connection', (socket) => {
         data: {
           mobile_phone: phoneNumber,
           start_suspension_date: new Date(),
-          end_suspension_dat: addMinutes(new Date(), 10),
+          end_suspension_date: addMinutes(new Date(), 10),
         },
       });
 
@@ -758,6 +743,7 @@ io.on('connection', (socket) => {
       const to = req.body.To;
       const conferenceName = `${from.slice(-10)}_conference`;
 
+      // check if the current caller has an active ban
       const callPermission = await checkCustomerMadeCalls(from.slice(-10));
 
       console.log(callPermission);
@@ -877,16 +863,18 @@ io.on('connection', (socket) => {
 
       // create a new lead register
 
-      const lead = await prisma.client_has_lead.create({
-        data: {
-          created_at: new Date(),
-          assigned_to_id: clientIdStatusAppointments.seller.id || 1,
-          client_id: clientIdStatusAppointments.id,
-          status_id: 2,
-          created_by_id: clientIdStatusAppointments.seller.id || 1,
-          lead_id: 7,
-        },
-      });
+      if (clientIdStatusAppointments?.id) {
+        const lead = await prisma.client_has_lead.create({
+          data: {
+            created_at: new Date(),
+            assigned_to_id: clientIdStatusAppointments?.seller?.id || 1,
+            client_id: clientIdStatusAppointments.id,
+            status_id: 2,
+            created_by_id: clientIdStatusAppointments?.seller?.id || 1,
+            lead_id: 7,
+          },
+        });
+      }
 
       // check if the message contain 'Y' , 'N' or 'S'
 
@@ -896,10 +884,10 @@ io.on('connection', (socket) => {
       const messageSplitted = message.split(' ');
 
       // accept appointment
-      if (messageSplitted.every((word) => specialCharactersToAccept.includes(word))) {
+      if (messageSplitted.every((word: string) => specialCharactersToAccept.includes(word))) {
         // check if the customer has a pending for confirmation appointment
 
-        if (clientIdStatusAppointments.appointment) {
+        if (clientIdStatusAppointments?.appointment) {
           clientIdStatusAppointments.appointment.forEach(async (el) => {
             if (el.status_id === 1 && new Date(el.start_date) > new Date()) {
               await prisma.appointments.update({
@@ -926,10 +914,10 @@ io.on('connection', (socket) => {
       }
 
       // cancel appointment
-      if (messageSplitted.every((word) => specialCharactersToCancel.includes(word))) {
+      if (messageSplitted.every((word: string) => specialCharactersToCancel.includes(word))) {
         // check if the customer has a pending for confirmation appointment
 
-        if (clientIdStatusAppointments.appointment) {
+        if (clientIdStatusAppointments?.appointment) {
           clientIdStatusAppointments.appointment.forEach(async (el) => {
             if (el.status_id === 1 && new Date(el.start_date) > new Date()) {
               await prisma.appointments.update({
