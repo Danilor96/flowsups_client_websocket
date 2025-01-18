@@ -1,32 +1,29 @@
 import express from 'express';
 import { createServer } from 'http';
 import { Server, Socket } from 'socket.io';
-import { PrismaClient } from '@prisma/client';
 import { env } from 'process';
 import bodyParser from 'body-parser';
 import bodyParserXml from 'body-parser-xml';
 import cors from 'cors';
 import cron from 'node-cron';
 import twilio from 'twilio';
-import { subMinutes, addMinutes, endOfToday } from 'date-fns';
-import { saveAndAssignUnregisteredCustomersToRoundRobinUsers } from './libs/handleRoundRobin';
-import { Tasks } from './libs/definitions';
+import { prisma } from './libs/prisma/prisma';
+import { handlingConferenceStatus } from './libs/conferenceStatus/conferenceStatus';
+import { handlingIncomingCall } from './libs/incomingCall/incomingCall';
+import { handlingIncomingSms } from './libs/incomingSms/incomingSms';
+import { handlingOutgoingCallStatus } from './libs/outgoingCallStatus/outgoinCallStatus';
 
 const accountSid = process.env.TWILIO_ACCOUNT_SID;
 const authToken = process.env.TWILIO_AUTH_TOKEN;
 
-const websocketPublicUrl = process.env.TWILIO_WEBSOCKET_URL;
-const nextPublicUrl = process.env.NEXT_API_URL;
-
 const VoiceResponse = twilio.twiml.VoiceResponse;
-const twiml = new VoiceResponse();
-const dial = twiml.dial();
-const client = twilio(accountSid, authToken);
+export const twiml = new VoiceResponse();
+export const dial = twiml.dial();
+export const client = twilio(accountSid, authToken);
 
 const app = express();
 const server = createServer(app);
-const prisma = new PrismaClient();
-const io = new Server(server, {
+export const io = new Server(server, {
   cors: {
     origin: [process.env.CORS_ORIGIN1 || '', process.env.CORS_ORIGIN2 || ''],
     optionsSuccessStatus: 200,
@@ -73,150 +70,21 @@ app.post('/getZapier', (req, res) => {
   res.send('Llegó');
 });
 
-const connectedUsers: { [id: string]: string } = {};
+// object to save current flowsups connected users
+
+export const connectedUsers: { [id: string]: string } = {};
+
+//function for specify a user in the websocket with email
+
+export const sendTo = (email: string) => {
+  const userAsking = Object.keys(connectedUsers).find((id) => connectedUsers[id] === email);
+  return userAsking ?? '';
+};
 
 io.on('connection', (socket: Socket) => {
-  //function for specify a user in the websocket with email
-  const sendTo = (email: string) => {
-    const userAsking = Object.keys(connectedUsers).find((id) => connectedUsers[id] == email);
-    return userAsking ?? '';
-  };
-
-  //function to retrieve tasks of an user with their email
-  const sendTasks = async (assignedUserEmail: string) => {
-    const userTasks = await prisma.tasks.findMany({
-      where: {
-        assigned: {
-          email: assignedUserEmail,
-        },
-        AND: {
-          status: {
-            not: 3,
-          },
-        },
-      },
-      select: {
-        id: true,
-        description: true,
-        title: true,
-        status: true,
-      },
-      orderBy: {
-        created_at: 'asc',
-      },
-    });
-
-    await prisma.$disconnect();
-
-    const sendTasksTo = sendTo(assignedUserEmail);
-
-    if (sendTasksTo && userTasks) {
-      io.to(sendTasksTo).emit('received_tasks', userTasks);
-    }
-  };
-
-  //save logged users
+  //save logged active users
   socket.on('login', (user: string) => {
     connectedUsers[socket.id] = user;
-
-    //retrieve tasks to logged users
-    socket.on('ask_for_tasks', async (askedUser) => {
-      sendTasks(askedUser);
-    });
-  });
-
-  // retrieve user notifications
-  socket.on('ask_for_notifications', (user: string) => {
-    io.to(sendTo(user)).emit('get_user_notifications', true);
-  });
-
-  //save new task and send task to assigned user
-  socket.on('save_task', async (data: Tasks) => {
-    /* 1) */ if (data.assigned_to) {
-      const task = await prisma.tasks.create({
-        data: {
-          description: data.description,
-          title: data.title,
-          deadline: data.deadline,
-          creator: {
-            connect: {
-              id: data.created_by,
-            },
-          },
-          assigned: {
-            connect: {
-              id: data.assigned_to,
-            },
-          },
-          task_status: {
-            connect: {
-              id: data.status,
-            },
-          },
-        },
-      });
-
-      await prisma.$disconnect();
-
-      /* 2) */ sendTasks(data.assigned?.name || '');
-    }
-  });
-
-  //set a new task status, from the assigned user
-  socket.on('set_task_status', async (data) => {
-    const taskStatusId = parseInt(data.status);
-
-    // "finished" task status
-    if (taskStatusId === 3) {
-      const taskStatusChanged = await prisma.tasks.update({
-        where: {
-          id: data.taskId,
-        },
-        data: {
-          status: {
-            set: taskStatusId,
-          },
-          finished_at: new Date(),
-        },
-      });
-
-      await prisma.$disconnect();
-    }
-
-    //"in progress" or "to do" task status
-    const taskStatusChanged = await prisma.tasks.update({
-      where: {
-        id: data.taskId,
-      },
-      data: {
-        status: {
-          set: taskStatusId,
-        },
-        updated_at: new Date(),
-      },
-    });
-
-    const creatorEmail = await prisma.tasks.findUnique({
-      where: {
-        id: data.taskId,
-      },
-      select: {
-        creator: {
-          select: {
-            email: true,
-          },
-        },
-        assigned: {
-          select: {
-            email: true,
-          },
-        },
-      },
-    });
-
-    await prisma.$disconnect();
-
-    sendTasks(data.activeUser);
   });
 
   // checking all pending tasks, appointments and statuses
@@ -351,80 +219,12 @@ io.on('connection', (socket: Socket) => {
 
     console.log(`Call SID: ${callSid}, Status: ${callStatus}. Parent Call SID: ${parentCallSid}`);
 
-    let callStatusId, socketEmit, toClientAnswered;
-
-    switch (callStatus) {
-      case 'initiated':
-        callStatusId = 1;
-        break;
-
-      case 'ringing':
-        break;
-
-      case 'in-progress':
-        callStatusId = 6;
-        socketEmit = 'callInProgress';
-        break;
-
-      case 'busy':
-        callStatusId = 2;
-        break;
-
-      case 'failed':
-        callStatusId = 4;
-        break;
-
-      case 'no-answer':
-        callStatusId = 3;
-        break;
-
-      case 'completed':
-        callStatusId = 1;
-        break;
-    }
-
-    let callExists: {
-      id: number;
-    } | null = null;
-
-    callExists = await prisma.client_calls.findUnique({
-      where: {
-        call_sid: parentCallSid,
-      },
-      select: {
-        id: true,
-      },
+    await handlingOutgoingCallStatus({
+      callSid,
+      parentCallSid,
+      callStatus,
+      callDuration,
     });
-
-    if (!callExists) {
-      callExists = await prisma.client_calls.findUnique({
-        where: {
-          call_sid: callSid,
-        },
-        select: {
-          id: true,
-        },
-      });
-    }
-
-    if (callExists && callStatusId) {
-      const callData = await prisma.client_calls.update({
-        where: {
-          id: callExists.id,
-        },
-        data: {
-          call_status_id: callStatusId,
-          call_duration: callDuration,
-        },
-      });
-    }
-
-    socketEmit &&
-      io.emit('update_data', socketEmit, {
-        callSid,
-        parentCallSid,
-        toClientAnswered,
-      });
 
     res.status(204).send();
   });
@@ -444,205 +244,19 @@ io.on('connection', (socket: Socket) => {
         .participants()
         .list();
 
-      // first conference action sequence
-      if (sequence === '1') {
-        // save the conference attempt in the web data base
-        const customerData = await prisma.clients.findUnique({
-          where: {
-            mobile_phone: from,
-          },
-          select: {
-            id: true,
-            seller: {
-              select: {
-                id: true,
-                email: true,
-              },
-            },
-          },
-        });
+      // function that handle all active conference statuses
 
-        createCallStatusInDatabase(customerData?.id, customerData?.seller?.id, from, conferenceSid);
-
-        // advise the web users of the incoming call (conference)
-
-        const usersConnectedArray = Object.values(connectedUsers);
-
-        // function to check if the related web user is connected
-        const isConnected = (email: string) => {
-          return usersConnectedArray.includes(email);
-        };
-
-        // check if the phone number of the incoming call is related to a registered customer
-
-        if (
-          customerData &&
-          customerData.seller &&
-          customerData.seller.email &&
-          isConnected(customerData.seller.email)
-        ) {
-          io.to(sendTo(customerData.seller.email)).emit('update_data', 'joinConference', {
-            conferenceName,
-            conferenceSid,
-          });
-
-          // if there is no relation with the caller or if the
-          // related web user is no connected then transfer the call
-          // to a round robin user
-        } else {
-          await saveAndAssignUnregisteredCustomersToRoundRobinUsers(from);
-
-          io.emit('update_data', 'joinConference', {
-            conferenceName,
-            conferenceSid,
-          });
-        }
-      }
-
-      console.log(`Conference SID: ${conferenceSid}, Status: ${conferenceStatus}.`);
-
-      switch (conferenceStatus) {
-        case 'conference-end':
-          // set the conference duration
-          const startConfDate = await prisma.client_calls.findUnique({
-            where: {
-              call_sid: conferenceSid,
-            },
-            select: {
-              call_date: true,
-            },
-          });
-
-          if (startConfDate) {
-            const endConfTime = new Date(eventTimestamp).getTime();
-
-            const startConfTime = new Date(startConfDate.call_date).getTime();
-
-            const callDuration = (endConfTime - startConfTime) / 1000;
-
-            await prisma.client_calls.update({
-              where: {
-                call_sid: conferenceSid,
-              },
-              data: {
-                call_duration: callDuration.toString(),
-                call_status_id: 1,
-              },
-            });
-          }
-
-          io.emit('update_data', 'callDisconnect', {
-            endedConferenceName: conferenceName,
-            endedConferenceSid: conferenceSid,
-          });
-
-          break;
-
-        case 'participant-join':
-          // check if the first two participants are just the caller customer and
-          // the first user that accept the call. Disconnect the rest of the web users from
-          // this call
-
-          const regexCorreo = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-
-          if (conferenceParticipansList.length > 1 && sequence >= 2 && sequence <= 3) {
-            const firstUserEmail = (
-              await client
-                .calls(conferenceParticipansList[conferenceParticipansList.length - 2].callSid)
-                .fetch()
-            ).from.split(':')[1];
-
-            const participantMobilePhone = (
-              await client
-                .calls(conferenceParticipansList[conferenceParticipansList.length - 2].callSid)
-                .fetch()
-            ).to;
-
-            const noFirtsUsersCallSid = conferenceParticipansList.map((el) => el.callSid);
-
-            if (firstUserEmail) {
-              io.emit('update_data', 'lastParticipant', {
-                userEmail: firstUserEmail,
-                callSidArray: noFirtsUsersCallSid,
-                inProgressConferenceName: conferenceName,
-                conferenceSid: conferenceSid,
-              });
-            }
-
-            if (participantMobilePhone && !regexCorreo.test(participantMobilePhone)) {
-              io.emit('update_data', 'lastParticipant', {
-                userEmail: '',
-                callSidArray: noFirtsUsersCallSid,
-                inProgressConferenceName: conferenceName,
-                conferenceSid: conferenceSid,
-                userMobilePhoneNumber: participantMobilePhone.slice(-10),
-              });
-            }
-          }
-
-          // check if there are a web user that accidentally has joined the conference and
-          // then disconnect it/them
-
-          if (conferenceParticipansList.length > 2 && sequence > 3) {
-            const webParticipants: string[] = [];
-            let firstParticipantEmail = '';
-
-            conferenceParticipansList.forEach(async (participantInfo) => {
-              if (
-                conferenceParticipansList[conferenceParticipansList.length - 2].callSid !==
-                participantInfo.callSid
-              ) {
-                const participantFetched = await client.calls(participantInfo.callSid).fetch();
-
-                if (regexCorreo.test(participantFetched.from)) {
-                  webParticipants.push(participantFetched.from);
-                }
-              } else {
-                firstParticipantEmail = (await client.calls(participantInfo.callSid).fetch()).from;
-              }
-            });
-
-            // if participants are from web disconnect them
-
-            if (webParticipants.length > 0) {
-              io.emit('update_data', 'lastParticipant', {
-                userEmail: firstParticipantEmail,
-                callSidArray: webParticipants,
-                inProgressConferenceName: conferenceName,
-              });
-            }
-
-            // if participants are from a mobile phone then disconnect the first joined web participant from current call
-            // (that means that there is a transfer in progress)
-
-            const thirdConferenceParticipant = await client
-              .calls(conferenceParticipansList[conferenceParticipansList.length - 3].callSid)
-              .fetch();
-
-            if (thirdConferenceParticipant && thirdConferenceParticipant.to) {
-              io.emit('update_data', 'lastParticipant', {
-                userEmail: '',
-                callSidArray: [
-                  conferenceParticipansList[conferenceParticipansList.length - 2].callSid,
-                ],
-                inProgressConferenceName: conferenceName,
-              });
-            }
-          }
-
-          break;
-
-        case 'participant-leave':
-          if (conferenceParticipansList.length === 1) {
-            const currentConference = client.conferences(conferenceSid);
-
-            currentConference.update({ status: 'completed' });
-          }
-          break;
-
-        case 'conference-start':
-          break;
-      }
+      await handlingConferenceStatus({
+        callSid,
+        conferenceName,
+        conferenceParticipansList,
+        conferenceSid,
+        conferenceStatus,
+        connectedUsers,
+        eventTimestamp,
+        from,
+        sequence,
+      });
     } catch (error) {
       console.log(error);
     }
@@ -664,134 +278,19 @@ io.on('connection', (socket: Socket) => {
     res.status(204).send();
   });
 
-  // create call status function
-
-  const createCallStatusInDatabase = async (
-    customerId?: number,
-    userId?: number,
-    phoneNumber?: string,
-    callSid?: string,
-  ) => {
-    if (callSid) {
-      await prisma.client_calls.create({
-        data: {
-          client_id: customerId ? customerId : null,
-          seller_id: userId ? userId : null,
-          phone_number: phoneNumber ? phoneNumber : null,
-          call_sid: callSid,
-          call_date: new Date(),
-          call_duration: '0',
-          call_status_id: 6,
-          call_direction_id: 1,
-        },
-      });
-    }
-  };
-
-  // check how many times a customer made a call
-
-  const checkCustomerMadeCalls = async (phoneNumber: string) => {
-    // check if the customer has an active suspension
-
-    const activeSuspension = await prisma.suspension.findFirst({
-      where: {
-        mobile_phone: phoneNumber,
-        end_suspension_date: {
-          gt: new Date(),
-        },
-      },
-    });
-
-    if (activeSuspension) {
-      return false;
-    }
-
-    // Check if the customer has any calls in the last 10 minutes
-
-    const tenMinutesAgo = subMinutes(new Date(), 10);
-
-    const incomingCalls = await prisma.client_calls.count({
-      where: {
-        call_direction_id: 1,
-        call_date: {
-          gte: tenMinutesAgo,
-        },
-        phone_number: phoneNumber,
-      },
-    });
-
-    if (incomingCalls >= 5) {
-      await prisma.suspension.create({
-        data: {
-          mobile_phone: phoneNumber,
-          start_suspension_date: new Date(),
-          end_suspension_date: addMinutes(new Date(), 10),
-        },
-      });
-
-      return false;
-    }
-
-    return true;
-  };
-
   // get incoming call from customers
 
   app.post('/incomingCall', async (req, res) => {
-    try {
-      const from = req.body.From;
-      const to = req.body.To;
-      const conferenceName = `${from.slice(-10)}_conference`;
+    const from = req.body.From;
+    const to = req.body.To;
+    const conferenceName = `${from.slice(-10)}_conference`;
 
-      // check if the current caller has an active ban
-      const callPermission = await checkCustomerMadeCalls(from.slice(-10));
-
-      console.log(callPermission);
-
-      if (callPermission) {
-        if (from && to && typeof from === 'string' && typeof to === 'string') {
-          // create conference room
-
-          const conference = dial.conference(
-            {
-              startConferenceOnEnter: true,
-              endConferenceOnExit: true,
-              waitUrl: `${nextPublicUrl}/api/waitConferenceUrl/${conferenceName}`,
-              waitMethod: 'POST',
-              statusCallback: `${websocketPublicUrl}/getCurrentConferenceStatus/${conferenceName}`,
-              statusCallbackEvent: ['start', 'announcement', 'end', 'leave', 'join'],
-              statusCallbackMethod: 'POST',
-            },
-            conferenceName,
-          );
-
-          res.type('text/xml');
-          res.send(twiml.toString());
-        }
-      } else if (
-        !callPermission &&
-        from &&
-        to &&
-        typeof from === 'string' &&
-        typeof to === 'string'
-      ) {
-        twiml.say(
-          'You have an active suspension due to several call attempts. Please wait ten minutes to try again',
-        );
-
-        twiml.hangup();
-
-        res.type('text/xml');
-        res.send(twiml.toString());
-      }
-    } catch (error) {
-      console.log(error);
-
-      twiml.say('Thanks for using Flowsups. Good Bye!');
-
-      res.type('text/xml');
-      res.send(twiml.toString());
-    }
+    await handlingIncomingCall({
+      from,
+      to,
+      conferenceName,
+      res,
+    });
   });
 
   // get messages from customers
@@ -801,145 +300,9 @@ io.on('connection', (socket: Socket) => {
 
     const from = req.body.From.replace(/\D/g, '');
 
-    const fromFormatted = from.slice(1);
-
     const message = req.body.Body;
 
-    try {
-      const clientIdStatusAppointments = await prisma.clients.findFirst({
-        where: {
-          mobile_phone: fromFormatted,
-        },
-        select: {
-          client_status_id: true,
-          id: true,
-          seller: {
-            select: {
-              id: true,
-            },
-          },
-          appointment: {
-            where: {
-              status_id: 1,
-              start_date: {
-                gt: new Date(),
-              },
-            },
-            select: {
-              id: true,
-              status_id: true,
-              start_date: true,
-            },
-          },
-        },
-      });
-
-      if (clientIdStatusAppointments && clientIdStatusAppointments.id) {
-        const data = await prisma.client_sms.create({
-          data: {
-            message: message,
-            date_sent: new Date(),
-            sent_by_user: false,
-            client_id: clientIdStatusAppointments.id,
-            status_id: 2,
-          },
-        });
-      }
-
-      if (
-        clientIdStatusAppointments &&
-        clientIdStatusAppointments.client_status_id &&
-        clientIdStatusAppointments.client_status_id === 1
-      ) {
-        const userStatus = await prisma.clients.update({
-          where: {
-            mobile_phone: fromFormatted,
-          },
-          data: {
-            client_status_id: 2,
-          },
-        });
-      }
-
-      // create a new lead register
-
-      if (clientIdStatusAppointments?.id) {
-        const lead = await prisma.client_has_lead.create({
-          data: {
-            created_at: new Date(),
-            assigned_to_id: clientIdStatusAppointments?.seller?.id || 1,
-            client_id: clientIdStatusAppointments.id,
-            status_id: 2,
-            created_by_id: clientIdStatusAppointments?.seller?.id || 1,
-            lead_id: 7,
-          },
-        });
-      }
-
-      // check if the message contain 'Y' , 'N' or 'S'
-
-      const specialCharactersToAccept = ['Y', 'S'];
-      const specialCharactersToCancel = ['N'];
-
-      const messageSplitted = message.split(' ');
-
-      // accept appointment
-      if (messageSplitted.every((word: string) => specialCharactersToAccept.includes(word))) {
-        // check if the customer has a pending for confirmation appointment
-
-        if (clientIdStatusAppointments?.appointment) {
-          clientIdStatusAppointments.appointment.forEach(async (el) => {
-            if (el.status_id === 1 && new Date(el.start_date) > new Date()) {
-              await prisma.appointments.update({
-                where: {
-                  id: el.id,
-                },
-                data: {
-                  status_id: 6,
-                  client_accept_appointment: true,
-                },
-              });
-            }
-          });
-
-          await prisma.clients.update({
-            where: {
-              id: clientIdStatusAppointments.id,
-            },
-            data: {
-              client_status_id: 6,
-            },
-          });
-        }
-      }
-
-      // cancel appointment
-      if (messageSplitted.every((word: string) => specialCharactersToCancel.includes(word))) {
-        // check if the customer has a pending for confirmation appointment
-
-        if (clientIdStatusAppointments?.appointment) {
-          clientIdStatusAppointments.appointment.forEach(async (el) => {
-            if (el.status_id === 1 && new Date(el.start_date) > new Date()) {
-              await prisma.appointments.update({
-                where: {
-                  id: el.id,
-                },
-                data: {
-                  status_id: 3,
-                  client_accept_appointment: true,
-                },
-              });
-            }
-          });
-        }
-      }
-
-      await prisma.$disconnect();
-
-      io.emit('update_data', 'customerMessage');
-    } catch (error) {
-      console.log(error);
-    }
+    await handlingIncomingSms({ from, message });
   });
 
   socket.on(
