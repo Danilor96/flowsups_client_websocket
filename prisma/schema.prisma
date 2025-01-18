@@ -21,8 +21,12 @@ model Users {
   mobile_phone                                                       String?                         @unique
   status_id                                                          Int?
   username                                                           String?                         @unique
+  ready_for_leads                                                    Boolean                         @default(false)
+  round_robin                                                        Boolean                         @default(false)
+  round_robin_order                                                  Int?
   Appointments_Appointments_created_byToUsers                        Appointments[]                  @relation("Appointments_created_byToUsers")
   appointments                                                       Appointments[]                  @relation("user")
+  Awaiting_unknow_client                                             Awaiting_unknow_client[]
   recipient_messages                                                 Chat_messages[]                 @relation("recipient")
   sender_messages                                                    Chat_messages[]                 @relation("sender")
   Client_calls                                                       Client_calls[]
@@ -1549,11 +1553,6 @@ model Vehicle_delivery {
   Vehicles                                  Vehicles @relation(fields: [vehicle_id], references: [id], onDelete: Cascade)
 }
 
-model Appointment_sms {
-  id  Int    @id @default(autoincrement())
-  sms String
-}
-
 model Task_Notes {
   id            Int      @id @default(autoincrement())
   note          String
@@ -1568,5 +1567,37 @@ model Suspension {
   id                    Int      @id @default(autoincrement())
   mobile_phone          String
   start_suspension_date DateTime
-  end_suspension_dat    DateTime
+  end_suspension_date   DateTime
+}
+
+model AppointmentSms {
+  id  Int    @id @default(autoincrement())
+  sms String
+}
+
+model Round_robin {
+  id                                    Int        @id @default(autoincrement())
+  ready_for_leads                       Boolean    @default(false)
+  automatic_reassign_leads              Boolean    @default(false)
+  span_time_id                          Int?
+  avoid_automatic_reassign_olders_leads Boolean    @default(false)
+  days_until_avoid                      Int?
+  assign_leads_during_store_hours       Boolean    @default(false)
+  assign_leads_during_shift_hours       Boolean    @default(false)
+  users_must_activate_ready_for_leads   Boolean    @default(false)
+  Time_span                             Time_span? @relation(fields: [span_time_id], references: [id])
+}
+
+model Time_span {
+  id          Int           @id @default(autoincrement())
+  time_span   String
+  Round_robin Round_robin[]
+}
+
+model Awaiting_unknow_client {
+  id                  Int     @id @default(autoincrement())
+  mobile_phone_number String? @unique
+  email               String? @unique
+  user_id             Int
+  Users               Users   @relation(fields: [user_id], references: [id], onDelete: Cascade)
 }
