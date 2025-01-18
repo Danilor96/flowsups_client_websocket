@@ -1,13 +1,13 @@
 import { ParticipantInstance } from 'twilio/lib/rest/api/v2010/account/conference/participant';
 import { prisma } from '../prisma/prisma';
-import { io, connectedUsers, sendTo, client } from '../../websocketServer';
+import { io, sendTo, client } from '../../websocketServer';
 import { createCallStatusInDatabase } from './createCallStatusInDatabase';
+import { deleteConferenceName } from './deleteConferenceName';
 
 interface ConferenceData {
   conferenceSid: any;
   conferenceName: any;
   conferenceStatus: any;
-  from: any;
   sequence: any;
   eventTimestamp: any;
   callSid: any;
@@ -21,7 +21,6 @@ export async function handlingConferenceStatus({
   conferenceSid,
   conferenceName,
   conferenceStatus,
-  from,
   sequence,
   eventTimestamp,
   callSid,
@@ -29,6 +28,8 @@ export async function handlingConferenceStatus({
   connectedUsers,
 }: ConferenceData) {
   try {
+    const from = callSid ? (await client.calls(callSid).fetch()).from.slice(2) : '';
+
     // first conference action sequence
     if (sequence === '1') {
       // save the conference attempt in the web data base
@@ -69,15 +70,17 @@ export async function handlingConferenceStatus({
         io.to(sendTo(customerData.seller.email)).emit('update_data', 'joinConference', {
           conferenceName,
           conferenceSid,
+          phoneNumber: from,
         });
 
         // if there is no relation with the caller or if the
         // related web user is no connected then transfer the call
-        // to a round robin user
+        // to a all connected users
       } else {
         io.emit('update_data', 'joinConference', {
           conferenceName,
           conferenceSid,
+          phoneNumber: from,
         });
       }
     }
@@ -113,6 +116,10 @@ export async function handlingConferenceStatus({
             },
           });
         }
+
+        // delete conference name from database
+
+        await deleteConferenceName(conferenceName);
 
         io.emit('update_data', 'callDisconnect', {
           endedConferenceName: conferenceName,
@@ -216,7 +223,6 @@ export async function handlingConferenceStatus({
         break;
 
       case 'participant-leave':
-        console.log('Se fué');
         if (conferenceParticipansList.length === 1) {
           const currentConference = client.conferences(conferenceSid);
 

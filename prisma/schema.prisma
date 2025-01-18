@@ -1601,3 +1601,8 @@ model Awaiting_unknow_client {
   user_id             Int
   Users               Users   @relation(fields: [user_id], references: [id], onDelete: Cascade)
 }
+
+model Conferences_names {
+  id              Int    @id @default(autoincrement())
+  conference_name String @unique
+}

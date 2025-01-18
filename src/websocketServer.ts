@@ -236,7 +236,6 @@ io.on('connection', (socket: Socket) => {
       const conferenceSid = req.body.ConferenceSid;
       const conferenceName = req.body.FriendlyName;
       const conferenceStatus = req.body.StatusCallbackEvent;
-      const from = req.body.FriendlyName.split('_')[0];
       const sequence = req.body.SequenceNumber;
       const eventTimestamp = req.body.Timestamp;
       const callSid = req.body.CallSid;
@@ -254,7 +253,6 @@ io.on('connection', (socket: Socket) => {
         conferenceStatus,
         connectedUsers,
         eventTimestamp,
-        from,
         sequence,
       });
     } catch (error) {
@@ -283,12 +281,10 @@ io.on('connection', (socket: Socket) => {
   app.post('/incomingCall', async (req, res) => {
     const from = req.body.From;
     const to = req.body.To;
-    const conferenceName = `${from.slice(-10)}_conference`;
 
     await handlingIncomingCall({
       from,
       to,
-      conferenceName,
       res,
     });
   });

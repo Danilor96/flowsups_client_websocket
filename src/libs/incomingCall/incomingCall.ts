@@ -1,6 +1,7 @@
 import { dial, twiml } from '../../websocketServer';
 import { checkCustomerMadeCalls } from './checkCustomerMadeCalls';
 import { Response } from 'express';
+import { RandomNameGenerator } from './randomNameGenerator';
 
 const nextPublicUrl = process.env.NEXT_API_URL;
 const websocketPublicUrl = process.env.TWILIO_WEBSOCKET_URL;
@@ -8,16 +9,17 @@ const websocketPublicUrl = process.env.TWILIO_WEBSOCKET_URL;
 interface IncomingCallData {
   from: any;
   to: any;
-  conferenceName: string;
   res: Response;
 }
 
-export async function handlingIncomingCall({ from, to, conferenceName, res }: IncomingCallData) {
+export async function handlingIncomingCall({ from, to, res }: IncomingCallData) {
   try {
+    const conferenceName = await RandomNameGenerator();
+
     // check if the current caller has an active ban
     const callPermission = await checkCustomerMadeCalls(from.slice(-10));
 
-    console.log(callPermission);
+    console.log('permission: ', callPermission);
 
     if (callPermission) {
       if (from && to && typeof from === 'string' && typeof to === 'string') {
