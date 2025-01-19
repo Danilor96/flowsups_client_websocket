@@ -1,6 +1,8 @@
-import { dial, twiml } from '../../websocketServer';
+import twilio from 'twilio';
 import { checkCustomerMadeCalls } from './checkCustomerMadeCalls';
 import { Response } from 'express';
+import { RandomNameGenerator } from './randomNameGenerator';
+import { deleteConferenceName } from '../conferenceStatus/deleteConferenceName';
 
 const nextPublicUrl = process.env.NEXT_API_URL;
 const websocketPublicUrl = process.env.TWILIO_WEBSOCKET_URL;
@@ -8,16 +10,21 @@ const websocketPublicUrl = process.env.TWILIO_WEBSOCKET_URL;
 interface IncomingCallData {
   from: any;
   to: any;
-  conferenceName: string;
   res: Response;
 }
 
-export async function handlingIncomingCall({ from, to, conferenceName, res }: IncomingCallData) {
+export async function handlingIncomingCall({ from, to, res }: IncomingCallData) {
+  const VoiceResponse = twilio.twiml.VoiceResponse;
+  const twiml = new VoiceResponse();
+  const dial = twiml.dial();
+
   try {
+    const conferenceName = await RandomNameGenerator();
+
     // check if the current caller has an active ban
     const callPermission = await checkCustomerMadeCalls(from.slice(-10));
 
-    console.log(callPermission);
+    console.log('permission: ', callPermission);
 
     if (callPermission) {
       if (from && to && typeof from === 'string' && typeof to === 'string') {
@@ -34,7 +41,7 @@ export async function handlingIncomingCall({ from, to, conferenceName, res }: In
             statusCallbackMethod: 'POST',
           },
           conferenceName,
-        );
+        ).conference;
 
         res.type('text/xml');
         res.send(twiml.toString());
@@ -46,6 +53,8 @@ export async function handlingIncomingCall({ from, to, conferenceName, res }: In
       typeof from === 'string' &&
       typeof to === 'string'
     ) {
+      await deleteConferenceName(conferenceName);
+
       twiml.say(
         'You have an active suspension due to several call attempts. Please wait ten minutes to try again',
       );

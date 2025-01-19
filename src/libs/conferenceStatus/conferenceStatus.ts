@@ -1,34 +1,35 @@
 import { ParticipantInstance } from 'twilio/lib/rest/api/v2010/account/conference/participant';
 import { prisma } from '../prisma/prisma';
-import { io, connectedUsers, sendTo, client } from '../../websocketServer';
+import { io, sendTo, client, connectedUsers } from '../../websocketServer';
 import { createCallStatusInDatabase } from './createCallStatusInDatabase';
+import { deleteConferenceName } from './deleteConferenceName';
+import { checkIfCustomerIsInAwaitingTable } from './checkIfCustomerIsInAwaitingTable';
+import { addUnknowCustomerToAwatingTable } from './addUnknowCustomerToAwatingTable';
+import { assignUserFromRoundRobin } from '../roundRobin/roundRobin';
+import { callAnsweredBy } from './callAnsweredBy/callAnsweredBy';
 
 interface ConferenceData {
   conferenceSid: any;
   conferenceName: any;
   conferenceStatus: any;
-  from: any;
   sequence: any;
   eventTimestamp: any;
   callSid: any;
   conferenceParticipansList: ParticipantInstance[];
-  connectedUsers: {
-    [id: string]: string;
-  };
 }
 
 export async function handlingConferenceStatus({
   conferenceSid,
   conferenceName,
   conferenceStatus,
-  from,
   sequence,
   eventTimestamp,
   callSid,
   conferenceParticipansList,
-  connectedUsers,
 }: ConferenceData) {
   try {
+    const from = callSid ? (await client.calls(callSid).fetch()).from.slice(2) : '';
+
     // first conference action sequence
     if (sequence === '1') {
       // save the conference attempt in the web data base
@@ -49,6 +50,15 @@ export async function handlingConferenceStatus({
 
       createCallStatusInDatabase(customerData?.id, customerData?.seller?.id, from, conferenceSid);
 
+      // check if the unknow user exists in unknow awaiting customers table
+      // if not save the customer in that table
+
+      const awaitingCustomer = await checkIfCustomerIsInAwaitingTable(from);
+
+      if (!customerData) {
+        if (!awaitingCustomer) addUnknowCustomerToAwatingTable(from);
+      }
+
       // advise the web users of the incoming call (conference)
 
       const usersConnectedArray = Object.values(connectedUsers);
@@ -59,26 +69,100 @@ export async function handlingConferenceStatus({
       };
 
       // check if the phone number of the incoming call is related to a registered customer
+      // and if the customer already has a user assigned
 
-      if (
-        customerData &&
-        customerData.seller &&
-        customerData.seller.email &&
-        isConnected(customerData.seller.email)
-      ) {
-        io.to(sendTo(customerData.seller.email)).emit('update_data', 'joinConference', {
-          conferenceName,
-          conferenceSid,
-        });
+      if (customerData && customerData.seller && customerData.seller.email) {
+        //check if the assigned user is connected
 
-        // if there is no relation with the caller or if the
-        // related web user is no connected then transfer the call
-        // to a round robin user
+        if (isConnected(customerData.seller.email)) {
+          io.to(sendTo(customerData.seller.email)).emit('update_data', 'joinConference', {
+            conferenceName,
+            conferenceSid,
+            phoneNumber: from,
+          });
+
+          // if the assigned web user is not connected, then reassigns customer to another user
+        } else {
+          let newAssignedUser = await assignUserFromRoundRobin(from, true);
+
+          let i = 0;
+
+          while (i < usersConnectedArray.length) {
+            if (newAssignedUser && isConnected(newAssignedUser)) break;
+
+            newAssignedUser = await assignUserFromRoundRobin(from, true);
+
+            i++;
+          }
+
+          if (newAssignedUser) {
+            io.to(sendTo(newAssignedUser)).emit('update_data', 'joinConference', {
+              conferenceName,
+              conferenceSid,
+              phoneNumber: from,
+            });
+          }
+        }
       } else {
-        io.emit('update_data', 'joinConference', {
-          conferenceName,
-          conferenceSid,
-        });
+        // if the phone number of the incoming call is not registered,
+        // then checks if is registered in unknow waiting customers table
+
+        if (awaitingCustomer) {
+          // if the phone number exists in unknow waiting customers,
+          // then checks if that unknow customer is assigned to a user
+          // in order to join both in a call
+
+          if (awaitingCustomer.Users?.email) {
+            // check if the user is connected
+
+            if (isConnected(awaitingCustomer.Users?.email)) {
+              io.to(sendTo(awaitingCustomer.Users?.email)).emit('update_data', 'joinConference', {
+                conferenceName,
+                conferenceSid,
+                phoneNumber: from,
+              });
+            } else {
+              // if the assigned web user is not connected, then reassigns customer to another user
+
+              let newAssignedUser = await assignUserFromRoundRobin(from);
+
+              let i = 0;
+
+              while (i < usersConnectedArray.length) {
+                if (newAssignedUser && isConnected(newAssignedUser)) break;
+
+                newAssignedUser = await assignUserFromRoundRobin(from);
+
+                i++;
+              }
+
+              if (newAssignedUser) {
+                io.to(sendTo(newAssignedUser)).emit('update_data', 'joinConference', {
+                  conferenceName,
+                  conferenceSid,
+                  phoneNumber: from,
+                });
+              }
+            }
+          } else {
+            // if there is no user assigned, then calls to every web users
+
+            io.emit('update_data', 'joinConference', {
+              conferenceName,
+              conferenceSid,
+              phoneNumber: from,
+            });
+          }
+        } else {
+          // if the phone number doesn't exists in unknow awaiting customers,
+          // then calls to every web users
+
+          io.emit('update_data', 'joinConference', {
+            conferenceName,
+            conferenceSid,
+            phoneNumber: from,
+          });
+        }
       }
     }
 
@@ -114,6 +198,10 @@ export async function handlingConferenceStatus({
           });
         }
 
+        // delete conference name from database
+
+        await deleteConferenceName(conferenceName);
+
         io.emit('update_data', 'callDisconnect', {
           endedConferenceName: conferenceName,
           endedConferenceSid: conferenceSid,
@@ -129,6 +217,12 @@ export async function handlingConferenceStatus({
         const regexCorreo = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
         if (conferenceParticipansList.length > 1 && sequence >= 2 && sequence <= 3) {
+          const customerMobilePhone = (
+            await client
+              .calls(conferenceParticipansList[conferenceParticipansList.length - 1].callSid)
+              .fetch()
+          ).from.slice(-10);
+
           const firstUserEmail = (
             await client
               .calls(conferenceParticipansList[conferenceParticipansList.length - 2].callSid)
@@ -144,6 +238,10 @@ export async function handlingConferenceStatus({
           const noFirtsUsersCallSid = conferenceParticipansList.map((el) => el.callSid);
 
           if (firstUserEmail) {
+            const awaitingCustomer = await checkIfCustomerIsInAwaitingTable(customerMobilePhone);
+
+            if (awaitingCustomer) callAnsweredBy(customerMobilePhone, firstUserEmail);
+
             io.emit('update_data', 'lastParticipant', {
               userEmail: firstUserEmail,
               callSidArray: noFirtsUsersCallSid,
@@ -153,6 +251,11 @@ export async function handlingConferenceStatus({
           }
 
           if (participantMobilePhone && !regexCorreo.test(participantMobilePhone)) {
+            const awaitingCustomer = await checkIfCustomerIsInAwaitingTable(customerMobilePhone);
+
+            if (awaitingCustomer)
+              callAnsweredBy(customerMobilePhone, undefined, participantMobilePhone.slice(-10));
+
             io.emit('update_data', 'lastParticipant', {
               userEmail: '',
               callSidArray: noFirtsUsersCallSid,
@@ -216,7 +319,6 @@ export async function handlingConferenceStatus({
         break;
 
       case 'participant-leave':
-        console.log('Se fué');
         if (conferenceParticipansList.length === 1) {
           const currentConference = client.conferences(conferenceSid);
 
