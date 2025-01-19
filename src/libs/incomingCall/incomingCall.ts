@@ -1,7 +1,8 @@
-import { dial, twiml } from '../../websocketServer';
+import twilio from 'twilio';
 import { checkCustomerMadeCalls } from './checkCustomerMadeCalls';
 import { Response } from 'express';
 import { RandomNameGenerator } from './randomNameGenerator';
+import { deleteConferenceName } from '../conferenceStatus/deleteConferenceName';
 
 const nextPublicUrl = process.env.NEXT_API_URL;
 const websocketPublicUrl = process.env.TWILIO_WEBSOCKET_URL;
@@ -13,6 +14,10 @@ interface IncomingCallData {
 }
 
 export async function handlingIncomingCall({ from, to, res }: IncomingCallData) {
+  const VoiceResponse = twilio.twiml.VoiceResponse;
+  const twiml = new VoiceResponse();
+  const dial = twiml.dial();
+
   try {
     const conferenceName = await RandomNameGenerator();
 
@@ -36,7 +41,7 @@ export async function handlingIncomingCall({ from, to, res }: IncomingCallData) 
             statusCallbackMethod: 'POST',
           },
           conferenceName,
-        );
+        ).conference;
 
         res.type('text/xml');
         res.send(twiml.toString());
@@ -48,6 +53,8 @@ export async function handlingIncomingCall({ from, to, res }: IncomingCallData) 
       typeof from === 'string' &&
       typeof to === 'string'
     ) {
+      await deleteConferenceName(conferenceName);
+
       twiml.say(
         'You have an active suspension due to several call attempts. Please wait ten minutes to try again',
       );

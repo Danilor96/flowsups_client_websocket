@@ -1598,8 +1598,8 @@ model Awaiting_unknow_client {
   id                  Int     @id @default(autoincrement())
   mobile_phone_number String? @unique
   email               String? @unique
-  user_id             Int
-  Users               Users   @relation(fields: [user_id], references: [id], onDelete: Cascade)
+  user_id             Int?
+  Users               Users?  @relation(fields: [user_id], references: [id], onDelete: Cascade)
 }
 
 model Conferences_names {

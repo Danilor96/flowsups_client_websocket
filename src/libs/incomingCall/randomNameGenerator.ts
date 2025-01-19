@@ -30,5 +30,5 @@ export async function RandomNameGenerator() {
     },
   });
 
-  return conferenceNamePrefix + uniqueId;
+  return newConference.conference_name;
 }

@@ -15,10 +15,6 @@ import { handlingOutgoingCallStatus } from './libs/outgoingCallStatus/outgoinCal
 
 const accountSid = process.env.TWILIO_ACCOUNT_SID;
 const authToken = process.env.TWILIO_AUTH_TOKEN;
-
-const VoiceResponse = twilio.twiml.VoiceResponse;
-export const twiml = new VoiceResponse();
-export const dial = twiml.dial();
 export const client = twilio(accountSid, authToken);
 
 const app = express();
@@ -89,63 +85,57 @@ io.on('connection', (socket: Socket) => {
 
   // checking all pending tasks, appointments and statuses
   cron.schedule('* * * * 1-6', async () => {
-    const todayDate = new Date();
-
-    const lateTasks = await prisma.tasks.findMany({
-      where: {
-        deadline: {
-          lt: new Date(),
-        },
-        status: 1,
-      },
-    });
-
-    if (lateTasks && lateTasks.length > 0) {
-      lateTasks.forEach(async (task) => {
-        const notificationTask = await prisma.notifications.create({
-          data: {
-            message: `Task '${task.description}' has expired`,
-            created_at: new Date(),
-            user_id: task.assigned_to,
-            type_id: 1,
-          },
-        });
-      });
-    }
-
-    const tasks = await prisma.tasks.updateMany({
-      where: {
-        deadline: {
-          lt: new Date(),
-        },
-        status: 1,
-      },
-      data: {
-        status: 4,
-      },
-    });
-
-    const appt = await prisma.clients.updateMany({
-      where: {
-        appointment: {
-          every: {
-            end_date: {
-              lt: todayDate,
-            },
-            AND: {
-              status_id: 1,
-            },
-          },
-        },
-      },
-      data: {
-        client_status_id: 8,
-      },
-    });
-
-    await prisma.$disconnect();
-
-    io.emit('update_data', 'notifications');
+    // const todayDate = new Date();
+    // const lateTasks = await prisma.tasks.findMany({
+    //   where: {
+    //     deadline: {
+    //       lt: new Date(),
+    //     },
+    //     status: 1,
+    //   },
+    // });
+    // if (lateTasks && lateTasks.length > 0) {
+    //   lateTasks.forEach(async (task) => {
+    //     const notificationTask = await prisma.notifications.create({
+    //       data: {
+    //         message: `Task '${task.description}' has expired`,
+    //         created_at: new Date(),
+    //         user_id: task.assigned_to,
+    //         type_id: 1,
+    //       },
+    //     });
+    //   });
+    // }
+    // const tasks = await prisma.tasks.updateMany({
+    //   where: {
+    //     deadline: {
+    //       lt: new Date(),
+    //     },
+    //     status: 1,
+    //   },
+    //   data: {
+    //     status: 4,
+    //   },
+    // });
+    // const appt = await prisma.clients.updateMany({
+    //   where: {
+    //     appointment: {
+    //       every: {
+    //         end_date: {
+    //           lt: todayDate,
+    //         },
+    //         AND: {
+    //           status_id: 1,
+    //         },
+    //       },
+    //     },
+    //   },
+    //   data: {
+    //     client_status_id: 8,
+    //   },
+    // });
+    // await prisma.$disconnect();
+    // io.emit('update_data', 'notifications');
   });
 
   // checking all customers last contacted day
