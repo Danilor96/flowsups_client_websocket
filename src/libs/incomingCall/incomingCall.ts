@@ -34,7 +34,7 @@ export async function handlingIncomingCall({ from, to, res }: IncomingCallData) 
           {
             startConferenceOnEnter: true,
             endConferenceOnExit: true,
-            waitUrl: `${nextPublicUrl}/api/waitConferenceUrl/${conferenceName}`,
+            // waitUrl: `${nextPublicUrl}/api/waitConferenceUrl/${conferenceName}`,
             waitMethod: 'POST',
             statusCallback: `${websocketPublicUrl}/getCurrentConferenceStatus/${conferenceName}`,
             statusCallbackEvent: ['start', 'announcement', 'end', 'leave', 'join'],
