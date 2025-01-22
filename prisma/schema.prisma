@@ -32,7 +32,6 @@ model Users {
   Client_calls                                                       Client_calls[]
   Client_has_lead                                                    Client_has_lead[]
   Client_has_lead_Client_has_lead_created_by_idToUsers               Client_has_lead[]               @relation("Client_has_lead_created_by_idToUsers")
-  Client_sms                                                         Client_sms[]
   Clients_Clients_bdc_idToUsers                                      Clients[]                       @relation("Clients_bdc_idToUsers")
   Clients_Clients_finance_manager_idToUsers                          Clients[]                       @relation("Clients_finance_manager_idToUsers")
   Clients_Clients_sales_manager_idToUsers                            Clients[]                       @relation("Clients_sales_manager_idToUsers")
@@ -58,6 +57,7 @@ model Users {
   user_has                                                           Users_has_roles?
   Vehicle_delivery_Vehicle_delivery_assigned_toToUsers               Vehicle_delivery[]              @relation("Vehicle_delivery_assigned_toToUsers")
   Vehicle_delivery_Vehicle_delivery_created_byToUsers                Vehicle_delivery[]              @relation("Vehicle_delivery_created_byToUsers")
+  Client_sms                                                         Client_sms[]
 }
 
 model Users_has_codes {
@@ -599,16 +599,16 @@ model Client_has_lead {
 }
 
 model Client_sms {
-  id           Int        @id @default(autoincrement())
-  message      String
-  date_sent    DateTime
-  sent_by_user Boolean
-  client_id    Int
-  sent_by      Int?
-  status_id    Int
-  Clients      Clients    @relation(fields: [client_id], references: [id], onDelete: Cascade)
-  Users        Users?     @relation(fields: [sent_by], references: [id], onDelete: Cascade)
-  Sms_status   Sms_status @relation(fields: [status_id], references: [id], onDelete: Cascade)
+  id                     Int                      @id @default(autoincrement())
+  message                String
+  date_sent              DateTime
+  sent_by_user           Boolean
+  client_id              Int?
+  status_id              Int
+  Clients                Clients?                 @relation(fields: [client_id], references: [id], onDelete: Cascade)
+  Sms_status             Sms_status               @relation(fields: [status_id], references: [id], onDelete: Cascade)
+  Awaiting_unknow_client Awaiting_unknow_client[] @relation("Awaiting_unknow_clientToClient_sms")
+  Users                  Users[]
 }
 
 model Cobuyer_client_relationship {
@@ -1595,11 +1595,12 @@ model Time_span {
 }
 
 model Awaiting_unknow_client {
-  id                  Int     @id @default(autoincrement())
-  mobile_phone_number String? @unique
-  email               String? @unique
+  id                  Int          @id @default(autoincrement())
+  mobile_phone_number String?      @unique
+  email               String?      @unique
   user_id             Int?
-  Users               Users?  @relation(fields: [user_id], references: [id], onDelete: Cascade)
+  Users               Users?       @relation(fields: [user_id], references: [id], onDelete: Cascade)
+  Client_sms          Client_sms[] @relation("Awaiting_unknow_clientToClient_sms")
 }
 
 model Conferences_names {

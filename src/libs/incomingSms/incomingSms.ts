@@ -1,5 +1,6 @@
 import { prisma } from '../prisma/prisma';
 import { io } from '../../websocketServer';
+import { assignUserFromRoundRobin } from '../roundRobin/roundRobin';
 
 interface IncomingSmsData {
   from: any;
@@ -48,6 +49,158 @@ export async function handlingIncomingSms({ from, message }: IncomingSmsData) {
           status_id: 2,
         },
       });
+    } else {
+      const awaitingCustomer = await prisma.awaiting_unknow_client.findUnique({
+        where: {
+          mobile_phone_number: fromFormatted,
+        },
+      });
+
+      // if there is no record in registered customers, then save the sms with the unregistered customer
+
+      if (awaitingCustomer) {
+        if (awaitingCustomer.user_id) {
+          await prisma.client_sms.create({
+            data: {
+              message: message,
+              date_sent: new Date(),
+              sent_by_user: false,
+              status_id: 2,
+              Awaiting_unknow_client: {
+                connect: {
+                  id: awaitingCustomer.id,
+                },
+              },
+              Users: {
+                connect: {
+                  id: awaitingCustomer.user_id,
+                },
+              },
+            },
+          });
+        } else {
+          // if the unregistered customer hasn't a user assigned, then assigned it from round robin and
+          // save the sms
+
+          const userFromRoundRobin = await assignUserFromRoundRobin(fromFormatted);
+
+          if (userFromRoundRobin) {
+            const updatedAwaitingCustomer = await prisma.awaiting_unknow_client.update({
+              where: {
+                mobile_phone_number: fromFormatted,
+              },
+              data: {
+                Users: {
+                  connect: {
+                    email: userFromRoundRobin,
+                  },
+                },
+              },
+            });
+
+            await prisma.client_sms.create({
+              data: {
+                message: message,
+                date_sent: new Date(),
+                sent_by_user: false,
+                status_id: 2,
+                Awaiting_unknow_client: {
+                  connect: {
+                    id: updatedAwaitingCustomer.id,
+                  },
+                },
+                Users: {
+                  connect: {
+                    email: userFromRoundRobin,
+                  },
+                },
+              },
+            });
+          } else {
+            // if there is no a round robin user, then save the sms without a related user
+
+            await prisma.client_sms.create({
+              data: {
+                message: message,
+                date_sent: new Date(),
+                sent_by_user: false,
+                status_id: 2,
+                Awaiting_unknow_client: {
+                  connect: {
+                    mobile_phone_number: fromFormatted,
+                  },
+                },
+              },
+            });
+          }
+        }
+      } else {
+        // if there is no record in unregistered customers (awaiting clients), then create it
+        // and assigns a round robin user
+
+        const userFromRoundRobin = await assignUserFromRoundRobin(fromFormatted);
+
+        if (userFromRoundRobin) {
+          // if there is a round robin user, then assigned it and save the sms
+
+          const unregisteredCustomer = await prisma.awaiting_unknow_client.create({
+            data: {
+              mobile_phone_number: fromFormatted,
+              Users: {
+                connect: {
+                  email: userFromRoundRobin,
+                },
+              },
+            },
+          });
+
+          const sms = await prisma.client_sms.create({
+            data: {
+              message: message,
+              date_sent: new Date(),
+              sent_by_user: false,
+              status_id: 2,
+              Awaiting_unknow_client: {
+                connect: {
+                  id: unregisteredCustomer.id,
+                },
+              },
+              Users: {
+                connect: {
+                  email: userFromRoundRobin,
+                },
+              },
+            },
+          });
+        } else {
+          // if there is no round robin user, then save de unregistered customer & the sms
+
+          const unregisteredCustomer = await prisma.awaiting_unknow_client.create({
+            data: {
+              mobile_phone_number: fromFormatted,
+              Users: {
+                connect: {
+                  email: userFromRoundRobin,
+                },
+              },
+            },
+          });
+
+          const sms = await prisma.client_sms.create({
+            data: {
+              message: message,
+              date_sent: new Date(),
+              sent_by_user: false,
+              status_id: 2,
+              Awaiting_unknow_client: {
+                connect: {
+                  id: unregisteredCustomer.id,
+                },
+              },
+            },
+          });
+        }
+      }
     }
 
     if (

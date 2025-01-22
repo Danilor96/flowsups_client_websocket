@@ -241,7 +241,6 @@ io.on('connection', (socket: Socket) => {
         conferenceParticipansList,
         conferenceSid,
         conferenceStatus,
-        connectedUsers,
         eventTimestamp,
         sequence,
       });
