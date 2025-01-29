@@ -1,6 +1,7 @@
 import { prisma } from '../prisma/prisma';
 import { io } from '../../websocketServer';
 import { assignUserFromRoundRobin } from '../roundRobin/roundRobin';
+import { AppointmentData, Sms } from '../definitions';
 
 interface IncomingSmsData {
   from: any;
@@ -10,6 +11,12 @@ interface IncomingSmsData {
 export async function handlingIncomingSms({ from, message }: IncomingSmsData) {
   const fromFormatted = from.slice(1);
 
+  let userId: number | null | undefined = null;
+  let customerId: number | null | undefined = null;
+  let unregisteredCustomerId: number | null = null;
+  let appointmentAccepted = '';
+  let appointmentAcceptStartDate = '';
+
   try {
     const clientIdStatusAppointments = await prisma.clients.findFirst({
       where: {
@@ -18,6 +25,8 @@ export async function handlingIncomingSms({ from, message }: IncomingSmsData) {
       select: {
         client_status_id: true,
         id: true,
+        first_name: true,
+        last_name: true,
         seller: {
           select: {
             id: true,
@@ -48,7 +57,22 @@ export async function handlingIncomingSms({ from, message }: IncomingSmsData) {
           client_id: clientIdStatusAppointments.id,
           status_id: 2,
         },
+        include: {
+          Users: {
+            select: {
+              id: true,
+            },
+          },
+          Clients: {
+            select: {
+              seller_id: true,
+            },
+          },
+        },
       });
+
+      userId = data?.Clients?.seller_id;
+      customerId = clientIdStatusAppointments.id;
     } else {
       const awaitingCustomer = await prisma.awaiting_unknow_client.findUnique({
         where: {
@@ -60,7 +84,7 @@ export async function handlingIncomingSms({ from, message }: IncomingSmsData) {
 
       if (awaitingCustomer) {
         if (awaitingCustomer.user_id) {
-          await prisma.client_sms.create({
+          const data = await prisma.client_sms.create({
             data: {
               message: message,
               date_sent: new Date(),
@@ -77,7 +101,21 @@ export async function handlingIncomingSms({ from, message }: IncomingSmsData) {
                 },
               },
             },
+            include: {
+              Users: {
+                select: {
+                  id: true,
+                },
+              },
+              Clients: {
+                select: {
+                  seller_id: true,
+                },
+              },
+            },
           });
+
+          userId = data.Clients?.seller_id;
         } else {
           // if the unregistered customer hasn't a user assigned, then assigned it from round robin and
           // save the sms
@@ -98,7 +136,7 @@ export async function handlingIncomingSms({ from, message }: IncomingSmsData) {
               },
             });
 
-            await prisma.client_sms.create({
+            const data = await prisma.client_sms.create({
               data: {
                 message: message,
                 date_sent: new Date(),
@@ -115,7 +153,22 @@ export async function handlingIncomingSms({ from, message }: IncomingSmsData) {
                   },
                 },
               },
+              include: {
+                Users: {
+                  select: {
+                    id: true,
+                  },
+                },
+                Clients: {
+                  select: {
+                    seller_id: true,
+                  },
+                },
+              },
             });
+
+            unregisteredCustomerId = updatedAwaitingCustomer.id;
+            userId = data?.Clients?.seller_id;
           } else {
             // if there is no a round robin user, then save the sms without a related user
 
@@ -134,27 +187,26 @@ export async function handlingIncomingSms({ from, message }: IncomingSmsData) {
             });
           }
         }
+
+        unregisteredCustomerId = awaitingCustomer.id;
       } else {
-        // if there is no record in unregistered customers (awaiting clients), then create it
-        // and assigns a round robin user
+        // if there is no record in unregistered customers (awaiting clients), then create it,
+        // assigns a round robin user and save the sms
+
+        const unregisteredCustomer = await prisma.awaiting_unknow_client.create({
+          data: {
+            mobile_phone_number: fromFormatted,
+          },
+        });
 
         const userFromRoundRobin = await assignUserFromRoundRobin(fromFormatted);
 
+        let sms: Sms | null = null;
+
         if (userFromRoundRobin) {
-          // if there is a round robin user, then assigned it and save the sms
+          // if there is assigned a user from round robin, then makes the relation establishment
 
-          const unregisteredCustomer = await prisma.awaiting_unknow_client.create({
-            data: {
-              mobile_phone_number: fromFormatted,
-              Users: {
-                connect: {
-                  email: userFromRoundRobin,
-                },
-              },
-            },
-          });
-
-          const sms = await prisma.client_sms.create({
+          sms = await prisma.client_sms.create({
             data: {
               message: message,
               date_sent: new Date(),
@@ -171,22 +223,25 @@ export async function handlingIncomingSms({ from, message }: IncomingSmsData) {
                 },
               },
             },
+            include: {
+              Users: {
+                select: {
+                  id: true,
+                },
+              },
+              Clients: {
+                select: {
+                  seller_id: true,
+                },
+              },
+            },
           });
+
+          userId = sms?.Clients?.seller_id;
         } else {
-          // if there is no round robin user, then save de unregistered customer & the sms
+          // create the sms without a related user
 
-          const unregisteredCustomer = await prisma.awaiting_unknow_client.create({
-            data: {
-              mobile_phone_number: fromFormatted,
-              Users: {
-                connect: {
-                  email: userFromRoundRobin,
-                },
-              },
-            },
-          });
-
-          const sms = await prisma.client_sms.create({
+          sms = await prisma.client_sms.create({
             data: {
               message: message,
               date_sent: new Date(),
@@ -195,11 +250,26 @@ export async function handlingIncomingSms({ from, message }: IncomingSmsData) {
               Awaiting_unknow_client: {
                 connect: {
                   id: unregisteredCustomer.id,
+                },
+              },
+            },
+            include: {
+              Users: {
+                select: {
+                  id: true,
+                },
+              },
+              Clients: {
+                select: {
+                  seller_id: true,
                 },
               },
             },
           });
         }
+
+        userId = sms?.Clients?.seller_id;
+        unregisteredCustomerId = unregisteredCustomer.id;
       }
     }
 
@@ -244,10 +314,15 @@ export async function handlingIncomingSms({ from, message }: IncomingSmsData) {
     if (messageSplitted.every((word: string) => specialCharactersToAccept.includes(word))) {
       // check if the customer has a pending for confirmation appointment
 
-      if (clientIdStatusAppointments?.appointment) {
+      if (
+        clientIdStatusAppointments?.appointment &&
+        clientIdStatusAppointments.appointment.length > 0
+      ) {
+        let apptData: AppointmentData | undefined;
+
         clientIdStatusAppointments.appointment.forEach(async (el) => {
           if (el.status_id === 1 && new Date(el.start_date) > new Date()) {
-            await prisma.appointments.update({
+            apptData = await prisma.appointments.update({
               where: {
                 id: el.id,
               },
@@ -267,6 +342,31 @@ export async function handlingIncomingSms({ from, message }: IncomingSmsData) {
             client_status_id: 6,
           },
         });
+
+        const userAppointmentId = clientIdStatusAppointments.seller?.id;
+
+        await prisma.notifications.create({
+          data: {
+            message: `Customer ${clientIdStatusAppointments.first_name} ${
+              clientIdStatusAppointments.last_name
+            } has accepted the appointment for ${
+              apptData
+                ? new Date(apptData.start_date).toLocaleString('en-US', {
+                    day: '2-digit',
+                    weekday: 'short',
+                    hour: '2-digit',
+                    minute: '2-digit',
+                  })
+                : ''
+            }`,
+            type_id: 2,
+            user_id: userAppointmentId,
+            notification_for_managers: true,
+          },
+        });
+
+        appointmentAccepted = '1';
+        appointmentAcceptStartDate = apptData?.start_date ? apptData.start_date.toISOString() : '';
       }
     }
 
@@ -291,9 +391,26 @@ export async function handlingIncomingSms({ from, message }: IncomingSmsData) {
       }
     }
 
+    // create sms notification
+
+    await prisma.notifications.create({
+      data: {
+        message: message,
+        type_id: 4,
+        user_id: userId,
+        unregistered_customer_id: unregisteredCustomerId,
+        customer_id: customerId,
+      },
+    });
+
     await prisma.$disconnect();
 
-    io.emit('update_data', 'customerMessage');
+    io.emit('update_data', 'customerMessage', {
+      appointment: appointmentAccepted,
+      appointmentStartDate: appointmentAcceptStartDate,
+    });
+
+    io.emit('update_data', 'notifications');
   } catch (error) {
     console.log(error);
   }

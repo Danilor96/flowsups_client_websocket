@@ -57,7 +57,7 @@ model Users {
   user_has                                                           Users_has_roles?
   Vehicle_delivery_Vehicle_delivery_assigned_toToUsers               Vehicle_delivery[]              @relation("Vehicle_delivery_assigned_toToUsers")
   Vehicle_delivery_Vehicle_delivery_created_byToUsers                Vehicle_delivery[]              @relation("Vehicle_delivery_created_byToUsers")
-  Client_sms                                                         Client_sms[]
+  Client_sms                                                         Client_sms[]                    @relation("Client_smsToUsers")
 }
 
 model Users_has_codes {
@@ -605,10 +605,11 @@ model Client_sms {
   sent_by_user           Boolean
   client_id              Int?
   status_id              Int
+  fileAttachment         Json?
   Clients                Clients?                 @relation(fields: [client_id], references: [id], onDelete: Cascade)
   Sms_status             Sms_status               @relation(fields: [status_id], references: [id], onDelete: Cascade)
   Awaiting_unknow_client Awaiting_unknow_client[] @relation("Awaiting_unknow_clientToClient_sms")
-  Users                  Users[]
+  Users                  Users[]                  @relation("Client_smsToUsers")
 }
 
 model Cobuyer_client_relationship {
@@ -964,20 +965,22 @@ model Lead_temperature {
 }
 
 model Notifications {
-  id                        Int               @id @default(autoincrement())
+  id                        Int                     @id @default(autoincrement())
   user_id                   Int?
   customer_id               Int?
   message                   String
   type_id                   Int
-  created_at                DateTime          @default(now())
-  is_read                   Boolean           @default(false)
-  is_deleted                Boolean           @default(false)
+  created_at                DateTime                @default(now())
+  is_read                   Boolean                 @default(false)
+  is_deleted                Boolean                 @default(false)
   notification_for_managers Boolean?
-  appointment_id            Int?              @unique
-  Appointments              Appointments?     @relation(fields: [appointment_id], references: [id], onDelete: Cascade)
-  Clients                   Clients?          @relation(fields: [customer_id], references: [id], onDelete: Cascade)
-  Type_notification         Type_notification @relation(fields: [type_id], references: [id], onDelete: Cascade)
-  Users                     Users?            @relation(fields: [user_id], references: [id], onDelete: Cascade)
+  appointment_id            Int?                    @unique
+  unregistered_customer_id  Int?
+  Appointments              Appointments?           @relation(fields: [appointment_id], references: [id], onDelete: Cascade)
+  Clients                   Clients?                @relation(fields: [customer_id], references: [id], onDelete: Cascade)
+  Type_notification         Type_notification       @relation(fields: [type_id], references: [id], onDelete: Cascade)
+  Awaiting_unknow_client    Awaiting_unknow_client? @relation(fields: [unregistered_customer_id], references: [id], onDelete: Cascade)
+  Users                     Users?                  @relation(fields: [user_id], references: [id], onDelete: Cascade)
 }
 
 model Notifications_preferences {
@@ -1448,12 +1451,12 @@ model Daily_visit_history {
   lead_type_id                                         Int
   vehicle_id                                           Int
   trade                                                Boolean       @default(false)
-  assigned_manager_id                                  Int
+  assigned_manager_id                                  Int?
   location_id                                          Int?
   decision_id                                          Int
   didTheyBuyAVehicle                                   Boolean
   managerTurnover                                      Boolean
-  Users_Daily_visit_history_assigned_manager_idToUsers Users         @relation("Daily_visit_history_assigned_manager_idToUsers", fields: [assigned_manager_id], references: [id], onDelete: Cascade)
+  Users_Daily_visit_history_assigned_manager_idToUsers Users?        @relation("Daily_visit_history_assigned_manager_idToUsers", fields: [assigned_manager_id], references: [id], onDelete: Cascade)
   Clients                                              Clients       @relation(fields: [customer_id], references: [id], onDelete: Cascade)
   Client_status                                        Client_status @relation(fields: [decision_id], references: [id])
   Lead_types                                           Lead_types    @relation(fields: [lead_type_id], references: [id], onDelete: Cascade)
@@ -1595,12 +1598,13 @@ model Time_span {
 }
 
 model Awaiting_unknow_client {
-  id                  Int          @id @default(autoincrement())
-  mobile_phone_number String?      @unique
-  email               String?      @unique
+  id                  Int             @id @default(autoincrement())
+  mobile_phone_number String?         @unique
+  email               String?         @unique
   user_id             Int?
-  Users               Users?       @relation(fields: [user_id], references: [id], onDelete: Cascade)
-  Client_sms          Client_sms[] @relation("Awaiting_unknow_clientToClient_sms")
+  Users               Users?          @relation(fields: [user_id], references: [id], onDelete: Cascade)
+  Notifications       Notifications[]
+  Client_sms          Client_sms[]    @relation("Awaiting_unknow_clientToClient_sms")
 }
 
 model Conferences_names {
