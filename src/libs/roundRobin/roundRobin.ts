@@ -19,19 +19,26 @@ export async function assignUserFromRoundRobin(
       },
     });
 
-    const firstInRoundRobinOrder = activeAndReadyForLeadRoundRobinUsers.reduce((prev, current) => {
-      if (current.round_robin_order === null) return prev;
+    let firstInRoundRobinOrder: {
+      id: number;
+      round_robin_order: number | null;
+    } | null = null;
 
-      if (prev.round_robin_order === null) return prev;
+    if (activeAndReadyForLeadRoundRobinUsers && activeAndReadyForLeadRoundRobinUsers.length > 0) {
+      firstInRoundRobinOrder = activeAndReadyForLeadRoundRobinUsers.reduce((prev, current) => {
+        if (current.round_robin_order === null) return prev;
 
-      return prev.round_robin_order < current.round_robin_order ? prev : current;
-    });
+        if (prev.round_robin_order === null) return prev;
+
+        return prev.round_robin_order < current.round_robin_order ? prev : current;
+      });
+    }
 
     // variable to retrieve user email
 
     let userEmail = '';
 
-    if (!customerAlreadyRegistered) {
+    if (!customerAlreadyRegistered && firstInRoundRobinOrder) {
       const assignUserToUnknowCustomer = await prisma.awaiting_unknow_client.update({
         where: {
           mobile_phone_number: customerMobilePhone,
@@ -49,7 +56,7 @@ export async function assignUserFromRoundRobin(
       });
 
       userEmail = assignUserToUnknowCustomer.Users?.email ?? '';
-    } else {
+    } else if (firstInRoundRobinOrder) {
       const assignUserToRegisteredCustomer = await prisma.clients.update({
         where: {
           mobile_phone: customerMobilePhone,
@@ -71,32 +78,34 @@ export async function assignUserFromRoundRobin(
 
     // reassign new orders
 
-    const firstUserIndex = activeAndReadyForLeadRoundRobinUsers.findIndex(
-      (user) => user.round_robin_order === firstInRoundRobinOrder.round_robin_order,
-    );
+    if (firstInRoundRobinOrder) {
+      const firstUserIndex = activeAndReadyForLeadRoundRobinUsers.findIndex(
+        (user) => user.round_robin_order === firstInRoundRobinOrder.round_robin_order,
+      );
 
-    const newArray = [...activeAndReadyForLeadRoundRobinUsers];
+      const newArray = [...activeAndReadyForLeadRoundRobinUsers];
 
-    const removeAndmoveFromFirstToLast = newArray.splice(firstUserIndex, 1)[0];
+      const removeAndmoveFromFirstToLast = newArray.splice(firstUserIndex, 1)[0];
 
-    newArray.push(removeAndmoveFromFirstToLast);
+      newArray.push(removeAndmoveFromFirstToLast);
 
-    newArray.forEach((user, index) => {
-      user.round_robin_order = index + 1;
-    });
+      newArray.forEach((user, index) => {
+        user.round_robin_order = index + 1;
+      });
 
-    await prisma.$transaction(
-      newArray.map((user) =>
-        prisma.users.update({
-          where: {
-            id: user.id,
-          },
-          data: {
-            round_robin_order: user.round_robin_order,
-          },
-        }),
-      ),
-    );
+      await prisma.$transaction(
+        newArray.map((user) =>
+          prisma.users.update({
+            where: {
+              id: user.id,
+            },
+            data: {
+              round_robin_order: user.round_robin_order,
+            },
+          }),
+        ),
+      );
+    }
 
     return userEmail;
   } catch (error) {

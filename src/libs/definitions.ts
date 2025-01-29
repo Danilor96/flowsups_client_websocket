@@ -31,3 +31,35 @@ export type Tasks = {
     status: string;
   };
 };
+
+export type Sms = {
+  message: string;
+  id: number;
+  status_id: number;
+  date_sent: Date;
+  sent_by_user: boolean;
+  client_id: number | null;
+  fileAttachment: any;
+  Users: {
+    id: number;
+  }[];
+  Clients: {
+    seller_id: number | null;
+  } | null;
+};
+
+export type AppointmentData = {
+  id: number;
+  created_at: Date;
+  status_id: number;
+  customer_id: number;
+  user_id: number;
+  end_date: Date;
+  start_date: Date;
+  waiting_aprove: boolean | null;
+  change_reason: string | null;
+  prevented_end_date: Date | null;
+  prevented_start_date: Date | null;
+  client_accept_appointment: boolean;
+  created_by: number;
+};
