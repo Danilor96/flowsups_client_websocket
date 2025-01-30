@@ -12,6 +12,11 @@ import { handlingConferenceStatus } from './libs/conferenceStatus/conferenceStat
 import { handlingIncomingCall } from './libs/incomingCall/incomingCall';
 import { handlingIncomingSms } from './libs/incomingSms/incomingSms';
 import { handlingOutgoingCallStatus } from './libs/outgoingCallStatus/outgoinCallStatus';
+import { pendingTasks } from './libs/minuteByMinuteCheck/pendingTasks';
+import { pendingAppointments } from './libs/minuteByMinuteCheck/pendingAppointments';
+import { pendingRescheduleAppointments } from './libs/minuteByMinuteCheck/pendingRescheduleAppointments';
+import { latesUsersTasks } from './libs/minuteByMinuteCheck/lateUsersTasks';
+import { pendingDeliveries } from './libs/minuteByMinuteCheck/pendingDeliveries';
 
 const accountSid = process.env.TWILIO_ACCOUNT_SID;
 const authToken = process.env.TWILIO_AUTH_TOKEN;
@@ -85,57 +90,15 @@ io.on('connection', (socket: Socket) => {
 
   // checking all pending tasks, appointments and statuses
   cron.schedule('* * * * 1-6', async () => {
-    // const todayDate = new Date();
-    // const lateTasks = await prisma.tasks.findMany({
-    //   where: {
-    //     deadline: {
-    //       lt: new Date(),
-    //     },
-    //     status: 1,
-    //   },
-    // });
-    // if (lateTasks && lateTasks.length > 0) {
-    //   lateTasks.forEach(async (task) => {
-    //     const notificationTask = await prisma.notifications.create({
-    //       data: {
-    //         message: `Task '${task.description}' has expired`,
-    //         created_at: new Date(),
-    //         user_id: task.assigned_to,
-    //         type_id: 1,
-    //       },
-    //     });
-    //   });
-    // }
-    // const tasks = await prisma.tasks.updateMany({
-    //   where: {
-    //     deadline: {
-    //       lt: new Date(),
-    //     },
-    //     status: 1,
-    //   },
-    //   data: {
-    //     status: 4,
-    //   },
-    // });
-    // const appt = await prisma.clients.updateMany({
-    //   where: {
-    //     appointment: {
-    //       every: {
-    //         end_date: {
-    //           lt: todayDate,
-    //         },
-    //         AND: {
-    //           status_id: 1,
-    //         },
-    //       },
-    //     },
-    //   },
-    //   data: {
-    //     client_status_id: 8,
-    //   },
-    // });
-    // await prisma.$disconnect();
-    // io.emit('update_data', 'notifications');
+    await pendingTasks();
+
+    await pendingAppointments();
+
+    await pendingRescheduleAppointments();
+
+    await latesUsersTasks();
+
+    await pendingDeliveries();
   });
 
   // checking all customers last contacted day
@@ -168,33 +131,6 @@ io.on('connection', (socket: Socket) => {
             },
           });
         }
-      }
-    }
-
-    await prisma.$disconnect();
-  });
-
-  // create notifications messages
-
-  cron.schedule('0 0 * * 1-5', async () => {
-    const tasksData = await prisma.tasks.findMany({
-      where: {
-        status: 4,
-      },
-    });
-
-    for (let i = 0; i < tasksData.length; i++) {
-      const el = tasksData[i];
-
-      if (el.assigned_to) {
-        const notificationData = await prisma.notifications.create({
-          data: {
-            message: `Task ${el.title} has expired`,
-            type_id: 5,
-            customer_id: el.customer_id,
-            user_id: el.assigned_to,
-          },
-        });
       }
     }
 
