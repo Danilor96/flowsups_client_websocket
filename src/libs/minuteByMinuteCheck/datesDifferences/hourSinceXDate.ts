@@ -1,9 +1,11 @@
 import { differenceInHours } from 'date-fns';
 
 export const hoursSinceXDate = (date: Date) => {
-  const now = new Date();
+  const todayIsos = new Date().toISOString();
 
-  const hoursDiff = differenceInHours(date, now);
+  const today = new Date(todayIsos);
+
+  const hoursDiff = differenceInHours(date, today);
 
   return Math.abs(hoursDiff);
 };

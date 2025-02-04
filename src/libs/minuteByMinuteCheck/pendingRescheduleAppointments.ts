@@ -5,11 +5,15 @@ import { hoursSinceXDate } from './datesDifferences/hourSinceXDate';
 
 export async function pendingRescheduleAppointments() {
   try {
+    const todayIsos = new Date().toISOString();
+
+    const today = new Date(todayIsos);
+
     const pendingReschedule = await prisma.appointments.findMany({
       where: {
         waiting_aprove: true,
         start_date: {
-          gt: new Date(),
+          gt: today,
         },
       },
     });
@@ -32,7 +36,7 @@ export async function pendingRescheduleAppointments() {
               id: reAppt.id,
             },
             data: {
-              last_check: new Date(),
+              last_check: today,
             },
           });
         }

@@ -1,9 +1,11 @@
 import { differenceInMinutes } from 'date-fns';
 
 export const minutesSinceXDate = (date: Date) => {
-  const now = new Date();
+  const todayIsos = new Date().toISOString();
 
-  const minuteDiff = differenceInMinutes(date, now);
+  const today = new Date(todayIsos);
+
+  const minuteDiff = differenceInMinutes(date, today);
 
   return Math.abs(minuteDiff);
 };

@@ -104,7 +104,9 @@ io.on('connection', (socket: Socket) => {
   // checking all customers last contacted day
 
   cron.schedule('0 0 * * 1-5', async () => {
-    const todayDate = new Date();
+    const todayIsos = new Date().toISOString();
+
+    const todayDate = new Date(todayIsos);
 
     const customers = await prisma.clients.findMany();
 
@@ -127,7 +129,7 @@ io.on('connection', (socket: Socket) => {
             },
             data: {
               client_status_id: 12,
-              lost_date: new Date(),
+              lost_date: todayDate,
             },
           });
         }

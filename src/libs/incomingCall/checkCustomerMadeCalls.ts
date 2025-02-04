@@ -6,11 +6,15 @@ import { prisma } from '../prisma/prisma';
 export const checkCustomerMadeCalls = async (phoneNumber: string) => {
   // check if the customer has an active suspension
 
+  const todayIsos = new Date().toISOString();
+
+  const today = new Date(todayIsos);
+
   const activeSuspension = await prisma.suspension.findFirst({
     where: {
       mobile_phone: phoneNumber,
       end_suspension_date: {
-        gt: new Date(),
+        gt: today,
       },
     },
   });
@@ -21,7 +25,7 @@ export const checkCustomerMadeCalls = async (phoneNumber: string) => {
 
   // Check if the customer has any calls in the last 10 minutes
 
-  const tenMinutesAgo = subMinutes(new Date(), 10);
+  const tenMinutesAgo = subMinutes(today, 10);
 
   const incomingCalls = await prisma.client_calls.count({
     where: {
@@ -37,8 +41,8 @@ export const checkCustomerMadeCalls = async (phoneNumber: string) => {
     await prisma.suspension.create({
       data: {
         mobile_phone: phoneNumber,
-        start_suspension_date: new Date(),
-        end_suspension_date: addMinutes(new Date(), 10),
+        start_suspension_date: today,
+        end_suspension_date: addMinutes(today, 10),
       },
     });
 

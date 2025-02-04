@@ -11,6 +11,10 @@ interface IncomingSmsData {
 export async function handlingIncomingSms({ from, message }: IncomingSmsData) {
   const fromFormatted = from.slice(1);
 
+  const todayIsos = new Date().toISOString();
+
+  const today = new Date(todayIsos);
+
   let userId: number | null | undefined = null;
   let customerId: number | null | undefined = null;
   let unregisteredCustomerId: number | null = null;
@@ -36,7 +40,7 @@ export async function handlingIncomingSms({ from, message }: IncomingSmsData) {
           where: {
             status_id: 1,
             start_date: {
-              gt: new Date(),
+              gt: today,
             },
           },
           select: {
@@ -52,7 +56,7 @@ export async function handlingIncomingSms({ from, message }: IncomingSmsData) {
       const data = await prisma.client_sms.create({
         data: {
           message: message,
-          date_sent: new Date(),
+          date_sent: today,
           sent_by_user: false,
           client_id: clientIdStatusAppointments.id,
           status_id: 2,
@@ -87,7 +91,7 @@ export async function handlingIncomingSms({ from, message }: IncomingSmsData) {
           const data = await prisma.client_sms.create({
             data: {
               message: message,
-              date_sent: new Date(),
+              date_sent: today,
               sent_by_user: false,
               status_id: 2,
               Awaiting_unknow_client: {
@@ -139,7 +143,7 @@ export async function handlingIncomingSms({ from, message }: IncomingSmsData) {
             const data = await prisma.client_sms.create({
               data: {
                 message: message,
-                date_sent: new Date(),
+                date_sent: today,
                 sent_by_user: false,
                 status_id: 2,
                 Awaiting_unknow_client: {
@@ -175,7 +179,7 @@ export async function handlingIncomingSms({ from, message }: IncomingSmsData) {
             await prisma.client_sms.create({
               data: {
                 message: message,
-                date_sent: new Date(),
+                date_sent: today,
                 sent_by_user: false,
                 status_id: 2,
                 Awaiting_unknow_client: {
@@ -209,7 +213,7 @@ export async function handlingIncomingSms({ from, message }: IncomingSmsData) {
           sms = await prisma.client_sms.create({
             data: {
               message: message,
-              date_sent: new Date(),
+              date_sent: today,
               sent_by_user: false,
               status_id: 2,
               Awaiting_unknow_client: {
@@ -244,7 +248,7 @@ export async function handlingIncomingSms({ from, message }: IncomingSmsData) {
           sms = await prisma.client_sms.create({
             data: {
               message: message,
-              date_sent: new Date(),
+              date_sent: today,
               sent_by_user: false,
               status_id: 2,
               Awaiting_unknow_client: {
@@ -293,7 +297,7 @@ export async function handlingIncomingSms({ from, message }: IncomingSmsData) {
     if (clientIdStatusAppointments?.id) {
       const lead = await prisma.client_has_lead.create({
         data: {
-          created_at: new Date(),
+          created_at: today,
           assigned_to_id: clientIdStatusAppointments?.seller?.id || 1,
           client_id: clientIdStatusAppointments.id,
           status_id: 2,
@@ -321,7 +325,7 @@ export async function handlingIncomingSms({ from, message }: IncomingSmsData) {
         let apptData: AppointmentData | undefined;
 
         clientIdStatusAppointments.appointment.forEach(async (el) => {
-          if (el.status_id === 1 && new Date(el.start_date) > new Date()) {
+          if (el.status_id === 1 && new Date(el.start_date) > today) {
             apptData = await prisma.appointments.update({
               where: {
                 id: el.id,
@@ -376,7 +380,7 @@ export async function handlingIncomingSms({ from, message }: IncomingSmsData) {
 
       if (clientIdStatusAppointments?.appointment) {
         clientIdStatusAppointments.appointment.forEach(async (el) => {
-          if (el.status_id === 1 && new Date(el.start_date) > new Date()) {
+          if (el.status_id === 1 && new Date(el.start_date) > today) {
             await prisma.appointments.update({
               where: {
                 id: el.id,

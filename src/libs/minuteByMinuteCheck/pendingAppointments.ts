@@ -3,10 +3,14 @@ import { io, sendTo } from '../../websocketServer';
 
 export async function pendingAppointments() {
   try {
+    const todayIsos = new Date().toISOString();
+
+    const today = new Date(todayIsos);
+
     const lateAppointments = await prisma.appointments.findMany({
       where: {
         end_date: {
-          lt: new Date(),
+          lt: today,
         },
         OR: [
           {
@@ -26,7 +30,7 @@ export async function pendingAppointments() {
       const appointmentsUpdated = await prisma.appointments.updateMany({
         where: {
           end_date: {
-            lt: new Date(),
+            lt: today,
           },
         },
         data: {
@@ -39,7 +43,7 @@ export async function pendingAppointments() {
           appointment: {
             every: {
               end_date: {
-                lt: new Date(),
+                lt: today,
               },
               AND: {
                 status_id: 1,
