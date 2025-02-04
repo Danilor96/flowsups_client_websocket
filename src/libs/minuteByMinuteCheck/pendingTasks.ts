@@ -3,10 +3,14 @@ import { io, sendTo } from '../../websocketServer';
 
 export async function pendingTasks() {
   try {
+    const todayIsos = new Date().toISOString();
+
+    const today = new Date(todayIsos);
+
     const lateTasks = await prisma.tasks.findMany({
       where: {
         deadline: {
-          lt: new Date(),
+          lt: today,
         },
         status: 1,
       },
@@ -17,7 +21,7 @@ export async function pendingTasks() {
         const notificationTask = await prisma.notifications.create({
           data: {
             message: `Task '${task.description}' has expired`,
-            created_at: new Date(),
+            created_at: today,
             user_id: task.assigned_to,
             type_id: 1,
           },
@@ -28,7 +32,7 @@ export async function pendingTasks() {
     const tasks = await prisma.tasks.updateMany({
       where: {
         deadline: {
-          lt: new Date(),
+          lt: today,
         },
         status: 1,
       },
