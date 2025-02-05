@@ -2,6 +2,7 @@ import { prisma } from '../prisma/prisma';
 import { io } from '../../websocketServer';
 import { assignUserFromRoundRobin } from '../roundRobin/roundRobin';
 import { AppointmentData, Sms } from '../definitions';
+import { startOfToday, endOfToday } from 'date-fns';
 
 interface IncomingSmsData {
   from: any;
@@ -379,6 +380,8 @@ export async function handlingIncomingSms({ from, message }: IncomingSmsData) {
       // check if the customer has a pending for confirmation appointment
 
       if (clientIdStatusAppointments?.appointment) {
+        let appointmentForToday = false;
+
         clientIdStatusAppointments.appointment.forEach(async (el) => {
           if (el.status_id === 1 && new Date(el.start_date) > today) {
             await prisma.appointments.update({
@@ -390,8 +393,14 @@ export async function handlingIncomingSms({ from, message }: IncomingSmsData) {
                 client_accept_appointment: true,
               },
             });
+
+            if (new Date(el.start_date) < endOfToday()) appointmentForToday = true;
           }
         });
+
+        if (appointmentForToday) {
+          io.emit('update_data', 'dailyAppointmentsList');
+        }
       }
     }
 
