@@ -78,6 +78,28 @@ export async function handlingIncomingSms({ from, message }: IncomingSmsData) {
 
       userId = data?.Clients?.seller_id;
       customerId = clientIdStatusAppointments.id;
+
+      // set the status from customer settings if this customers has status lost
+
+      if (clientIdStatusAppointments.client_status_id === 12) {
+        const customersSettings = await prisma.customer_settings.findFirst();
+
+        if (customersSettings) {
+          // check if the configuration is setted to activate a customer when contacted
+          if (customersSettings.active_lost_customer) {
+            const newStatusId = customersSettings.set_active_lost_customer_status_to;
+
+            await prisma.clients.update({
+              where: {
+                id: clientIdStatusAppointments.id,
+              },
+              data: {
+                client_status_id: newStatusId,
+              },
+            });
+          }
+        }
+      }
     } else {
       const awaitingCustomer = await prisma.awaiting_unknow_client.findUnique({
         where: {

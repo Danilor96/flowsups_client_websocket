@@ -521,6 +521,7 @@ model Clients {
   bdc_id                                                                Int?
   finance_manager_id                                                    Int?
   sales_manager_id                                                      Int?
+  appointment_confirmation_sms_sent                                     Boolean?                  @default(false)
   appointment                                                           Appointments[]            @relation("customer")
   Client_calls                                                          Client_calls[]
   Client_has_cobuyer_Client_has_cobuyer_buyer_client_idToClients        Client_has_cobuyer?       @relation("Client_has_cobuyer_buyer_client_idToClients")
@@ -577,7 +578,7 @@ model Client_has_lead {
   id                                         Int                  @id @default(autoincrement())
   lead_id                                    Int?
   follow_up_date                             DateTime?
-  assigned_to_id                             Int
+  assigned_to_id                             Int?
   note_id                                    Int?
   reminder_time                              DateTime?
   appointment_id                             Int?
@@ -590,7 +591,7 @@ model Client_has_lead {
   created_at                                 DateTime
   status_id                                  Int
   Appointments                               Appointments?        @relation(fields: [appointment_id], references: [id])
-  Users                                      Users                @relation(fields: [assigned_to_id], references: [id])
+  Users                                      Users?               @relation(fields: [assigned_to_id], references: [id])
   Clients                                    Clients              @relation(fields: [client_id], references: [id])
   Users_Client_has_lead_created_by_idToUsers Users                @relation("Client_has_lead_created_by_idToUsers", fields: [created_by_id], references: [id])
   Client_detail_leads                        Client_detail_leads? @relation(fields: [lead_id], references: [id])
@@ -1611,4 +1612,9 @@ model Awaiting_unknow_client {
 model Conferences_names {
   id              Int    @id @default(autoincrement())
   conference_name String @unique
+}
+
+model ConfirmationSms {
+  id  Int    @id @default(autoincrement())
+  sms String
 }
