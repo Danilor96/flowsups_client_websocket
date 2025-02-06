@@ -17,6 +17,7 @@ import { pendingAppointments } from './libs/minuteByMinuteCheck/pendingAppointme
 import { pendingRescheduleAppointments } from './libs/minuteByMinuteCheck/pendingRescheduleAppointments';
 import { latesUsersTasks } from './libs/minuteByMinuteCheck/lateUsersTasks';
 import { pendingDeliveries } from './libs/minuteByMinuteCheck/pendingDeliveries';
+import { customerStatus } from './libs/minuteByMinuteCheck/customerStatus';
 
 const accountSid = process.env.TWILIO_ACCOUNT_SID;
 const authToken = process.env.TWILIO_AUTH_TOKEN;
@@ -99,6 +100,8 @@ io.on('connection', (socket: Socket) => {
     await latesUsersTasks();
 
     await pendingDeliveries();
+
+    await customerStatus();
   });
 
   // checking all customers last contacted day
@@ -137,6 +140,8 @@ io.on('connection', (socket: Socket) => {
     }
 
     await prisma.$disconnect();
+
+    io.emit('update_data', 'dailyTotals');
   });
 
   app.post('/getCurrentCallStatus', async (req, res) => {
