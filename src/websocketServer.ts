@@ -86,7 +86,11 @@ export const sendTo = (email: string) => {
 io.on('connection', (socket: Socket) => {
   //save logged active users
   socket.on('login', (user: string) => {
-    connectedUsers[socket.id] = user;
+    if (user) {
+      connectedUsers[socket.id] = user;
+
+      console.log(`User connected: ${user}`);
+    }
   });
 
   // checking all pending tasks, appointments and statuses
@@ -245,8 +249,9 @@ io.on('connection', (socket: Socket) => {
   );
 
   socket.on('disconnect', () => {
+    console.log(`User disconnected: ${connectedUsers[socket.id]}`);
+
     delete connectedUsers[socket.id];
-    console.log('User disconnected');
   });
 });
 
