@@ -101,6 +101,14 @@ export async function handlingConferenceStatus({
               conferenceSid,
               phoneNumber: from,
             });
+          } else {
+            // if there is not a new user assigned, then calls to every web users
+
+            io.emit('update_data', 'joinConference', {
+              conferenceName,
+              conferenceSid,
+              phoneNumber: from,
+            });
           }
         }
       } else {
@@ -138,6 +146,14 @@ export async function handlingConferenceStatus({
 
               if (newAssignedUser) {
                 io.to(sendTo(newAssignedUser)).emit('update_data', 'joinConference', {
+                  conferenceName,
+                  conferenceSid,
+                  phoneNumber: from,
+                });
+              } else {
+                // if there is not a new user assigned, then calls to every web users
+
+                io.emit('update_data', 'joinConference', {
                   conferenceName,
                   conferenceSid,
                   phoneNumber: from,
