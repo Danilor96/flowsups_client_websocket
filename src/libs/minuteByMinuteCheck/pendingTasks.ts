@@ -1,11 +1,12 @@
 import { prisma } from '../prisma/prisma';
 import { io, sendTo } from '../../websocketServer';
+import { parseISO } from 'date-fns';
 
 export async function pendingTasks() {
   try {
     const todayIsos = new Date().toISOString();
 
-    const today = new Date(todayIsos);
+    const today = parseISO(todayIsos);
 
     const lateTasks = await prisma.tasks.findMany({
       where: {
