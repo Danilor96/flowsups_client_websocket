@@ -1,11 +1,12 @@
 import { prisma } from '../prisma/prisma';
 import { io, sendTo } from '../../websocketServer';
+import { parseISO } from 'date-fns';
 
 export async function pendingAppointments() {
   try {
     const todayIsos = new Date().toISOString();
 
-    const today = new Date(todayIsos);
+    const today = parseISO(todayIsos);
 
     const lateAppointments = await prisma.appointments.findMany({
       where: {

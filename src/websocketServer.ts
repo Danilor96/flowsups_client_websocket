@@ -18,6 +18,7 @@ import { pendingRescheduleAppointments } from './libs/minuteByMinuteCheck/pendin
 import { latesUsersTasks } from './libs/minuteByMinuteCheck/lateUsersTasks';
 import { pendingDeliveries } from './libs/minuteByMinuteCheck/pendingDeliveries';
 import { customerStatus } from './libs/minuteByMinuteCheck/customerStatus';
+import { parseISO } from 'date-fns';
 
 const accountSid = process.env.TWILIO_ACCOUNT_SID;
 const authToken = process.env.TWILIO_AUTH_TOKEN;
@@ -113,7 +114,7 @@ io.on('connection', (socket: Socket) => {
   cron.schedule('0 0 * * 1-5', async () => {
     const todayIsos = new Date().toISOString();
 
-    const todayDate = new Date(todayIsos);
+    const todayDate = parseISO(todayIsos);
 
     const customers = await prisma.clients.findMany();
 

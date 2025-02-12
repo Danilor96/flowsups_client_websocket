@@ -2,12 +2,13 @@ import { prisma } from '../prisma/prisma';
 import { io, sendTo } from '../../websocketServer';
 import { managerUsersArray } from './specificUsers/managerUsers';
 import { hoursSinceXDate } from './datesDifferences/hourSinceXDate';
+import { parseISO } from 'date-fns';
 
 export async function pendingRescheduleAppointments() {
   try {
     const todayIsos = new Date().toISOString();
 
-    const today = new Date(todayIsos);
+    const today = parseISO(todayIsos);
 
     const pendingReschedule = await prisma.appointments.findMany({
       where: {
