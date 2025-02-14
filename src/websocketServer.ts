@@ -98,8 +98,6 @@ io.on('connection', (socket: Socket) => {
   cron.schedule('* * * * 1-6', async () => {
     await pendingTasks();
 
-    await pendingAppointments();
-
     await pendingRescheduleAppointments();
 
     await latesUsersTasks();
@@ -145,6 +143,8 @@ io.on('connection', (socket: Socket) => {
     }
 
     await prisma.$disconnect();
+
+    await pendingAppointments();
 
     io.emit('update_data', 'dailyTotals');
   });
