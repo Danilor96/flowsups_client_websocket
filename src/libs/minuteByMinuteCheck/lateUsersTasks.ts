@@ -29,7 +29,7 @@ export async function latesUsersTasks() {
 
           if (managerUsers && managerUsers.length > 0) {
             managerUsers.forEach((user) => {
-              io.to(sendTo(user.email)).emit('update_data', 'notifications');
+              sendTo(user.email, 'notifications');
             });
           }
         }

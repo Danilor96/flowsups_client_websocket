@@ -75,7 +75,7 @@ export async function handlingConferenceStatus({
         //check if the assigned user is connected
 
         if (isConnected(customerData.seller.email)) {
-          io.to(sendTo(customerData.seller.email)).emit('update_data', 'joinConference', {
+          sendTo(customerData.seller.email, 'joinConference', {
             conferenceName,
             conferenceSid,
             phoneNumber: from,
@@ -96,7 +96,7 @@ export async function handlingConferenceStatus({
           }
 
           if (newAssignedUser) {
-            io.to(sendTo(newAssignedUser)).emit('update_data', 'joinConference', {
+            sendTo(newAssignedUser, 'joinConference', {
               conferenceName,
               conferenceSid,
               phoneNumber: from,
@@ -124,7 +124,7 @@ export async function handlingConferenceStatus({
             // check if the user is connected
 
             if (isConnected(awaitingCustomer.Users?.email)) {
-              io.to(sendTo(awaitingCustomer.Users?.email)).emit('update_data', 'joinConference', {
+              sendTo(awaitingCustomer.Users?.email, 'joinConference', {
                 conferenceName,
                 conferenceSid,
                 phoneNumber: from,
@@ -145,7 +145,7 @@ export async function handlingConferenceStatus({
               }
 
               if (newAssignedUser) {
-                io.to(sendTo(newAssignedUser)).emit('update_data', 'joinConference', {
+                sendTo(newAssignedUser, 'joinConference', {
                   conferenceName,
                   conferenceSid,
                   phoneNumber: from,
