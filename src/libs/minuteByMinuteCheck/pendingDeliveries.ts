@@ -36,14 +36,11 @@ export async function pendingDeliveries() {
             },
           });
 
-          io.to(sendTo(delivery.Users_Vehicle_delivery_assigned_toToUsers.email)).emit(
-            'update_data',
-            'notifications',
-          );
+          sendTo(delivery.Users_Vehicle_delivery_assigned_toToUsers.email, 'notifications');
 
           if (managerUsers && managerUsers.length > 0) {
             managerUsers.forEach((user) => {
-              io.to(sendTo(user.email)).emit('update_data', 'notifications');
+              sendTo(user.email, 'notifications');
             });
           }
         } else if (minutesSinceXDate(delivery.end_date) === 30) {
@@ -58,14 +55,11 @@ export async function pendingDeliveries() {
             },
           });
 
-          io.to(sendTo(delivery.Users_Vehicle_delivery_assigned_toToUsers.email)).emit(
-            'update_data',
-            'notifications',
-          );
+          sendTo(delivery.Users_Vehicle_delivery_assigned_toToUsers.email, 'notifications');
 
           if (managerUsers && managerUsers.length > 0) {
             managerUsers.forEach((user) => {
-              io.to(sendTo(user.email)).emit('update_data', 'notifications');
+              sendTo(user.email, 'notifications');
             });
           }
         }

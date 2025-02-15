@@ -79,22 +79,28 @@ export const connectedUsers: { [id: string]: string } = {};
 
 //function for specify a user in the websocket with email
 
-export const sendTo = (email: string) => {
-  const userAsking = Object.keys(connectedUsers).find((id) => connectedUsers[id] === email);
-  return userAsking ?? '';
+export const sendTo = (email: string, dataToUpdate: string, extraData?: any) => {
+  io.to(email).emit('update_data', dataToUpdate, extraData);
 };
 
-io.on('connection', (socket: Socket) => {
+io.on('connection', async (socket: Socket) => {
   //save logged active users
-  socket.on('login', (user: string) => {
-    if (user) {
-      connectedUsers[socket.id] = user;
 
-      console.log(`User connected: ${user}`);
+  const query = socket.handshake.query;
+  const user = query?.userEmail;
+
+  if (user) {
+    console.log(`User connected: ${user}`);
+
+    if (typeof user === 'string') {
+      await socket.join(user);
+
+      connectedUsers[socket.id] = user;
     }
-  });
+  }
 
   // checking all pending tasks, appointments and statuses
+
   cron.schedule('* * * * 1-6', async () => {
     await pendingTasks();
 
@@ -242,14 +248,14 @@ io.on('connection', (socket: Socket) => {
     'ask_for_update_data',
     (dataToUpdate, specificUser = false, userEmail = null, extraData = null) => {
       if (specificUser && userEmail) {
-        io.to(sendTo(userEmail)).emit('update_data', dataToUpdate, extraData);
+        sendTo(userEmail, dataToUpdate, extraData);
       } else {
         io.emit('update_data', dataToUpdate, extraData);
       }
     },
   );
 
-  socket.on('disconnect', () => {
+  socket.on('disconnect', (reason) => {
     console.log(`User disconnected: ${connectedUsers[socket.id]}`);
 
     delete connectedUsers[socket.id];
