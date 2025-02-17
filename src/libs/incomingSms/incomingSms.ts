@@ -446,6 +446,7 @@ export async function handlingIncomingSms({ from, message }: IncomingSmsData) {
     });
 
     io.emit('update_data', 'notifications');
+    io.emit('update_data', 'smsModal');
   } catch (error) {
     console.log(error);
   }
