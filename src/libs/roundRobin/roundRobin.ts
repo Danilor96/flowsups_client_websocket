@@ -47,7 +47,7 @@ export async function assignUserFromRoundRobin(
           user_id: firstInRoundRobinOrder.id,
         },
         include: {
-          Users: {
+          user: {
             select: {
               email: true,
             },
@@ -55,7 +55,7 @@ export async function assignUserFromRoundRobin(
         },
       });
 
-      userEmail = assignUserToUnknowCustomer.Users?.email ?? '';
+      userEmail = assignUserToUnknowCustomer.user?.email ?? '';
     } else if (firstInRoundRobinOrder) {
       const assignUserToRegisteredCustomer = await prisma.clients.update({
         where: {

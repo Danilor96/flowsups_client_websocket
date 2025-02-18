@@ -63,12 +63,12 @@ export async function handlingIncomingSms({ from, message }: IncomingSmsData) {
           status_id: 2,
         },
         include: {
-          Users: {
+          user: {
             select: {
               id: true,
             },
           },
-          Clients: {
+          client_message: {
             select: {
               seller_id: true,
             },
@@ -76,7 +76,7 @@ export async function handlingIncomingSms({ from, message }: IncomingSmsData) {
         },
       });
 
-      userId = data?.Clients?.seller_id;
+      userId = data?.client_message?.seller_id;
       customerId = clientIdStatusAppointments.id;
 
       // set the status from customer settings if this customers has status lost
@@ -117,24 +117,24 @@ export async function handlingIncomingSms({ from, message }: IncomingSmsData) {
               date_sent: today,
               sent_by_user: false,
               status_id: 2,
-              Awaiting_unknow_client: {
+              unregistered_customer: {
                 connect: {
                   id: awaitingCustomer.id,
                 },
               },
-              Users: {
+              user: {
                 connect: {
                   id: awaitingCustomer.user_id,
                 },
               },
             },
             include: {
-              Users: {
+              user: {
                 select: {
                   id: true,
                 },
               },
-              Clients: {
+              client_message: {
                 select: {
                   seller_id: true,
                 },
@@ -142,7 +142,7 @@ export async function handlingIncomingSms({ from, message }: IncomingSmsData) {
             },
           });
 
-          userId = data.Clients?.seller_id;
+          userId = data.client_message?.seller_id;
         } else {
           // if the unregistered customer hasn't a user assigned, then assigned it from round robin and
           // save the sms
@@ -155,7 +155,7 @@ export async function handlingIncomingSms({ from, message }: IncomingSmsData) {
                 mobile_phone_number: fromFormatted,
               },
               data: {
-                Users: {
+                user: {
                   connect: {
                     email: userFromRoundRobin,
                   },
@@ -169,24 +169,24 @@ export async function handlingIncomingSms({ from, message }: IncomingSmsData) {
                 date_sent: today,
                 sent_by_user: false,
                 status_id: 2,
-                Awaiting_unknow_client: {
+                unregistered_customer: {
                   connect: {
                     id: updatedAwaitingCustomer.id,
                   },
                 },
-                Users: {
+                user: {
                   connect: {
                     email: userFromRoundRobin,
                   },
                 },
               },
               include: {
-                Users: {
+                user: {
                   select: {
                     id: true,
                   },
                 },
-                Clients: {
+                client_message: {
                   select: {
                     seller_id: true,
                   },
@@ -195,7 +195,7 @@ export async function handlingIncomingSms({ from, message }: IncomingSmsData) {
             });
 
             unregisteredCustomerId = updatedAwaitingCustomer.id;
-            userId = data?.Clients?.seller_id;
+            userId = data?.client_message?.seller_id;
           } else {
             // if there is no a round robin user, then save the sms without a related user
 
@@ -205,7 +205,7 @@ export async function handlingIncomingSms({ from, message }: IncomingSmsData) {
                 date_sent: today,
                 sent_by_user: false,
                 status_id: 2,
-                Awaiting_unknow_client: {
+                unregistered_customer: {
                   connect: {
                     mobile_phone_number: fromFormatted,
                   },
@@ -239,24 +239,24 @@ export async function handlingIncomingSms({ from, message }: IncomingSmsData) {
               date_sent: today,
               sent_by_user: false,
               status_id: 2,
-              Awaiting_unknow_client: {
+              unregistered_customer: {
                 connect: {
                   id: unregisteredCustomer.id,
                 },
               },
-              Users: {
+              user: {
                 connect: {
                   email: userFromRoundRobin,
                 },
               },
             },
             include: {
-              Users: {
+              user: {
                 select: {
                   id: true,
                 },
               },
-              Clients: {
+              client_message: {
                 select: {
                   seller_id: true,
                 },
@@ -264,7 +264,7 @@ export async function handlingIncomingSms({ from, message }: IncomingSmsData) {
             },
           });
 
-          userId = sms?.Clients?.seller_id;
+          userId = sms?.client_message?.seller_id;
         } else {
           // create the sms without a related user
 
@@ -274,19 +274,19 @@ export async function handlingIncomingSms({ from, message }: IncomingSmsData) {
               date_sent: today,
               sent_by_user: false,
               status_id: 2,
-              Awaiting_unknow_client: {
+              unregistered_customer: {
                 connect: {
                   id: unregisteredCustomer.id,
                 },
               },
             },
             include: {
-              Users: {
+              user: {
                 select: {
                   id: true,
                 },
               },
-              Clients: {
+              client_message: {
                 select: {
                   seller_id: true,
                 },
@@ -295,7 +295,7 @@ export async function handlingIncomingSms({ from, message }: IncomingSmsData) {
           });
         }
 
-        userId = sms?.Clients?.seller_id;
+        userId = sms?.client_message?.seller_id;
         unregisteredCustomerId = unregisteredCustomer.id;
       }
     }

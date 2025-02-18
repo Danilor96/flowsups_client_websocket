@@ -8,13 +8,13 @@ export async function pendingDeliveries() {
   try {
     const pendingDeliveries = await prisma.vehicle_delivery.findMany({
       include: {
-        Clients: {
+        customer: {
           select: {
             first_name: true,
             last_name: true,
           },
         },
-        Users_Vehicle_delivery_assigned_toToUsers: {
+        assigned: {
           select: {
             email: true,
           },
@@ -29,14 +29,14 @@ export async function pendingDeliveries() {
 
           await prisma.notifications.create({
             data: {
-              message: `There is a delivery scheduled in one hour with ${delivery.Clients.first_name} ${delivery.Clients.last_name}`,
+              message: `There is a delivery scheduled in one hour with ${delivery.customer.first_name} ${delivery.customer.last_name}`,
               type_id: 3,
               user_id: delivery.assigned_to,
               notification_for_managers: true,
             },
           });
 
-          sendTo(delivery.Users_Vehicle_delivery_assigned_toToUsers.email, 'notifications');
+          sendTo(delivery.assigned.email, 'notifications');
 
           if (managerUsers && managerUsers.length > 0) {
             managerUsers.forEach((user) => {
@@ -48,14 +48,14 @@ export async function pendingDeliveries() {
 
           await prisma.notifications.create({
             data: {
-              message: `The delivery with ${delivery.Clients.first_name} ${delivery.Clients.last_name} has expired`,
+              message: `The delivery with ${delivery.customer.first_name} ${delivery.customer.last_name} has expired`,
               type_id: 5,
               user_id: delivery.assigned_to,
               notification_for_managers: true,
             },
           });
 
-          sendTo(delivery.Users_Vehicle_delivery_assigned_toToUsers.email, 'notifications');
+          sendTo(delivery.assigned.email, 'notifications');
 
           if (managerUsers && managerUsers.length > 0) {
             managerUsers.forEach((user) => {

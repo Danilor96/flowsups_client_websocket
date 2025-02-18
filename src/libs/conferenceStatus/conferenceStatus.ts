@@ -120,11 +120,11 @@ export async function handlingConferenceStatus({
           // then checks if that unknow customer is assigned to a user
           // in order to join both in a call
 
-          if (awaitingCustomer.Users?.email) {
+          if (awaitingCustomer.user?.email) {
             // check if the user is connected
 
-            if (isConnected(awaitingCustomer.Users?.email)) {
-              sendTo(awaitingCustomer.Users?.email, 'joinConference', {
+            if (isConnected(awaitingCustomer.user?.email)) {
+              sendTo(awaitingCustomer.user?.email, 'joinConference', {
                 conferenceName,
                 conferenceSid,
                 phoneNumber: from,
