@@ -19,6 +19,7 @@ import { latesUsersTasks } from './libs/minuteByMinuteCheck/lateUsersTasks';
 import { pendingDeliveries } from './libs/minuteByMinuteCheck/pendingDeliveries';
 import { customerStatus } from './libs/minuteByMinuteCheck/customerStatus';
 import { parseISO } from 'date-fns';
+import { smsStatus } from './libs/sentSmsStatus/sentSmsStatus';
 
 const accountSid = process.env.TWILIO_ACCOUNT_SID;
 const authToken = process.env.TWILIO_AUTH_TOKEN;
@@ -242,6 +243,26 @@ io.on('connection', async (socket: Socket) => {
     const message = req.body.Body;
 
     await handlingIncomingSms({ from, message });
+  });
+
+  // sent sms status
+
+  app.post('/smsStatus', async (req, res) => {
+    try {
+      console.log('socket!');
+
+      const to = req.body.To;
+      const status = req.body.MessageStatus;
+      const errorMessage = req.body.ErrorMessage;
+      const errorCode = req.body.ErrorCode;
+      const messageSid = req.body.MessageSid;
+
+      await smsStatus(to, status, errorMessage, errorCode, messageSid);
+    } catch (error) {
+      console.log(error);
+    }
+
+    res.status(204).send();
   });
 
   socket.on(

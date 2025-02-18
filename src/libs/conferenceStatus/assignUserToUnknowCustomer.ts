@@ -7,7 +7,7 @@ export async function assignUserToUnknowCustomer(userEmail: string, mobilePhone:
         mobile_phone_number: mobilePhone,
       },
       data: {
-        Users: {
+        user: {
           connect: {
             email: userEmail,
           },

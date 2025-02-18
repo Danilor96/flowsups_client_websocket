@@ -7,7 +7,7 @@ export async function checkIfCustomerIsInAwaitingTable(customerMobilePhone: stri
         mobile_phone_number: customerMobilePhone,
       },
       include: {
-        Users: {
+        user: {
           select: {
             email: true,
           },

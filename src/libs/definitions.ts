@@ -33,17 +33,21 @@ export type Tasks = {
 };
 
 export type Sms = {
-  message: string;
   id: number;
-  status_id: number;
-  date_sent: Date;
+  message: string;
+  date_sent: Date | null;
   sent_by_user: boolean;
   client_id: number | null;
-  fileAttachment: any;
-  Users: {
+  status_id: number;
+  fileAttachment: Object | null;
+  read_by: number[];
+  delivered: boolean;
+  message_sid: string | null;
+  sent: boolean;
+  user: {
     id: number;
   }[];
-  Clients: {
+  client_message: {
     seller_id: number | null;
   } | null;
 };
