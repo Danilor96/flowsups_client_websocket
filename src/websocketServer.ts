@@ -249,8 +249,6 @@ io.on('connection', async (socket: Socket) => {
 
   app.post('/smsStatus', async (req, res) => {
     try {
-      console.log('socket!');
-
       const to = req.body.To;
       const status = req.body.MessageStatus;
       const errorMessage = req.body.ErrorMessage;
