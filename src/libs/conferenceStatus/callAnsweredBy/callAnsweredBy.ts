@@ -12,7 +12,7 @@ export async function callAnsweredBy(
           mobile_phone_number: customerMobilePhone,
         },
         data: {
-          Users: {
+          user: {
             connect: {
               email: userEmail,
             },
@@ -27,7 +27,7 @@ export async function callAnsweredBy(
           mobile_phone_number: customerMobilePhone,
         },
         data: {
-          Users: {
+          user: {
             connect: {
               mobile_phone: userMobilePhone,
             },

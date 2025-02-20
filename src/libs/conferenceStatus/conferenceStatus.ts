@@ -7,6 +7,10 @@ import { checkIfCustomerIsInAwaitingTable } from './checkIfCustomerIsInAwaitingT
 import { addUnknowCustomerToAwatingTable } from './addUnknowCustomerToAwatingTable';
 import { assignUserFromRoundRobin } from '../roundRobin/roundRobin';
 import { callAnsweredBy } from './callAnsweredBy/callAnsweredBy';
+import {
+  checkIfTheCallWasAnswered,
+  setTheCallAsAnswered,
+} from './transferCall/checkIfTheCallWasAnswered';
 
 interface ConferenceData {
   conferenceSid: any;
@@ -180,6 +184,8 @@ export async function handlingConferenceStatus({
           });
         }
       }
+
+      checkIfTheCallWasAnswered(from, conferenceSid, conferenceName);
     }
 
     console.log(`Conference SID: ${conferenceSid}, Status: ${conferenceStatus}.`);
@@ -233,6 +239,8 @@ export async function handlingConferenceStatus({
         const regexCorreo = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
         if (conferenceParticipansList.length > 1 && sequence >= 2 && sequence <= 3) {
+          await setTheCallAsAnswered(conferenceName);
+
           const customerMobilePhone = (
             await client
               .calls(conferenceParticipansList[conferenceParticipansList.length - 1].callSid)
