@@ -1,5 +1,6 @@
 import { client } from '../../../websocketServer';
 import { prisma } from '../../prisma/prisma';
+import { io } from '../../../websocketServer';
 
 const websocketPublicUrl = process.env.TWILIO_WEBSOCKET_URL;
 const accountPhoneNumber: string = process.env.TWILIO_PHONE_NUMBER || '';
@@ -8,6 +9,7 @@ export async function transferCall(
   customerNumber: string,
   conferenceSid: string,
   conferenceName: string,
+  conferenceParticipants: string[],
 ) {
   try {
     const conferenceInProgess = await client.conferences(conferenceSid).fetch();
@@ -44,7 +46,7 @@ export async function transferCall(
             statusCallback: `${websocketPublicUrl}/getCurrentConferenceCallStatus/${conferenceName}`,
             statusCallbackEvent: ['answered', 'completed', 'initiated', 'ringing'],
             statusCallbackMethod: 'POST',
-            timeout: 5,
+            timeout: 7,
           })
           .catch((reason) => {
             console.log(reason);
@@ -60,13 +62,19 @@ export async function transferCall(
             statusCallback: `${websocketPublicUrl}/getCurrentConferenceCallStatus/${conferenceName}`,
             statusCallbackEvent: ['answered', 'completed', 'initiated', 'ringing'],
             statusCallbackMethod: 'POST',
-            timeout: 5,
+            timeout: 7,
           })
           .catch((reason) => {
             console.log(reason);
           });
       }
     }
+
+    io.emit('update_data', 'lastParticipant', {
+      userEmail: '',
+      inProgressConferenceName: conferenceName,
+      callSidArray: conferenceParticipants,
+    });
   } catch (error) {
     console.log(error);
   }

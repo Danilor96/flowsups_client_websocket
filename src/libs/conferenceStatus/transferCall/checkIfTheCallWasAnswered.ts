@@ -6,6 +6,7 @@ export async function checkIfTheCallWasAnswered(
   customerNumber: string,
   conferenceSid: string,
   conferenceName: string,
+  conferenceParticipants: string[],
 ) {
   try {
     setTimeout(async () => {
@@ -22,9 +23,10 @@ export async function checkIfTheCallWasAnswered(
         io.emit('update_data', 'lastParticipant', {
           userEmail: '',
           inProgressConferenceName: conferenceName,
+          callSidArray: conferenceParticipants,
         });
 
-        await transferCall(customerNumber, conferenceSid, conferenceName);
+        await transferCall(customerNumber, conferenceSid, conferenceName, conferenceParticipants);
       }
     }, 8000);
   } catch (error) {
