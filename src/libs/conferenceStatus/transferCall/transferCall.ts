@@ -9,6 +9,7 @@ export async function transferCall(
   customerNumber: string,
   conferenceSid: string,
   conferenceName: string,
+  conferenceParticipants: string[],
 ) {
   try {
     const conferenceInProgess = await client.conferences(conferenceSid).fetch();
@@ -72,7 +73,7 @@ export async function transferCall(
     io.emit('update_data', 'lastParticipant', {
       userEmail: '',
       inProgressConferenceName: conferenceName,
-      transferInProgress: '1',
+      callSidArray: conferenceParticipants,
     });
   } catch (error) {
     console.log(error);

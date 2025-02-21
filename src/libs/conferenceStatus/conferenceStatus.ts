@@ -185,7 +185,9 @@ export async function handlingConferenceStatus({
         }
       }
 
-      checkIfTheCallWasAnswered(from, conferenceSid, conferenceName);
+      const conferenceParticipants = conferenceParticipansList.map((el) => el.callSid);
+
+      checkIfTheCallWasAnswered(from, conferenceSid, conferenceName, conferenceParticipants);
     }
 
     console.log(`Conference SID: ${conferenceSid}, Status: ${conferenceStatus}.`);
