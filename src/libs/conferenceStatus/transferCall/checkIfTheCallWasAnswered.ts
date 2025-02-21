@@ -22,6 +22,7 @@ export async function checkIfTheCallWasAnswered(
         io.emit('update_data', 'lastParticipant', {
           userEmail: '',
           inProgressConferenceName: conferenceName,
+          transferInProgress: '1',
         });
 
         await transferCall(customerNumber, conferenceSid, conferenceName);

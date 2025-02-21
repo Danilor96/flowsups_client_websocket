@@ -259,7 +259,7 @@ export async function handlingConferenceStatus({
               .fetch()
           ).to;
 
-          const noFirtsUsersCallSid = conferenceParticipansList.map((el) => el.callSid);
+          const noFirstUsersCallSid = conferenceParticipansList.map((el) => el.callSid);
 
           if (firstUserEmail) {
             const awaitingCustomer = await checkIfCustomerIsInAwaitingTable(customerMobilePhone);
@@ -268,7 +268,7 @@ export async function handlingConferenceStatus({
 
             io.emit('update_data', 'lastParticipant', {
               userEmail: firstUserEmail,
-              callSidArray: noFirtsUsersCallSid,
+              callSidArray: noFirstUsersCallSid,
               inProgressConferenceName: conferenceName,
               conferenceSid: conferenceSid,
             });
@@ -282,7 +282,7 @@ export async function handlingConferenceStatus({
 
             io.emit('update_data', 'lastParticipant', {
               userEmail: '',
-              callSidArray: noFirtsUsersCallSid,
+              callSidArray: noFirstUsersCallSid,
               inProgressConferenceName: conferenceName,
               conferenceSid: conferenceSid,
               userMobilePhoneNumber: participantMobilePhone.slice(-10),
