@@ -74,6 +74,7 @@ export async function transferCall(
       userEmail: '',
       inProgressConferenceName: conferenceName,
       callSidArray: conferenceParticipants,
+      transferInProgress: '1',
     });
   } catch (error) {
     console.log(error);
