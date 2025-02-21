@@ -24,6 +24,7 @@ export async function checkIfTheCallWasAnswered(
           userEmail: '',
           inProgressConferenceName: conferenceName,
           callSidArray: conferenceParticipants,
+          transferInProgress: '1'
         });
 
         await transferCall(customerNumber, conferenceSid, conferenceName, conferenceParticipants);
