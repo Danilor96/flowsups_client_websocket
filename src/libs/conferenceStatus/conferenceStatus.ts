@@ -60,6 +60,8 @@ export async function handlingConferenceStatus({
       const awaitingCustomer = await checkIfCustomerIsInAwaitingTable(from);
 
       if (!customerData) {
+        await setTheCallAsAnswered(conferenceName);
+
         if (!awaitingCustomer) addUnknowCustomerToAwatingTable(from);
       }
 
@@ -117,7 +119,7 @@ export async function handlingConferenceStatus({
         }
       } else {
         // if the phone number of the incoming call is not registered,
-        // then checks if is registered in unknow waiting customers table
+        // then checks if is registered in unknow awaiting customers table
 
         if (awaitingCustomer) {
           // if the phone number exists in unknow waiting customers,
@@ -201,6 +203,8 @@ export async function handlingConferenceStatus({
           },
           select: {
             call_date: true,
+            answered_by_mobile: true,
+            answered_by_web: true,
           },
         });
 
@@ -216,7 +220,11 @@ export async function handlingConferenceStatus({
               call_sid: conferenceSid,
             },
             data: {
-              call_duration: callDuration.toString(),
+              call_duration: startConfDate.answered_by_web
+                ? callDuration.toString()
+                : startConfDate.answered_by_mobile
+                ? callDuration.toString()
+                : '0',
               call_status_id: 1,
             },
           });
@@ -264,6 +272,15 @@ export async function handlingConferenceStatus({
           const noFirstUsersCallSid = conferenceParticipansList.map((el) => el.callSid);
 
           if (firstUserEmail) {
+            await prisma.client_calls.update({
+              where: {
+                call_sid: conferenceSid,
+              },
+              data: {
+                answered_by_web: true,
+              },
+            });
+
             const awaitingCustomer = await checkIfCustomerIsInAwaitingTable(customerMobilePhone);
 
             if (awaitingCustomer) callAnsweredBy(customerMobilePhone, firstUserEmail);
@@ -277,6 +294,15 @@ export async function handlingConferenceStatus({
           }
 
           if (participantMobilePhone && !regexCorreo.test(participantMobilePhone)) {
+            await prisma.client_calls.update({
+              where: {
+                call_sid: conferenceSid,
+              },
+              data: {
+                answered_by_mobile: true,
+              },
+            });
+
             const awaitingCustomer = await checkIfCustomerIsInAwaitingTable(customerMobilePhone);
 
             if (awaitingCustomer)

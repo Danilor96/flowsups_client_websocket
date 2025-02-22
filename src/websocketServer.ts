@@ -210,12 +210,13 @@ io.on('connection', async (socket: Socket) => {
     const callStatus = req.body.CallStatus;
     const callSid = req.body.CallSid;
     const conferenceName = req.params.conferenceName;
+    const sequence = req.body.SequenceNumber;
 
-    console.log(`Call: ${callSid}. Status: ${callStatus}`);
-
-    if (callStatus == 'ringing') {
+    if (sequence === '0') {
       io.emit('update_data', 'transferCompleted', { conferenceName });
     }
+
+    console.log(`Call: ${callSid}. Status: ${callStatus}`);
 
     res.status(204).send();
   });
