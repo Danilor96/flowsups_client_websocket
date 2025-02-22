@@ -20,14 +20,9 @@ export async function checkIfTheCallWasAnswered(
       });
 
       if (!answered?.answered) {
-        io.emit('update_data', 'lastParticipant', {
-          userEmail: '',
-          inProgressConferenceName: conferenceName,
-          callSidArray: conferenceParticipants,
-          transferInProgress: '1'
-        });
+        io.emit('update_data', 'transferCompleted', { conferenceName });
 
-        await transferCall(customerNumber, conferenceSid, conferenceName, conferenceParticipants);
+        await transferCall(customerNumber, conferenceSid, conferenceName);
       }
     }, 8000);
   } catch (error) {

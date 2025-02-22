@@ -758,6 +758,8 @@ model Client_calls {
   call_sid           String         @unique
   unknow_call_number String?
   phone_number       String?
+  answered_by_mobile Boolean        @default(false)
+  answered_by_web    Boolean        @default(false)
   call_direction     Call_direction @relation(fields: [call_direction_id], references: [id], onDelete: Cascade)
   call_status        Call_statuses  @relation("status", fields: [call_status_id], references: [id])
   client_call        Clients?       @relation("client_call", fields: [client_id], references: [id])
