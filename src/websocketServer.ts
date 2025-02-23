@@ -103,7 +103,7 @@ io.on('connection', async (socket: Socket) => {
 
   // checking all pending tasks, appointments and statuses
 
-  cron.schedule('* * * * 1-7', async () => {
+  cron.schedule('* * * * 1-6', async () => {
     await pendingTasks();
 
     await pendingRescheduleAppointments();
