@@ -20,6 +20,7 @@ import { pendingDeliveries } from './libs/minuteByMinuteCheck/pendingDeliveries'
 import { customerStatus } from './libs/minuteByMinuteCheck/customerStatus';
 import { parseISO } from 'date-fns';
 import { smsStatus } from './libs/sentSmsStatus/sentSmsStatus';
+import { checkSendingsSms } from './libs/checkSendingsSms/checkSendingsSms';
 
 const accountSid = process.env.TWILIO_ACCOUNT_SID;
 const authToken = process.env.TWILIO_AUTH_TOKEN;
@@ -102,7 +103,7 @@ io.on('connection', async (socket: Socket) => {
 
   // checking all pending tasks, appointments and statuses
 
-  cron.schedule('* * * * 1-6', async () => {
+  cron.schedule('* * * * 1-7', async () => {
     await pendingTasks();
 
     await pendingRescheduleAppointments();
@@ -112,6 +113,8 @@ io.on('connection', async (socket: Socket) => {
     await pendingDeliveries();
 
     await customerStatus();
+
+    await checkSendingsSms();
   });
 
   // checking all customers last contacted day
