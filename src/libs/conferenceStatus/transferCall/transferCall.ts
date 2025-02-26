@@ -44,15 +44,13 @@ export async function transferCall(
             statusCallback: `${websocketPublicUrl}/getCurrentConferenceCallStatus/${conferenceName}`,
             statusCallbackEvent: ['answered', 'completed', 'initiated', 'ringing'],
             statusCallbackMethod: 'POST',
+            endConferenceOnExit: true,
             timeout: 7,
-            label: 'Hola',
           })
           .catch((reason) => {
             console.log(reason);
           });
-      }
-
-      if (bdcnum) {
+      } else if (bdcnum) {
         await client
           .conferences(conferenceSid)
           .participants.create({
@@ -61,8 +59,8 @@ export async function transferCall(
             statusCallback: `${websocketPublicUrl}/getCurrentConferenceCallStatus/${conferenceName}`,
             statusCallbackEvent: ['answered', 'completed', 'initiated', 'ringing'],
             statusCallbackMethod: 'POST',
+            endConferenceOnExit: true,
             timeout: 7,
-            label: 'Hola',
           })
           .catch((reason) => {
             console.log(reason);

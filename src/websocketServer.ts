@@ -210,16 +210,59 @@ io.on('connection', async (socket: Socket) => {
   });
 
   app.post('/getCurrentConferenceCallStatus/:conferenceName', async (req, res) => {
-    const callStatus = req.body.CallStatus;
-    const callSid = req.body.CallSid;
-    const conferenceName = req.params.conferenceName;
-    const sequence = req.body.SequenceNumber;
+    try {
+      const callStatus = req.body.CallStatus;
+      const callSid = req.body.CallSid;
+      const param = req.params.conferenceName;
+      const conferenceName = param.split('.')[0];
+      const conferenceSid = param.split('.')[1];
+      const sequence = req.body.SequenceNumber;
 
-    if (sequence === '0') {
-      io.emit('update_data', 'transferCompleted', { conferenceName });
+      if (sequence === '0') {
+        io.emit('update_data', 'transferCompleted', { conferenceName });
+      }
+
+      if (conferenceSid) {
+        const conferenceParticipants = await client.conferences(conferenceSid).participants.list();
+
+        const customerCall = conferenceParticipants.find((participant) => participant.hold);
+
+        if (customerCall) {
+          const hangUpConference = async () => {
+            await client.conferences(conferenceSid).update({
+              status: 'completed',
+            });
+          };
+
+          if (callStatus === 'in-progress' && conferenceSid) {
+            const conferenceParticipants = await client
+              .conferences(conferenceSid)
+              .participants.list();
+
+            const customerCall = conferenceParticipants.find((participant) => participant.hold);
+
+            if (customerCall?.callSid) {
+              await client.conferences(conferenceSid).participants(customerCall.callSid).update({
+                hold: false,
+                endConferenceOnExit: true,
+              });
+            }
+          }
+
+          if (callStatus === 'completed') {
+            await hangUpConference();
+          }
+
+          if (callStatus === 'no-answer' && conferenceSid) {
+            await hangUpConference();
+          }
+        }
+      }
+
+      console.log(`Call: ${callSid}. Status: ${callStatus}`);
+    } catch (error) {
+      console.log(error);
     }
-
-    console.log(`Call: ${callSid}. Status: ${callStatus}`);
 
     res.status(204).send();
   });

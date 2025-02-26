@@ -192,6 +192,22 @@ export async function handlingConferenceStatus({
       checkIfTheCallWasAnswered(from, conferenceSid, conferenceName, conferenceParticipants);
     }
 
+    if (conferenceStatus !== 'conference-end') {
+      const conferenceParticipants = await client.conferences(conferenceSid).participants.list();
+
+      const participantsIdentity: string[] = [];
+
+      for (let i = 0; i < conferenceParticipants.length; i++) {
+        const participant = conferenceParticipants[i];
+
+        const participantDetail = await client.calls(participant.callSid).fetch();
+
+        participantsIdentity.push(participantDetail.fromFormatted);
+      }
+
+      console.log(`participants: ${participantsIdentity.join(' | ')}`);
+    }
+
     console.log(`Conference SID: ${conferenceSid}, Status: ${conferenceStatus}.`);
 
     switch (conferenceStatus) {
@@ -324,14 +340,12 @@ export async function handlingConferenceStatus({
         if (conferenceParticipansList.length > 2 && sequence > 3) {
           const webParticipants: string[] = [];
           let firstParticipantEmail = '';
-
           conferenceParticipansList.forEach(async (participantInfo) => {
             if (
               conferenceParticipansList[conferenceParticipansList.length - 2].callSid !==
               participantInfo.callSid
             ) {
               const participantFetched = await client.calls(participantInfo.callSid).fetch();
-
               if (regexCorreo.test(participantFetched.from)) {
                 webParticipants.push(participantFetched.from);
               }
@@ -356,7 +370,6 @@ export async function handlingConferenceStatus({
           const thirdConferenceParticipant = await client
             .calls(conferenceParticipansList[conferenceParticipansList.length - 3].callSid)
             .fetch();
-
           if (thirdConferenceParticipant && thirdConferenceParticipant.to) {
             io.emit('update_data', 'lastParticipant', {
               userEmail: '',
@@ -371,7 +384,11 @@ export async function handlingConferenceStatus({
         break;
 
       case 'participant-leave':
-        if (conferenceParticipansList.length === 1) {
+        const participants = await client.conferences(conferenceSid).participants.list();
+
+        const customerInHold = participants.find((call) => call.hold === true);
+
+        if (conferenceParticipansList.length === 1 && !customerInHold) {
           const currentConference = client.conferences(conferenceSid);
 
           currentConference.update({ status: 'completed' });
