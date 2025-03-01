@@ -15,7 +15,7 @@ export async function handlingOutgoingCallStatus({
   callDuration,
 }: OutogingCallData) {
   try {
-    let callStatusId, socketEmit, toClientAnswered;
+    let callStatusId, socketEmit, toClientAnswered, disconnectOutgoingCall;
 
     switch (callStatus) {
       case 'initiated':
@@ -32,18 +32,42 @@ export async function handlingOutgoingCallStatus({
 
       case 'busy':
         callStatusId = 2;
+
+        console.log('Call ended');
+
+        socketEmit = 'callDisconnect';
+        disconnectOutgoingCall = '1'
+
         break;
 
       case 'failed':
         callStatusId = 4;
+
+        console.log('Call ended');
+
+        socketEmit = 'callDisconnect';
+        disconnectOutgoingCall = '1'
+
         break;
 
       case 'no-answer':
         callStatusId = 3;
+
+        console.log('Call ended');
+
+        socketEmit = 'callDisconnect';
+        disconnectOutgoingCall = '1'
+
         break;
 
       case 'completed':
         callStatusId = 1;
+
+        console.log('Call ended');
+
+        socketEmit = 'callDisconnect';
+        disconnectOutgoingCall = '1'
+
         break;
     }
 
@@ -88,6 +112,7 @@ export async function handlingOutgoingCallStatus({
         callSid,
         parentCallSid,
         toClientAnswered,
+        disconnectOutgoingCall
       });
   } catch (error) {
     console.log(error);
