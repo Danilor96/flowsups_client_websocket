@@ -21,6 +21,7 @@ import { customerStatus } from './libs/minuteByMinuteCheck/customerStatus';
 import { parseISO } from 'date-fns';
 import { smsStatus } from './libs/sentSmsStatus/sentSmsStatus';
 import { checkSendingsSms } from './libs/checkSendingsSms/checkSendingsSms';
+import { incomingFileSave } from './libs/mediaMessage.services';
 
 const accountSid = process.env.TWILIO_ACCOUNT_SID;
 const authToken = process.env.TWILIO_AUTH_TOKEN;
@@ -289,7 +290,23 @@ io.on('connection', async (socket: Socket) => {
 
     const message = req.body.Body;
 
-    await handlingIncomingSms({ from, message });
+    const media = req.body.MediaUrl0;
+
+    let file = undefined;
+
+    if (media) {
+      const mediaType = req.body.MediaContentType0;
+
+      const customerId = req.body.From;
+
+      const messageSid: string = req.body.MessageSid;
+
+      const fileUrl = await incomingFileSave(media, mediaType, customerId);
+
+      file = { url: fileUrl, name: messageSid + mediaType };
+    }
+
+    await handlingIncomingSms({ from, message, file });
   });
 
   // sent sms status

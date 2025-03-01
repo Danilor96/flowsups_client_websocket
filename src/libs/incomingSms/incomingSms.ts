@@ -7,9 +7,10 @@ import { startOfToday, endOfToday } from 'date-fns';
 interface IncomingSmsData {
   from: any;
   message: any;
+  file?: { url?: string; name: string };
 }
 
-export async function handlingIncomingSms({ from, message }: IncomingSmsData) {
+export async function handlingIncomingSms({ from, message, file }: IncomingSmsData) {
   const fromFormatted = from.slice(1);
 
   const todayIsos = new Date().toISOString();
@@ -61,6 +62,7 @@ export async function handlingIncomingSms({ from, message }: IncomingSmsData) {
           sent_by_user: false,
           client_id: clientIdStatusAppointments.id,
           status_id: 2,
+          fileAttachment: file,
         },
         include: {
           user: {
@@ -117,6 +119,7 @@ export async function handlingIncomingSms({ from, message }: IncomingSmsData) {
               date_sent: today,
               sent_by_user: false,
               status_id: 2,
+              fileAttachment: file,
               unregistered_customer: {
                 connect: {
                   id: awaitingCustomer.id,
@@ -169,6 +172,7 @@ export async function handlingIncomingSms({ from, message }: IncomingSmsData) {
                 date_sent: today,
                 sent_by_user: false,
                 status_id: 2,
+                fileAttachment: file,
                 unregistered_customer: {
                   connect: {
                     id: updatedAwaitingCustomer.id,
@@ -204,6 +208,7 @@ export async function handlingIncomingSms({ from, message }: IncomingSmsData) {
                 message: message,
                 date_sent: today,
                 sent_by_user: false,
+                fileAttachment: file,
                 status_id: 2,
                 unregistered_customer: {
                   connect: {
@@ -239,6 +244,7 @@ export async function handlingIncomingSms({ from, message }: IncomingSmsData) {
               date_sent: today,
               sent_by_user: false,
               status_id: 2,
+              fileAttachment: file,
               unregistered_customer: {
                 connect: {
                   id: unregisteredCustomer.id,
@@ -274,6 +280,7 @@ export async function handlingIncomingSms({ from, message }: IncomingSmsData) {
               date_sent: today,
               sent_by_user: false,
               status_id: 2,
+              fileAttachment: file,
               unregistered_customer: {
                 connect: {
                   id: unregisteredCustomer.id,
