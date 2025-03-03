@@ -1,7 +1,6 @@
 // Import the functions you need from the SDKs you need
-import { initializeApp } from 'firebase/app';
-import { getAnalytics } from 'firebase/analytics';
-import { getStorage, ref } from '@firebase/storage';
+import { FirebaseApp, initializeApp } from 'firebase/app';
+import { FirebaseStorage, getStorage, ref, StorageReference } from '@firebase/storage';
 // TODO: Add SDKs for Firebase products that you want to use
 // https://firebase.google.com/docs/web/setup#available-libraries
 
@@ -17,9 +16,23 @@ const firebaseConfig = {
   measurementId: 'G-VD23J5VYDB',
 };
 
-// Initialize Firebase
-const app = initializeApp(firebaseConfig);
-export const storage = getStorage(app);
+let app: FirebaseApp | null = null;
+let storage: FirebaseStorage | null = null;
+export let smsImageStorageRef: StorageReference | null = null;
 
-// Create a storage reference from our storage service
-export const smsImageStorageRef = ref(storage, 'sms-images/images-temp');
+export async function initializeFirebaseStorage() {
+  // Initialize Firebase
+  const app = initializeApp(firebaseConfig);
+  storage = getStorage(app);
+}
+
+initializeFirebaseStorage()
+  .then(() => {
+    if (storage) {
+      // Create a storage reference from our storage service
+      smsImageStorageRef = ref(storage, 'sms-images/images-temp');
+    }
+  })
+  .catch((error) => {
+    console.log(error);
+  });
