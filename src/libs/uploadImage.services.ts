@@ -7,13 +7,17 @@ export async function uploadImageForSms(
   imageBuffer: Buffer | Uint8Array,
   contentType: string,
 ): Promise<string> {
-  const uuid = crypto.randomUUID();
-  const filePath = `/${customerId}/${uuid}`;
-  const newImageRef = ref(smsImageStorageRef, filePath);
+  if (smsImageStorageRef) {
+    const uuid = crypto.randomUUID();
+    const filePath = `/${customerId}/${uuid}`;
+    const newImageRef = ref(smsImageStorageRef, filePath);
 
-  await uploadBytesResumable(newImageRef, imageBuffer, {
-    contentType: contentType,
-  });
+    await uploadBytesResumable(newImageRef, imageBuffer, {
+      contentType: contentType,
+    });
 
-  return await getDownloadURL(newImageRef);
+    return await getDownloadURL(newImageRef);
+  } else {
+    return '';
+  }
 }
