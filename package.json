@@ -2,7 +2,7 @@
   "name": "websocket",
   "version": "1.0.0",
   "description": "",
-  "type": "module",
+  "type": "commonjs",
   "main": "websocketServer.ts",
   "exports": "./dist/websocketServer.mjs",
   "scripts": {
