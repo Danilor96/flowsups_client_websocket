@@ -1,6 +1,8 @@
 // Import the functions you need from the SDKs you need
-import { FirebaseApp, initializeApp } from 'firebase/app';
-import { FirebaseStorage, getStorage, ref, StorageReference } from '@firebase/storage';
+const { initializeApp } = require('firebase/app');
+const { getStorage, ref } = require('@firebase/storage');
+import { FirebaseApp } from 'firebase/app';
+import { StorageReference, FirebaseStorage } from '@firebase/storage';
 // TODO: Add SDKs for Firebase products that you want to use
 // https://firebase.google.com/docs/web/setup#available-libraries
 
@@ -17,12 +19,12 @@ const firebaseConfig = {
 };
 
 let app: FirebaseApp | null = null;
-let storage: FirebaseStorage | null = null;
-export let smsImageStorageRef: StorageReference | null = null;
+let storage: StorageReference | null = null;
+export let smsImageStorageRef: FirebaseStorage | null = null;
 
 export async function initializeFirebaseStorage() {
   // Initialize Firebase
-  const app = initializeApp(firebaseConfig);
+  app = initializeApp(firebaseConfig);
   storage = getStorage(app);
 }
 
