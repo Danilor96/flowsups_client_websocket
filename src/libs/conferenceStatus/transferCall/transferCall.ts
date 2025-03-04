@@ -45,7 +45,7 @@ export async function transferCall(
             statusCallbackEvent: ['answered', 'completed', 'initiated', 'ringing'],
             statusCallbackMethod: 'POST',
             endConferenceOnExit: true,
-            timeout: 7,
+            timeout: 12,
           })
           .catch((reason) => {
             console.log(reason);
@@ -60,7 +60,7 @@ export async function transferCall(
             statusCallbackEvent: ['answered', 'completed', 'initiated', 'ringing'],
             statusCallbackMethod: 'POST',
             endConferenceOnExit: true,
-            timeout: 7,
+            timeout: 12,
           })
           .catch((reason) => {
             console.log(reason);

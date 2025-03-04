@@ -24,7 +24,7 @@ export async function checkIfTheCallWasAnswered(
 
         await transferCall(customerNumber, conferenceSid, conferenceName);
       }
-    }, 8000);
+    }, 12000);
   } catch (error) {
     console.log(error);
   }
