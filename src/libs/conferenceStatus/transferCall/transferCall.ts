@@ -39,7 +39,7 @@ export async function transferCall(
         .conferences(conferenceSid)
         .participants.create({
           from: accountPhoneNumber,
-          to: `${phoneNumber}`,
+          to: `+1${phoneNumber}`,
           statusCallback: `${websocketPublicUrl}/getCurrentConferenceCallStatus/${conferenceName}`,
           statusCallbackEvent: ['answered', 'completed', 'initiated', 'ringing'],
           statusCallbackMethod: 'POST',
@@ -53,11 +53,11 @@ export async function transferCall(
 
     if (conferenceInProgess.status !== 'completed' && participantsList.length > 0) {
       if (salesrepnum) {
-        await callCreation(`+1${salesrepnum}`);
+        await callCreation(salesrepnum);
       }
 
       if (bdcnum) {
-        await callCreation(`+58${bdcnum}`);
+        await callCreation(bdcnum);
       }
     }
   } catch (error) {

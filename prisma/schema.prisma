@@ -29,7 +29,6 @@ model Users {
   awaiting_customer                    Awaiting_unknow_client[]
   recipient_messages                   Chat_messages[]                 @relation("recipient")
   sender_messages                      Chat_messages[]                 @relation("sender")
-  calls                                Client_calls[]                  @relation("seller_call")
   assigned_client_lead                 Client_has_lead[]               @relation("client_lead_seller")
   leads                                Client_has_lead[]               @relation("lead_created_by")
   client_bdc                           Clients[]                       @relation("bdc")
@@ -57,6 +56,7 @@ model Users {
   user_has                             Users_has_roles?
   vehicle_delivery_assigned            Vehicle_delivery[]              @relation("assigned")
   vehicle_delivery_creator             Vehicle_delivery[]              @relation("creator")
+  Client_calls                         Client_calls[]
   sms_sender                           Client_sms[]                    @relation("Client_smsToUsers")
 }
 
@@ -750,7 +750,6 @@ model Sms_status {
 model Client_calls {
   id                 Int            @id @default(autoincrement())
   client_id          Int?
-  seller_id          Int?
   call_date          DateTime
   call_status_id     Int
   call_direction_id  Int
@@ -760,10 +759,11 @@ model Client_calls {
   phone_number       String?
   answered_by_mobile Boolean        @default(false)
   answered_by_web    Boolean        @default(false)
+  user_id            Int[]          @default([])
   call_direction     Call_direction @relation(fields: [call_direction_id], references: [id], onDelete: Cascade)
   call_status        Call_statuses  @relation("status", fields: [call_status_id], references: [id])
   client_call        Clients?       @relation("client_call", fields: [client_id], references: [id])
-  seller_call        Users?         @relation("seller_call", fields: [seller_id], references: [id])
+  Users              Users[]
 }
 
 model Suspension {

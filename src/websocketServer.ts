@@ -22,6 +22,7 @@ import { parseISO } from 'date-fns';
 import { smsStatus } from './libs/sentSmsStatus/sentSmsStatus';
 import { checkSendingsSms } from './libs/checkSendingsSms/checkSendingsSms';
 import { incomingFileSave } from './libs/mediaMessage.services';
+import { setTheCallAsAnswered } from './libs/conferenceStatus/transferCall/checkIfTheCallWasAnswered';
 
 const accountSid = process.env.TWILIO_ACCOUNT_SID;
 const authToken = process.env.TWILIO_AUTH_TOKEN;
@@ -208,6 +209,10 @@ io.on('connection', async (socket: Socket) => {
     }
 
     res.status(204).send();
+  });
+
+  socket.on('cancelAutoTransfer', async (data) => {
+    await setTheCallAsAnswered(data.conferenceName);
   });
 
   app.post('/getCurrentConferenceCallStatus/:conferenceName', async (req, res) => {
