@@ -34,37 +34,30 @@ export async function transferCall(
     const salesrepnum = assignedUsers?.seller?.mobile_phone;
     const bdcnum = assignedUsers?.bdc?.mobile_phone;
 
+    const callCreation = async (phoneNumber: string) => {
+      await client
+        .conferences(conferenceSid)
+        .participants.create({
+          from: accountPhoneNumber,
+          to: `${phoneNumber}`,
+          statusCallback: `${websocketPublicUrl}/getCurrentConferenceCallStatus/${conferenceName}`,
+          statusCallbackEvent: ['answered', 'completed', 'initiated', 'ringing'],
+          statusCallbackMethod: 'POST',
+          endConferenceOnExit: true,
+          timeout: 12,
+        })
+        .catch((reason) => {
+          console.log(reason);
+        });
+    };
+
     if (conferenceInProgess.status !== 'completed' && participantsList.length > 0) {
       if (salesrepnum) {
-        await client
-          .conferences(conferenceSid)
-          .participants.create({
-            from: accountPhoneNumber,
-            to: `+1${salesrepnum}`,
-            statusCallback: `${websocketPublicUrl}/getCurrentConferenceCallStatus/${conferenceName}`,
-            statusCallbackEvent: ['answered', 'completed', 'initiated', 'ringing'],
-            statusCallbackMethod: 'POST',
-            endConferenceOnExit: true,
-            timeout: 12,
-          })
-          .catch((reason) => {
-            console.log(reason);
-          });
-      } else if (bdcnum) {
-        await client
-          .conferences(conferenceSid)
-          .participants.create({
-            from: accountPhoneNumber,
-            to: `+1${bdcnum}`,
-            statusCallback: `${websocketPublicUrl}/getCurrentConferenceCallStatus/${conferenceName}`,
-            statusCallbackEvent: ['answered', 'completed', 'initiated', 'ringing'],
-            statusCallbackMethod: 'POST',
-            endConferenceOnExit: true,
-            timeout: 12,
-          })
-          .catch((reason) => {
-            console.log(reason);
-          });
+        await callCreation(`+1${salesrepnum}`);
+      }
+
+      if (bdcnum) {
+        await callCreation(`+58${bdcnum}`);
       }
     }
   } catch (error) {
