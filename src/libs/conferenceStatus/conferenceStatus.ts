@@ -11,6 +11,7 @@ import {
   checkIfTheCallWasAnswered,
   setTheCallAsAnswered,
 } from './transferCall/checkIfTheCallWasAnswered';
+import { setTheUserThatResponseTheCall } from './setTheUserThatResponseTheCall';
 
 interface ConferenceData {
   conferenceSid: any;
@@ -321,8 +322,9 @@ export async function handlingConferenceStatus({
 
             const awaitingCustomer = await checkIfCustomerIsInAwaitingTable(customerMobilePhone);
 
-            if (awaitingCustomer)
+            if (awaitingCustomer) {
               callAnsweredBy(customerMobilePhone, undefined, participantMobilePhone.slice(-10));
+            }
 
             io.emit('update_data', 'lastParticipant', {
               userEmail: '',
@@ -361,6 +363,7 @@ export async function handlingConferenceStatus({
               userEmail: firstParticipantEmail,
               callSidArray: webParticipants,
               inProgressConferenceName: conferenceName,
+              conferenceSid
             });
           }
 
@@ -377,9 +380,12 @@ export async function handlingConferenceStatus({
                 conferenceParticipansList[conferenceParticipansList.length - 2].callSid,
               ],
               inProgressConferenceName: conferenceName,
+              conferenceSid
             });
           }
         }
+
+        await setTheUserThatResponseTheCall(conferenceSid, conferenceParticipansList);
 
         break;
 
@@ -400,5 +406,10 @@ export async function handlingConferenceStatus({
     }
   } catch (error) {
     console.log(error);
+
+    io.emit('update_data', 'callDisconnect', {
+      endedConferenceName: conferenceName,
+      endedConferenceSid: conferenceSid,
+    });
   }
 }

@@ -16,7 +16,7 @@ export const createCallStatusInDatabase = async (
     await prisma.client_calls.create({
       data: {
         client_id: customerId ? customerId : null,
-        seller_id: userId ? userId : null,
+        user_id: [],
         phone_number: phoneNumber ? phoneNumber : null,
         call_sid: callSid,
         call_date: today,
