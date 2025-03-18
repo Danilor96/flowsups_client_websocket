@@ -1,5 +1,6 @@
 import { prisma } from '../prisma/prisma';
-import { io } from '../../websocketServer';
+import { io, client } from '../../websocketServer';
+import { addUserThatHasRespondedToTransferCall } from './addUserThatHasRespondedToTransferCall';
 
 interface OutogingCallData {
   callStatus: any;
@@ -36,7 +37,7 @@ export async function handlingOutgoingCallStatus({
         console.log('Call ended');
 
         socketEmit = 'callDisconnect';
-        disconnectOutgoingCall = '1'
+        disconnectOutgoingCall = '1';
 
         break;
 
@@ -46,7 +47,7 @@ export async function handlingOutgoingCallStatus({
         console.log('Call ended');
 
         socketEmit = 'callDisconnect';
-        disconnectOutgoingCall = '1'
+        disconnectOutgoingCall = '1';
 
         break;
 
@@ -56,7 +57,7 @@ export async function handlingOutgoingCallStatus({
         console.log('Call ended');
 
         socketEmit = 'callDisconnect';
-        disconnectOutgoingCall = '1'
+        disconnectOutgoingCall = '1';
 
         break;
 
@@ -66,13 +67,22 @@ export async function handlingOutgoingCallStatus({
         console.log('Call ended');
 
         socketEmit = 'callDisconnect';
-        disconnectOutgoingCall = '1'
+        disconnectOutgoingCall = '1';
 
         break;
     }
 
+    socketEmit &&
+      io.emit('update_data', socketEmit, {
+        callSid,
+        parentCallSid,
+        toClientAnswered,
+        disconnectOutgoingCall,
+      });
+
     let callExists: {
       id: number;
+      user_id?: number[];
     } | null = null;
 
     callExists = await prisma.client_calls.findUnique({
@@ -81,6 +91,7 @@ export async function handlingOutgoingCallStatus({
       },
       select: {
         id: true,
+        user_id: true,
       },
     });
 
@@ -107,13 +118,49 @@ export async function handlingOutgoingCallStatus({
       });
     }
 
-    socketEmit &&
-      io.emit('update_data', socketEmit, {
-        callSid,
-        parentCallSid,
-        toClientAnswered,
-        disconnectOutgoingCall
-      });
+    if (callStatus === 'completed') {
+      const calls = await client.calls.list({ parentCallSid: callSid });
+
+      // transfered call data
+
+      if (calls && calls.length > 0) {
+        const childCallTo = calls[0].to.slice(-10);
+
+        const childCallStatus = calls[0]?.status;
+
+        if (childCallTo && childCallStatus === 'completed') {
+          const data = await addUserThatHasRespondedToTransferCall(parentCallSid, childCallTo);
+
+          const usersRelated = await prisma.users.findMany({
+            where: {
+              OR: [
+                {
+                  id: {
+                    in: callExists?.user_id,
+                  },
+                },
+                {
+                  id: {
+                    in: data?.user_id,
+                  },
+                },
+              ],
+            },
+            select: {
+              email: true,
+            },
+          });
+
+          if (usersRelated && usersRelated.length > 0) {
+            for (let i = 0; i < usersRelated.length; i++) {
+              const el = usersRelated[i];
+
+              io.to(el.email).emit('update_data', 'dailyTotals');
+            }
+          }
+        }
+      }
+    }
   } catch (error) {
     console.log(error);
   }
