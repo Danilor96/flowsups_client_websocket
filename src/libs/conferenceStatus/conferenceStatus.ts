@@ -12,6 +12,7 @@ import {
   setTheCallAsAnswered,
 } from './transferCall/checkIfTheCallWasAnswered';
 import { setTheUserThatResponseTheCall } from './setTheUserThatResponseTheCall';
+import { makeTaskAfterMissingACall } from './makeTaskAfterMissingACall';
 
 interface ConferenceData {
   conferenceSid: any;
@@ -245,6 +246,10 @@ export async function handlingConferenceStatus({
               call_status_id: 1,
             },
           });
+
+          if (!startConfDate.answered_by_web && !startConfDate.answered_by_mobile) {
+            await makeTaskAfterMissingACall(conferenceSid);
+          }
         }
 
         // delete conference name from database
@@ -363,7 +368,7 @@ export async function handlingConferenceStatus({
               userEmail: firstParticipantEmail,
               callSidArray: webParticipants,
               inProgressConferenceName: conferenceName,
-              conferenceSid
+              conferenceSid,
             });
           }
 
@@ -380,7 +385,7 @@ export async function handlingConferenceStatus({
                 conferenceParticipansList[conferenceParticipansList.length - 2].callSid,
               ],
               inProgressConferenceName: conferenceName,
-              conferenceSid
+              conferenceSid,
             });
           }
         }

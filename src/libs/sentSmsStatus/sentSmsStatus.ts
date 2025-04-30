@@ -192,12 +192,11 @@ export async function smsStatus(
           notificationType: {
             warning: true,
           },
-          assignedToId: sms.user[0].id,
+          assignedToId: [sms.user[0].id],
           notificationsForManagers: true,
         });
 
         io.emit('update_data', 'smsModal');
-        io.emit('update_data', 'notifications');
       }
     }
   } catch (error) {

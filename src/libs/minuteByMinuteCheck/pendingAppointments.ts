@@ -57,6 +57,8 @@ export async function pendingAppointments() {
         },
       });
 
+      // set the customer status to No Show Up 
+
       lateAppointments.forEach(async (appt) => {
         const notifications = await prisma.notifications.create({
           data: {
