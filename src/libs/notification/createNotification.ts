@@ -72,7 +72,11 @@ export async function createNotification({
         });
       }
 
-      if (exclusiveManagerNotification) return;
+      if (exclusiveManagerNotification) {
+        io.emit('update_data', 'notifications');
+
+        return;
+      }
     }
 
     if (assignedToId && managerUsersIds !== assignedToId) {
