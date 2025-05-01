@@ -1,4 +1,5 @@
 import { prisma } from '../prisma/prisma';
+import { io } from '../../websocketServer';
 
 export async function createNotification({
   notificationType,
@@ -17,7 +18,7 @@ export async function createNotification({
     customer?: boolean;
     warning?: boolean;
   };
-  assignedToId?: number | null;
+  assignedToId?: number[] | null;
   customerId?: number;
   message: string;
   appointmentId?: number;
@@ -41,10 +42,8 @@ export async function createNotification({
       const managerUsers = await prisma.users.findMany({
         where: {
           user_has: {
-            some: {
-              role_id: {
-                in: [1, 2, 3, 4],
-              },
+            role_id: {
+              in: [1, 2, 3, 4],
             },
           },
         },
@@ -73,25 +72,35 @@ export async function createNotification({
         });
       }
 
-      if (exclusiveManagerNotification) return;
+      if (exclusiveManagerNotification) {
+        io.emit('update_data', 'notifications');
+
+        return;
+      }
     }
 
-    if (assignedToId && !managerUsersIds.includes(assignedToId)) {
-      const notification = await prisma.notifications.create({
-        data: {
-          message: message,
-          user_id: assignedToId,
-          customer_id: customerId,
-          type_id: notiType,
-          appointment_id: appointmentId,
-          created_at: new Date(),
-          is_read: false,
-          is_deleted: false,
-          notification_for_managers: false,
-          unregistered_customer_id: unregisteredCustomerId,
-        },
-      });
+    if (assignedToId && managerUsersIds !== assignedToId) {
+      for (let i = 0; i < assignedToId.length; i++) {
+        const userId = assignedToId[i];
+
+        const notification = await prisma.notifications.create({
+          data: {
+            message: message,
+            user_id: userId,
+            customer_id: customerId,
+            type_id: notiType,
+            appointment_id: appointmentId,
+            created_at: new Date(),
+            is_read: false,
+            is_deleted: false,
+            notification_for_managers: false,
+            unregistered_customer_id: unregisteredCustomerId,
+          },
+        });
+      }
     }
+
+    io.emit('update_data', 'notifications');
   } catch (error) {
     console.log(error);
   }
