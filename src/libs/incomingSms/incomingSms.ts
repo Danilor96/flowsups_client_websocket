@@ -337,9 +337,9 @@ export async function handlingIncomingSms({ from, message, file }: IncomingSmsDa
       });
     }
 
-    // check if the message contain 'Y' , 'N' or 'S'
+    // check if the message contain 'Y', 'YES', 'N', or 'S'
 
-    const specialCharactersToAccept = ['Y', 'S'];
+    const specialCharactersToAccept = ['Y', 'S', 'YES'];
     const specialCharactersToCancel = ['N'];
 
     const messageSplitted = message.split(' ');
