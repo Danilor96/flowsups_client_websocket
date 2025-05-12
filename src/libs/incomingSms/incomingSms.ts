@@ -401,29 +401,15 @@ export async function handlingIncomingSms({ from, message, file }: IncomingSmsDa
 
         appointmentAccepted = '1';
         appointmentAcceptStartDate = apptData?.start_date ? apptData.start_date.toISOString() : '';
-      }
 
-      let appointmentForToday = false;
-
-        clientIdStatusAppointments?.appointment.forEach(async (el) => {
-          if (el.status_id === 1 && new Date(el.start_date) > today) {
-            await prisma.appointments.update({
-              where: {
-                id: el.id,
-              },
-              data: {
-                status_id: 3,
-                client_accept_appointment: true,
-              },
-            });
-
-            if (new Date(el.start_date) < endOfToday()) appointmentForToday = true;
-          }
-        });
-
-        if (appointmentForToday) {
+        if (
+          apptData &&
+          apptData.start_date < startOfToday() &&
+          apptData.start_date > startOfToday()
+        ) {
           io.emit('update_data', 'dailyAppointmentsList');
         }
+      }
     }
 
     // cancel appointment
