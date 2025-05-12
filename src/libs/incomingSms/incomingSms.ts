@@ -402,13 +402,7 @@ export async function handlingIncomingSms({ from, message, file }: IncomingSmsDa
         appointmentAccepted = '1';
         appointmentAcceptStartDate = apptData?.start_date ? apptData.start_date.toISOString() : '';
 
-        if (
-          apptData &&
-          apptData.start_date < startOfToday() &&
-          apptData.start_date > startOfToday()
-        ) {
-          io.emit('update_data', 'dailyAppointmentsList');
-        }
+        io.emit('update_data', 'dailyAppointmentsList');
       }
     }
 
