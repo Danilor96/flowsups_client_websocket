@@ -3,8 +3,8 @@ import { prisma } from '../../prisma/prisma';
 export const managerUsersArray = async () => {
   const managerUsers = await prisma.users.findMany({
     where: {
-      Roles: {
-        some: {
+      user_has: {
+        role: {
           OR: [
             {
               id: 1,
