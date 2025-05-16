@@ -1,6 +1,7 @@
 import { transferCall } from './transferCall';
 import { prisma } from '../../prisma/prisma';
 import { io } from '../../../websocketServer';
+import { missedCallFromUnknowCustomer } from './missedCallFromUnknowCustomer/missedCallFromUnknowCustomer';
 
 export async function checkIfTheCallWasAnswered(
   customerNumber: string,
@@ -19,10 +20,23 @@ export async function checkIfTheCallWasAnswered(
         },
       });
 
+      const conferenceCustomerData = await prisma.client_calls.findUnique({
+        where: {
+          call_sid: conferenceSid,
+        },
+        select: {
+          client_id: true,
+        },
+      });
+
       if (!answered?.answered) {
         io.emit('update_data', 'transferCompleted', { conferenceName });
 
         await transferCall(customerNumber, conferenceSid, conferenceName);
+      }
+
+      if (conferenceCustomerData && !conferenceCustomerData.client_id) {
+        await missedCallFromUnknowCustomer(conferenceSid);
       }
     }, 12000);
   } catch (error) {

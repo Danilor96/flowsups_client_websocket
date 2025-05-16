@@ -21,6 +21,8 @@ export async function makeTaskAfterMissingACall(conferenceSid: string) {
           },
         },
         unknow_call_number: true,
+        client_id: true,
+        phone_number: true,
       },
     });
 
@@ -107,7 +109,62 @@ export async function makeTaskAfterMissingACall(conferenceSid: string) {
           exclusiveManagerNotification: true,
           notificationsForManagers: true,
         });
+
+        const task = await prisma.tasks.create({
+          data: {
+            description: `To call ${customer || 'Unregistered customer'} ${
+              customerMobilePhoneNumber || conferenceCustomerData.unknow_call_number
+            }`,
+            title: 'Missing call',
+            deadline: new Date(),
+            status: 1,
+            created_by: 1,
+            assigned_to_all_managers: true,
+            customer_id: conferenceCustomerData?.client_call?.id,
+            notes: {
+              create: {
+                created_at: new Date(),
+                note: `To call ${customer} ${customerMobilePhoneNumber}`,
+                created_by_id: 1,
+              },
+            },
+          },
+        });
       }
+
+      io.emit('update_data', 'tasks');
+    } else if (conferenceCustomerData && !conferenceCustomerData.client_id) {
+      const phoneNumber = conferenceCustomerData?.phone_number;
+
+      const numberFormatted = phoneNumber ? formatPhoneNumber(phoneNumber) : '';
+
+      await createNotification({
+        message: `There is a missing call from ${numberFormatted}`,
+        notificationType: {
+          warning: true,
+        },
+        exclusiveManagerNotification: true,
+        notificationsForManagers: true,
+      });
+
+      const task = await prisma.tasks.create({
+        data: {
+          description: `To call Unregistered customer ${numberFormatted}`,
+          title: 'Missing call',
+          deadline: new Date(),
+          status: 1,
+          created_by: 1,
+          assigned_to_all_managers: true,
+          customer_id: conferenceCustomerData?.client_call?.id,
+          notes: {
+            create: {
+              created_at: new Date(),
+              note: `To call ${numberFormatted}`,
+              created_by_id: 1,
+            },
+          },
+        },
+      });
 
       io.emit('update_data', 'tasks');
     }

@@ -209,13 +209,14 @@ model Appointments {
   created_at                DateTime            @default(now())
   created_by                Int
   last_check                DateTime?
+  confirmation_sent         Boolean             @default(false)
   creator                   Users               @relation("creator", fields: [created_by], references: [id])
   customers                 Clients             @relation("customer", fields: [customer_id], references: [id], onDelete: Cascade)
   appointments_status       Appointments_status @relation("appointment_status", fields: [status_id], references: [id])
   users                     Users               @relation("user", fields: [user_id], references: [id])
   lead_appointment          Client_has_lead[]   @relation("lead_appointment")
   notification              Notifications?      @relation("appointment")
-  task                      Tasks?              @relation("appointment")
+  task                      Tasks[]             @relation("appointment")
 }
 
 model Vehicle_make {
@@ -434,7 +435,7 @@ model Tasks {
   deadline                 DateTime
   completed_by             Int?
   assigned_to_all_managers Boolean?
-  appointment_id           Int?          @unique
+  appointment_id           Int?
   notes                    Task_Notes[]
   appointment              Appointments? @relation("appointment", fields: [appointment_id], references: [id], onDelete: Cascade)
   assigned                 Users?        @relation("assigned", fields: [assigned_to], references: [id], onDelete: Cascade)
