@@ -35,7 +35,7 @@ export async function checkIfTheCallWasAnswered(
         await transferCall(customerNumber, conferenceSid, conferenceName);
       }
 
-      if (conferenceCustomerData && !conferenceCustomerData.client_id) {
+      if (conferenceCustomerData && !conferenceCustomerData.client_id && !answered?.answered) {
         await missedCallFromUnknowCustomer(conferenceSid);
       }
     }, 12000);

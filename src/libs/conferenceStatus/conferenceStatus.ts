@@ -62,8 +62,6 @@ export async function handlingConferenceStatus({
       const awaitingCustomer = await checkIfCustomerIsInAwaitingTable(from);
 
       if (!customerData) {
-        await setTheCallAsAnswered(conferenceName);
-
         if (!awaitingCustomer) addUnknowCustomerToAwatingTable(from);
       }
 
