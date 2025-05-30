@@ -46,6 +46,7 @@ model Users {
   role_creator                         Roles[]                         @relation("creator")
   sms_template                         Sms_template[]                  @relation("user")
   sms_template_variables               Sms_template_variables_tagged[]
+  System_accesses                      System_accesses[]
   task_notes                           Task_Notes[]
   assigned_task                        Tasks[]                         @relation("assigned")
   completed_task                       Tasks[]                         @relation("completed")
@@ -555,6 +556,7 @@ model Cobuyer_client_relationship {
 model Client_status {
   id                  Int                   @id @default(autoincrement())
   status              String
+  Automatic_emails    Automatic_emails[]
   client_status       Clients[]             @relation("client_status")
   customer_settings   Customer_settings[]   @relation("customer")
   daily_visit_history Daily_visit_history[]
@@ -673,6 +675,7 @@ model Clients {
   appointment_confirmation_sms_sent Boolean?                  @default(false)
   consent_to_sent_sms               Boolean?                  @default(false)
   credit_app_forms_completed        Boolean?                  @default(false)
+  client_status_changed_at          DateTime?
   appointment                       Appointments[]            @relation("customer")
   calls                             Client_calls[]            @relation("client_call")
   buyer_client                      Client_has_cobuyer?       @relation("buyer_client")
@@ -1172,6 +1175,7 @@ model Sms_template {
   created_by  Int
   creted_date DateTime
   published   Boolean               @default(false)
+  favorite    Boolean               @default(false)
   category    Sms_template_category @relation(fields: [category_id], references: [id], onDelete: Cascade)
   user        Users                 @relation("user", fields: [created_by], references: [id], onDelete: Cascade)
 }
@@ -1454,21 +1458,21 @@ model Sms_limit_warning_recipients {
 }
 
 model Voice_and_sms {
-  id                                         Int                    @id @default(autoincrement())
+  id                                         Int                     @id @default(autoincrement())
   system_phone_for_publishing                String?
   system_email_address_for_publishing        String?
-  email_verfified                            Boolean                @default(false)
+  email_verfified                            Boolean                 @default(false)
   forward_incoming_calls_to                  String?
-  forward_incoming_calls_option_id           Int
-  dealership_phone_number                    Boolean                @default(false)
-  disable_auto_emails_to_customer            Boolean                @default(false)
-  disable_sending_auto_sms_over_montly_limit Boolean                @default(false)
-  for_buying_vehicles_from_customers         Boolean                @default(false)
-  in_spanish                                 Boolean                @default(false)
-  include_dealership_address                 Boolean                @default(false)
+  forward_incoming_calls_option_id           Int?
+  dealership_phone_number                    Boolean                 @default(false)
+  disable_auto_emails_to_customer            Boolean                 @default(false)
+  disable_sending_auto_sms_over_montly_limit Boolean                 @default(false)
+  for_buying_vehicles_from_customers         Boolean                 @default(false)
+  in_spanish                                 Boolean                 @default(false)
+  include_dealership_address                 Boolean                 @default(false)
   email_name_displayed_id                    Int
-  email_name_displayed                       Email_name_displayed   @relation(fields: [email_name_displayed_id], references: [id], onDelete: Cascade)
-  forward_incoming_calls_option              Incoming_calls_options @relation(fields: [forward_incoming_calls_option_id], references: [id], onDelete: Cascade)
+  email_name_displayed                       Email_name_displayed    @relation(fields: [email_name_displayed_id], references: [id], onDelete: Cascade)
+  forward_incoming_calls_option              Incoming_calls_options? @relation(fields: [forward_incoming_calls_option_id], references: [id], onDelete: Cascade)
 }
 
 model Sms_template_category {
@@ -1653,4 +1657,59 @@ model ReminderTime {
   id              Int               @id @default(autoincrement())
   time            String
   Client_has_lead Client_has_lead[]
+}
+
+model Automatic_emails {
+  id                                          Int           @id @default(autoincrement())
+  internet_lead_auto_response                 Boolean       @default(false)
+  appointment_reminder                        Boolean       @default(false)
+  appointment_reminder_days                   String
+  appointment_scheduled_on_site               Boolean       @default(false)
+  appointment_rescheduled_on_site             Boolean       @default(false)
+  appointment_scheduled_online                Boolean       @default(false)
+  appointment_rescheduled_online              Boolean       @default(false)
+  sold_deals_thank_you                        Boolean       @default(false)
+  sold_deals_thank_you_days                   String
+  vehicle_price_drop                          Boolean       @default(false)
+  customer_status_id                          Int
+  deposit_payment_receipt                     Boolean       @default(false)
+  deposit_payment_receipt_send_immediately_id Int
+  stipulation_request                         Boolean       @default(false)
+  Client_status                               Client_status @relation(fields: [customer_status_id], references: [id], onDelete: Cascade)
+  Payment_types                               Payment_types @relation(fields: [deposit_payment_receipt_send_immediately_id], references: [id], onDelete: Cascade)
+}
+
+model Automatic_sms {
+  id                            Int     @id @default(autoincrement())
+  appointment_reminder          Boolean @default(false)
+  appointment_reminder_timing   String
+  appointment_schedule_on_site  Boolean @default(false)
+  appointment_schedule_online   Boolean @default(false)
+  appointment_reschedule_onSite Boolean @default(false)
+  appointment_reschedule_online Boolean @default(false)
+  stipulation_request           Boolean @default(false)
+}
+
+model Disable_select_values {
+  id    Int    @id @default(autoincrement())
+  value String
+}
+
+model Payment_types {
+  id               Int                @id @default(autoincrement())
+  type             String
+  Automatic_emails Automatic_emails[]
+}
+
+model RescheduleSms {
+  id  Int    @id @default(autoincrement())
+  sms String
+}
+
+model System_accesses {
+  id         Int       @id @default(autoincrement())
+  user_id    Int
+  entry_date DateTime
+  exit_date  DateTime?
+  Users      Users     @relation(fields: [user_id], references: [id], onDelete: Cascade)
 }

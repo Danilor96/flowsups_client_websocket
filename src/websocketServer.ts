@@ -23,6 +23,7 @@ import { smsStatus } from './libs/sentSmsStatus/sentSmsStatus';
 import { checkSendingsSms } from './libs/checkSendingsSms/checkSendingsSms';
 import { incomingFileSave } from './libs/mediaMessage.services';
 import { setTheCallAsAnswered } from './libs/conferenceStatus/transferCall/checkIfTheCallWasAnswered';
+import { entryHandler, exitHandler } from './libs/systemAccesses/systemAccessesHandler';
 
 const accountSid = process.env.TWILIO_ACCOUNT_SID;
 const authToken = process.env.TWILIO_AUTH_TOKEN;
@@ -100,6 +101,8 @@ io.on('connection', async (socket: Socket) => {
       await socket.join(user);
 
       connectedUsers[socket.id] = user;
+
+      await entryHandler(user);
     }
   }
 
@@ -343,7 +346,9 @@ io.on('connection', async (socket: Socket) => {
     },
   );
 
-  socket.on('disconnect', (reason) => {
+  socket.on('disconnect', async (reason) => {
+    if (connectedUsers[socket.id]) await exitHandler(connectedUsers[socket.id]);
+
     console.log(`User disconnected: ${connectedUsers[socket.id]}`);
 
     delete connectedUsers[socket.id];
