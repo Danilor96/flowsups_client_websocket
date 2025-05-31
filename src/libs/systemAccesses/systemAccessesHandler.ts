@@ -1,5 +1,22 @@
 import { prisma } from '../prisma/prisma';
-import { startOfToday, endOfToday } from 'date-fns';
+import { startOfDay, endOfDay } from 'date-fns';
+import { toZonedTime, fromZonedTime } from 'date-fns-tz';
+
+const timeZone = 'America/New_York';
+
+function getStartOfTodayInUTC() {
+  const now = new Date();
+  const zoned = toZonedTime(now, timeZone);
+
+  return fromZonedTime(startOfDay(zoned), timeZone);
+}
+
+export function getEndOfTodayInUTC() {
+  const now = new Date();
+  const zoned = toZonedTime(now, timeZone);
+  const end = endOfDay(zoned);
+  return fromZonedTime(end, timeZone);
+}
 
 export async function entryHandler(user: string) {
   try {
@@ -7,8 +24,8 @@ export async function entryHandler(user: string) {
       where: {
         Users: { email: user },
         entry_date: {
-          gte: startOfToday(),
-          lt: endOfToday(),
+          gte: getStartOfTodayInUTC(),
+          lt: getEndOfTodayInUTC(),
         },
       },
     });
@@ -36,8 +53,8 @@ export async function exitHandler(user: string) {
         System_accesses: {
           some: {
             entry_date: {
-              gte: startOfToday(),
-              lt: endOfToday(),
+              gte: getEndOfTodayInUTC(),
+              lt: getEndOfTodayInUTC(),
             },
           },
         },
@@ -50,7 +67,6 @@ export async function exitHandler(user: string) {
         },
       },
     });
-
     if (existTodayAccess && existTodayAccess.System_accesses.length > 0) {
       const todayExit = await prisma.system_accesses.update({
         where: {
@@ -74,7 +90,6 @@ export async function exitHandler(user: string) {
           },
         },
       });
-
       if (lastAccess && lastAccess.System_accesses.length > 0) {
         await prisma.system_accesses.update({
           where: {
