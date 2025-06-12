@@ -60,6 +60,7 @@ model Users {
   user_has                                                          Users_has_roles?
   vehicle_delivery_assigned                                         Vehicle_delivery[]              @relation("assigned")
   vehicle_delivery_creator                                          Vehicle_delivery[]              @relation("creator")
+  customer_report_permissions                                       customer_report_permissions[]
   Client_calls                                                      Client_calls[]                  @relation("Client_callsToUsers")
   sms_sender                                                        Client_sms[]                    @relation("Client_smsToUsers")
   Customer_Report_user_favorite_customer_reports                    Customer_Report[]               @relation("user_favorite_customer_reports")
@@ -522,17 +523,18 @@ model Client_types {
 }
 
 model Notes {
-  id               Int               @id @default(autoincrement())
-  note             String
-  created_at       DateTime
-  created_by_id    Int
-  from_id          Int?
-  client_id        Int
-  client_lead_note Client_has_lead[] @relation("assigned_note")
-  deposit          Deposits[]        @relation("deposit_note")
-  client_note      Clients           @relation("note", fields: [client_id], references: [id], onDelete: Cascade)
-  created_by       Users             @relation("creator_user", fields: [created_by_id], references: [id], onDelete: Cascade)
-  from             Client_note_from? @relation("note_from", fields: [from_id], references: [id], onDelete: Cascade)
+  id                  Int                   @id @default(autoincrement())
+  note                String
+  created_at          DateTime
+  created_by_id       Int
+  from_id             Int?
+  client_id           Int
+  client_lead_note    Client_has_lead[]     @relation("assigned_note")
+  Daily_visit_history Daily_visit_history[]
+  deposit             Deposits[]            @relation("deposit_note")
+  client_note         Clients               @relation("note", fields: [client_id], references: [id], onDelete: Cascade)
+  created_by          Users                 @relation("creator_user", fields: [created_by_id], references: [id], onDelete: Cascade)
+  from                Client_note_from?     @relation("note_from", fields: [from_id], references: [id], onDelete: Cascade)
 }
 
 model Ad_id {
@@ -713,6 +715,7 @@ model Clients {
   consent_code                      Consent_code?             @relation("customer")
   credit_app                        Credit_app?               @relation("client_credit_app")
   credit_app_address                Credit_app_address[]      @relation("credit_app_address")
+  Credit_app_code                   Credit_app_code?
   credit_app_other_income           Credit_app_other_income[]
   credit_app_reference              Credit_app_reference[]
   client_employment                 Customer_employment[]     @relation("customer")
@@ -744,6 +747,7 @@ model Client_sms {
   delivered             Boolean                  @default(false)
   message_sid           String?                  @unique
   sent                  Boolean                  @default(false)
+  client_phone_number   String                   @default("")
   client_message        Clients?                 @relation("client_message", fields: [client_id], references: [id], onDelete: Cascade)
   status                Sms_status               @relation("status", fields: [status_id], references: [id], onDelete: Cascade)
   unregistered_customer Awaiting_unknow_client[] @relation("Awaiting_unknow_clientToClient_sms")
@@ -813,22 +817,23 @@ model Deposit_methods {
 }
 
 model Deposits {
-  id                Int             @id @default(autoincrement())
-  client_id         Int
-  vehicle_id        Int?
-  amount            String
-  processing_fee    String?
-  total             String
-  method_id         Int
-  reference         String
-  deposit_date      DateTime
-  good_through_date DateTime
-  non_refundable    Boolean?
-  note_id           Int?
-  client            Clients         @relation("client_deposit", fields: [client_id], references: [id], onDelete: Cascade)
-  method            Deposit_methods @relation("client_method", fields: [method_id], references: [id], onDelete: Cascade)
-  note              Notes?          @relation("deposit_note", fields: [note_id], references: [id], onDelete: Cascade)
-  vehicle           Vehicles?       @relation("client_deposit_vehicle", fields: [vehicle_id], references: [id], onDelete: Cascade)
+  id                  Int             @id @default(autoincrement())
+  client_id           Int
+  vehicle_id          Int?
+  amount              String
+  processing_fee      String?
+  total               String
+  method_id           Int
+  reference           String
+  deposit_date        DateTime
+  good_through_date   DateTime
+  non_refundable      Boolean?
+  note_id             Int?
+  scanned_deposit_url String?
+  client              Clients         @relation("client_deposit", fields: [client_id], references: [id], onDelete: Cascade)
+  method              Deposit_methods @relation("client_method", fields: [method_id], references: [id], onDelete: Cascade)
+  note                Notes?          @relation("deposit_note", fields: [note_id], references: [id], onDelete: Cascade)
+  vehicle             Vehicles?       @relation("client_deposit_vehicle", fields: [vehicle_id], references: [id], onDelete: Cascade)
 }
 
 model Client_has_lead {
@@ -1218,6 +1223,7 @@ model Email_template {
   header_id   Int?
   body        String
   footer_id   Int?
+  subject     String?
   category    Sms_template_category  @relation(fields: [category_id], references: [id], onDelete: Cascade)
   user        Users                  @relation("user", fields: [created_by], references: [id], onDelete: Cascade)
   footer      Footer_email_template? @relation(fields: [footer_id], references: [id], onDelete: Cascade)
@@ -1592,12 +1598,13 @@ model Daily_visit_history {
   assigned_manager_id Int?
   location_id         Int?
   decision_id         Int
-  didTheyBuyAVehicle  Boolean
   managerTurnover     Boolean
+  note_id             Int?
   assigned_manager    Users?        @relation("daily_visit_history_assigned_manager", fields: [assigned_manager_id], references: [id], onDelete: Cascade)
   customer            Clients       @relation(fields: [customer_id], references: [id], onDelete: Cascade)
   decision            Client_status @relation(fields: [decision_id], references: [id])
   lead_type           Lead_types    @relation(fields: [lead_type_id], references: [id], onDelete: Cascade)
+  Notes               Notes?        @relation(fields: [note_id], references: [id], onDelete: Cascade)
   sales_rep           Users         @relation("daily_visit_history_sales_rep", fields: [sales_rep_id], references: [id], onDelete: Cascade)
   vehicle             Vehicles      @relation(fields: [vehicle_id], references: [id], onDelete: Cascade)
 }
@@ -1719,18 +1726,37 @@ model System_accesses {
 }
 
 model Customer_Report {
-  id                                                      Int           @id @default(autoincrement())
+  id                                                      Int                           @id @default(autoincrement())
   name                                                    String
   owner_user_id                                           Int
   filters                                                 Json
   sort_config                                             Json
   advanced_filters                                        Json
   view_type                                               ListViewTypes
-  created_at                                              DateTime      @default(now())
+  created_at                                              DateTime                      @default(now())
   columns_config                                          Json?
-  Users_Customer_Report_owner_user_idToUsers              Users         @relation("Customer_Report_owner_user_idToUsers", fields: [owner_user_id], references: [id], onDelete: Cascade)
-  Users_Users_default_customer_report_idToCustomer_Report Users[]       @relation("Users_default_customer_report_idToCustomer_Report")
-  Users_user_favorite_customer_reports                    Users[]       @relation("user_favorite_customer_reports")
+  for_company                                             Boolean                       @default(false)
+  Users_Customer_Report_owner_user_idToUsers              Users                         @relation("Customer_Report_owner_user_idToUsers", fields: [owner_user_id], references: [id], onDelete: Cascade)
+  Users_Users_default_customer_report_idToCustomer_Report Users[]                       @relation("Users_default_customer_report_idToCustomer_Report")
+  customer_report_permissions                             customer_report_permissions[]
+  Users_user_favorite_customer_reports                    Users[]                       @relation("user_favorite_customer_reports")
+}
+
+model Credit_app_code {
+  id           Int      @id @default(autoincrement())
+  customer_id  Int      @unique
+  token        String   @unique
+  code_expired DateTime
+  Clients      Clients  @relation(fields: [customer_id], references: [id], onDelete: Cascade)
+}
+
+model customer_report_permissions {
+  customer_report_id Int
+  user_id            Int
+  Customer_Report    Customer_Report @relation(fields: [customer_report_id], references: [id], onDelete: Cascade)
+  Users              Users           @relation(fields: [user_id], references: [id], onDelete: Cascade)
+
+  @@id([customer_report_id, user_id])
 }
 
 enum ListViewTypes {

@@ -63,6 +63,7 @@ export async function handlingIncomingSms({ from, message, file }: IncomingSmsDa
           client_id: clientIdStatusAppointments.id,
           status_id: 2,
           fileAttachment: file,
+          client_phone_number: fromFormatted,
         },
         include: {
           user: {
@@ -120,6 +121,7 @@ export async function handlingIncomingSms({ from, message, file }: IncomingSmsDa
               sent_by_user: false,
               status_id: 2,
               fileAttachment: file,
+              client_phone_number: fromFormatted,
               unregistered_customer: {
                 connect: {
                   id: awaitingCustomer.id,
@@ -173,6 +175,7 @@ export async function handlingIncomingSms({ from, message, file }: IncomingSmsDa
                 sent_by_user: false,
                 status_id: 2,
                 fileAttachment: file,
+                client_phone_number: fromFormatted,
                 unregistered_customer: {
                   connect: {
                     id: updatedAwaitingCustomer.id,
@@ -209,6 +212,7 @@ export async function handlingIncomingSms({ from, message, file }: IncomingSmsDa
                 date_sent: today,
                 sent_by_user: false,
                 fileAttachment: file,
+                client_phone_number: fromFormatted,
                 status_id: 2,
                 unregistered_customer: {
                   connect: {
@@ -245,6 +249,7 @@ export async function handlingIncomingSms({ from, message, file }: IncomingSmsDa
               sent_by_user: false,
               status_id: 2,
               fileAttachment: file,
+              client_phone_number: fromFormatted,
               unregistered_customer: {
                 connect: {
                   id: unregisteredCustomer.id,
@@ -281,6 +286,7 @@ export async function handlingIncomingSms({ from, message, file }: IncomingSmsDa
               sent_by_user: false,
               status_id: 2,
               fileAttachment: file,
+              client_phone_number: fromFormatted,
               unregistered_customer: {
                 connect: {
                   id: unregisteredCustomer.id,
