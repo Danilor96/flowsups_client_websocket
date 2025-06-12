@@ -55,7 +55,7 @@ model Users {
   sender_task                                                       Tasks[]                         @relation("creator")
   user_schedule                                                     User_schedule[]
   Customer_Report_Users_default_customer_report_idToCustomer_Report Customer_Report?                @relation("Users_default_customer_report_idToCustomer_Report", fields: [default_customer_report_id], references: [id])
-  users_status                                                      User_status?                    @relation("status", fields: [status_id], references: [id], onDelete: Cascade)
+  users_status                                                      User_status?                    @relation("status", fields: [status_id], references: [id])
   user_code                                                         Users_has_codes?
   user_has                                                          Users_has_roles?
   vehicle_delivery_assigned                                         Vehicle_delivery[]              @relation("assigned")
@@ -112,7 +112,7 @@ model Roles {
   status_id  Int
   created_by Int?
   created_at DateTime?               @default(now())
-  creator    Users?                  @relation("creator", fields: [created_by], references: [id], onDelete: Cascade)
+  creator    Users?                  @relation("creator", fields: [created_by], references: [id])
   status     Role_status             @relation("status", fields: [status_id], references: [id], onDelete: Cascade)
   roles_has  Roles_has_permissions[]
   users_has  Users_has_roles[]
@@ -408,20 +408,20 @@ model Vehicles {
   exterior_vehicle_colors        Vehicle_colors                 @relation("exterior_vehicle_color", fields: [exterior_color_id], references: [id])
   vehicle_fuel_tank_types        Vehicle_fuel_tank_types        @relation("vehicle_fuel_tank_type", fields: [fuel_tank_type_id], references: [id])
   vehicle_identification_numbers Vehicle_identification_numbers @relation(fields: [identification_id], references: [id], onDelete: Cascade)
-  vehicle_image                  Vehicle_image?                 @relation("vehicle_image", fields: [image_id], references: [id], onDelete: Cascade)
+  vehicle_image                  Vehicle_image?                 @relation("vehicle_image", fields: [image_id], references: [id])
   interior_vehicle_colors        Vehicle_colors                 @relation("interior_vehicle_color", fields: [interior_color_id], references: [id])
-  key_info                       Vehicle_details_key_info?      @relation("key_info", fields: [key_info_id], references: [id], onDelete: Cascade)
+  key_info                       Vehicle_details_key_info?      @relation("key_info", fields: [key_info_id], references: [id])
   vehicle_brands                 Vehicle_make                   @relation("vehicle_make", fields: [make_id], references: [id])
   vehicle_manufacture_years      Vehicle_manufacture_years?     @relation("vehicle_manufacture_year", fields: [manufacture_year_id], references: [id])
   vehicle_mileages               Vehicle_mileages?              @relation("vehicle_mileage", fields: [mileage_id], references: [id])
   vehicle_models                 Vehicle_models                 @relation("vehicle_model", fields: [model_id], references: [id])
   vehicle_prices                 Vehicle_prices?                @relation("vehicle_price", fields: [price_id], references: [id])
-  title_license                  Vehicle_details_title_license? @relation("title_license", fields: [title_license_id], references: [id], onDelete: Cascade)
+  title_license                  Vehicle_details_title_license? @relation("title_license", fields: [title_license_id], references: [id])
   vehicle_transmissions          Vehicle_transmissions          @relation("vehicle_transmission", fields: [transmission_id], references: [id])
-  vehicle_trim                   Vehicle_trim?                  @relation("vehicle_trim", fields: [trim_id], references: [id], onDelete: Cascade)
-  general_info                   General_info?                  @relation("general_info", fields: [vehicle_general_info_id], references: [id], onDelete: Cascade)
-  vehicle_license_plate          Vehicle_license_plates?        @relation("vehicle_plate", fields: [vehicle_plate_id], references: [id], onDelete: Cascade)
-  purchase_info                  Vehicle_details_purchase_info? @relation("purchase_info", fields: [vehicle_purchase_info_id], references: [id], onDelete: Cascade)
+  vehicle_trim                   Vehicle_trim?                  @relation("vehicle_trim", fields: [trim_id], references: [id])
+  general_info                   General_info?                  @relation("general_info", fields: [vehicle_general_info_id], references: [id])
+  vehicle_license_plate          Vehicle_license_plates?        @relation("vehicle_plate", fields: [vehicle_plate_id], references: [id])
+  purchase_info                  Vehicle_details_purchase_info? @relation("purchase_info", fields: [vehicle_purchase_info_id], references: [id])
   vehicle_status                 Vehicle_status                 @relation("vehicle_status", fields: [vehicle_status_id], references: [id])
   vehicle_type                   Vehicle_types                  @relation("vehicle_type", fields: [vehicle_type_id], references: [id])
 }
@@ -443,11 +443,11 @@ model Tasks {
   assigned_to_all_managers Boolean?
   appointment_id           Int?
   notes                    Task_Notes[]
-  appointment              Appointments? @relation("appointment", fields: [appointment_id], references: [id], onDelete: Cascade)
-  assigned                 Users?        @relation("assigned", fields: [assigned_to], references: [id], onDelete: Cascade)
-  completed                Users?        @relation("completed", fields: [completed_by], references: [id], onDelete: Cascade)
+  appointment              Appointments? @relation("appointment", fields: [appointment_id], references: [id])
+  assigned                 Users?        @relation("assigned", fields: [assigned_to], references: [id])
+  completed                Users?        @relation("completed", fields: [completed_by], references: [id])
   creator                  Users         @relation("creator", fields: [created_by], references: [id], onDelete: Cascade)
-  customer                 Clients?      @relation("customer_task", fields: [customer_id], references: [id], onDelete: Cascade)
+  customer                 Clients?      @relation("customer_task", fields: [customer_id], references: [id])
   task_status              Task_status   @relation("task_status", fields: [status], references: [id], onDelete: Cascade)
 }
 
@@ -534,7 +534,7 @@ model Notes {
   deposit             Deposits[]            @relation("deposit_note")
   client_note         Clients               @relation("note", fields: [client_id], references: [id], onDelete: Cascade)
   created_by          Users                 @relation("creator_user", fields: [created_by_id], references: [id], onDelete: Cascade)
-  from                Client_note_from?     @relation("note_from", fields: [from_id], references: [id], onDelete: Cascade)
+  from                Client_note_from?     @relation("note_from", fields: [from_id], references: [id])
 }
 
 model Ad_id {
@@ -697,9 +697,9 @@ model Clients {
   client_status                     Client_status?            @relation("client_status", fields: [client_status_id], references: [id])
   client_type                       Client_types?             @relation("client_type", fields: [client_type_id], references: [id])
   contact_method                    Contact_methods?          @relation("contact_method", fields: [contact_method_id], references: [id])
-  contact_time                      Contact_time?             @relation("contact_time", fields: [contact_time_id], references: [id], onDelete: Cascade)
-  country_code                      Country_phone_code?       @relation("country_phone_code", fields: [country_phone_code_id], references: [id], onDelete: Cascade)
-  credit_app_list_status            Credit_app_list_status?   @relation("credit_app_list_status", fields: [credit_app_list_status_id], references: [id], onDelete: Cascade)
+  contact_time                      Contact_time?             @relation("contact_time", fields: [contact_time_id], references: [id])
+  country_code                      Country_phone_code?       @relation("country_phone_code", fields: [country_phone_code_id], references: [id])
+  credit_app_list_status            Credit_app_list_status?   @relation("credit_app_list_status", fields: [credit_app_list_status_id], references: [id])
   finance_manager                   Users?                    @relation("finance_manager", fields: [finance_manager_id], references: [id])
   gender                            Genders?                  @relation("gender", fields: [gender_id], references: [id])
   inquiry_type                      Inquiry_types?            @relation("inquiry_type", fields: [inquiry_type_id], references: [id])
@@ -748,7 +748,7 @@ model Client_sms {
   message_sid           String?                  @unique
   sent                  Boolean                  @default(false)
   client_phone_number   String                   @default("")
-  client_message        Clients?                 @relation("client_message", fields: [client_id], references: [id], onDelete: Cascade)
+  client_message        Clients?                 @relation("client_message", fields: [client_id], references: [id])
   status                Sms_status               @relation("status", fields: [status_id], references: [id], onDelete: Cascade)
   unregistered_customer Awaiting_unknow_client[] @relation("Awaiting_unknow_clientToClient_sms")
   user                  Users[]                  @relation("Client_smsToUsers")
@@ -832,8 +832,8 @@ model Deposits {
   scanned_deposit_url String?
   client              Clients         @relation("client_deposit", fields: [client_id], references: [id], onDelete: Cascade)
   method              Deposit_methods @relation("client_method", fields: [method_id], references: [id], onDelete: Cascade)
-  note                Notes?          @relation("deposit_note", fields: [note_id], references: [id], onDelete: Cascade)
-  vehicle             Vehicles?       @relation("client_deposit_vehicle", fields: [vehicle_id], references: [id], onDelete: Cascade)
+  note                Notes?          @relation("deposit_note", fields: [note_id], references: [id])
+  vehicle             Vehicles?       @relation("client_deposit_vehicle", fields: [vehicle_id], references: [id])
 }
 
 model Client_has_lead {
@@ -854,12 +854,12 @@ model Client_has_lead {
   reminder_time        Int?
   appointment_assigned Appointments?        @relation("lead_appointment", fields: [appointment_id], references: [id])
   assigned_seller      Users?               @relation("client_lead_seller", fields: [assigned_to_id], references: [id])
-  client_lead          Clients              @relation("cleant_lead", fields: [client_id], references: [id])
+  client_lead          Clients              @relation("cleant_lead", fields: [client_id], references: [id], onDelete: Cascade)
   lead_created_by      Users                @relation("lead_created_by", fields: [created_by_id], references: [id])
   client_deal          Client_detail_leads? @relation("client_lead", fields: [lead_id], references: [id])
   lost_reason          Lost_reason?         @relation("lost_reason", fields: [lost_reason_id], references: [id])
   note_assigned        Notes?               @relation("assigned_note", fields: [note_id], references: [id])
-  ReminderTime         ReminderTime?        @relation(fields: [reminder_time], references: [id], onDelete: Cascade)
+  ReminderTime         ReminderTime?        @relation(fields: [reminder_time], references: [id])
   lead_status          Lead_status          @relation("lead_status", fields: [status_id], references: [id], onDelete: Cascade)
 }
 
@@ -910,7 +910,7 @@ model Client_vehicle_tradein {
   client_id       Int
   vehicle_type_id Int
   client          Clients                        @relation("tradein_vehicle", fields: [client_id], references: [id], onDelete: Cascade)
-  comment         Vehicle_tradein_comments?      @relation("tradein_comment", fields: [comment_id], references: [id], onDelete: Cascade)
+  comment         Vehicle_tradein_comments?      @relation("tradein_comment", fields: [comment_id], references: [id])
   ext_color       Vehicle_colors                 @relation("tradein_ext_color", fields: [ext_color_id], references: [id], onDelete: Cascade)
   int_color       Vehicle_colors                 @relation("tradein_int_color", fields: [int_color_id], references: [id], onDelete: Cascade)
   make            Vehicle_make                   @relation("tradein_make", fields: [make_id], references: [id], onDelete: Cascade)
@@ -949,9 +949,9 @@ model Credit_app {
   gender_id          Int?
   created_at         DateTime         @default(now())
   client             Clients          @relation("client_credit_app", fields: [client_id], references: [id], onDelete: Cascade)
-  gender             Genders?         @relation("cresit_app_gender", fields: [gender_id], references: [id], onDelete: Cascade)
-  id_state           Client_id_state? @relation("id_state", fields: [id_state_id], references: [id], onDelete: Cascade)
-  id_type            Client_id_type?  @relation("id_type", fields: [id_type_id], references: [id], onDelete: Cascade)
+  gender             Genders?         @relation("cresit_app_gender", fields: [gender_id], references: [id])
+  id_state           Client_id_state? @relation("id_state", fields: [id_state_id], references: [id])
+  id_type            Client_id_type?  @relation("id_type", fields: [id_type_id], references: [id])
 }
 
 model Credit_app_address {
@@ -974,10 +974,10 @@ model Credit_app_address {
   current_state_id        Int?
   mailing_state_id        Int?
   client                  Clients                    @relation("credit_app_address", fields: [client_id], references: [id], onDelete: Cascade)
-  current_type            Credit_app_address_type?   @relation("current_type", fields: [current_address_type_id], references: [id], onDelete: Cascade)
-  current_month           Credit_app_address_months? @relation("current_month", fields: [current_month_id], references: [id], onDelete: Cascade)
-  current_state           States?                    @relation("currentState", fields: [current_state_id], references: [id], onDelete: Cascade)
-  mailing_state           States?                    @relation("mailingState", fields: [mailing_state_id], references: [id], onDelete: Cascade)
+  current_type            Credit_app_address_type?   @relation("current_type", fields: [current_address_type_id], references: [id])
+  current_month           Credit_app_address_months? @relation("current_month", fields: [current_month_id], references: [id])
+  current_state           States?                    @relation("currentState", fields: [current_state_id], references: [id])
+  mailing_state           States?                    @relation("mailingState", fields: [mailing_state_id], references: [id])
   prev_address            Credit_app_address_prev[]
 }
 
@@ -995,9 +995,9 @@ model Credit_app_address_prev {
   prev_rent_mort        String?
   prev_state_id         Int?
   credit_app_address    Credit_app_address         @relation(fields: [credit_app_address_id], references: [id], onDelete: Cascade)
-  prev_type             Credit_app_address_type?   @relation("prev_type", fields: [prev_address_type_id], references: [id], onDelete: Cascade)
-  prev_month            Credit_app_address_months? @relation("prev_month", fields: [prev_month_id], references: [id], onDelete: Cascade)
-  prev_state            States?                    @relation(fields: [prev_state_id], references: [id], onDelete: Cascade)
+  prev_type             Credit_app_address_type?   @relation("prev_type", fields: [prev_address_type_id], references: [id])
+  prev_month            Credit_app_address_months? @relation("prev_month", fields: [prev_month_id], references: [id])
+  prev_state            States?                    @relation(fields: [prev_state_id], references: [id])
 }
 
 model Credit_app_address_months {
@@ -1095,11 +1095,11 @@ model Notifications {
   notification_for_managers Boolean?
   appointment_id            Int?                    @unique
   unregistered_customer_id  Int?
-  appointment               Appointments?           @relation("appointment", fields: [appointment_id], references: [id], onDelete: Cascade)
-  customers                 Clients?                @relation("customers_noti", fields: [customer_id], references: [id], onDelete: Cascade)
+  appointment               Appointments?           @relation("appointment", fields: [appointment_id], references: [id])
+  customers                 Clients?                @relation("customers_noti", fields: [customer_id], references: [id])
   type                      Type_notification       @relation("noti_type", fields: [type_id], references: [id], onDelete: Cascade)
   unregistered_customer     Awaiting_unknow_client? @relation(fields: [unregistered_customer_id], references: [id], onDelete: Cascade)
-  user                      Users?                  @relation("users_noti", fields: [user_id], references: [id], onDelete: Cascade)
+  user                      Users?                  @relation("users_noti", fields: [user_id], references: [id])
 }
 
 model Type_notification {
@@ -1177,16 +1177,22 @@ model Incidents {
 }
 
 model Sms_template {
-  id          Int                   @id @default(autoincrement())
-  name        String
-  template    String
-  category_id Int
-  created_by  Int
-  creted_date DateTime
-  published   Boolean               @default(false)
-  favorite    Boolean               @default(false)
-  category    Sms_template_category @relation(fields: [category_id], references: [id], onDelete: Cascade)
-  user        Users                 @relation("user", fields: [created_by], references: [id], onDelete: Cascade)
+  id                                                                                  Int                   @id @default(autoincrement())
+  name                                                                                String
+  template                                                                            String
+  category_id                                                                         Int
+  created_by                                                                          Int
+  creted_date                                                                         DateTime
+  published                                                                           Boolean               @default(false)
+  favorite                                                                            Boolean               @default(false)
+  Automatic_sms_Automatic_sms_appointment_reminder_template_idToSms_template          Automatic_sms[]       @relation("Automatic_sms_appointment_reminder_template_idToSms_template")
+  Automatic_sms_Automatic_sms_appointment_reschedule_onSite_template_idToSms_template Automatic_sms[]       @relation("Automatic_sms_appointment_reschedule_onSite_template_idToSms_template")
+  Automatic_sms_Automatic_sms_appointment_reschedule_online_template_idToSms_template Automatic_sms[]       @relation("Automatic_sms_appointment_reschedule_online_template_idToSms_template")
+  Automatic_sms_Automatic_sms_appointment_schedule_on_site_template_idToSms_template  Automatic_sms[]       @relation("Automatic_sms_appointment_schedule_on_site_template_idToSms_template")
+  Automatic_sms_Automatic_sms_appointment_schedule_online_template_idToSms_template   Automatic_sms[]       @relation("Automatic_sms_appointment_schedule_online_template_idToSms_template")
+  Automatic_sms_Automatic_sms_stipulation_request_template_idToSms_template           Automatic_sms[]       @relation("Automatic_sms_stipulation_request_template_idToSms_template")
+  category                                                                            Sms_template_category @relation(fields: [category_id], references: [id], onDelete: Cascade)
+  user                                                                                Users                 @relation("user", fields: [created_by], references: [id], onDelete: Cascade)
 }
 
 model Header_email_template {
@@ -1209,25 +1215,36 @@ model Letterhead {
   id        Int                    @id @default(autoincrement())
   header_id Int?
   footer_id Int?
-  footer    Footer_email_template? @relation(fields: [footer_id], references: [id], onDelete: Cascade)
-  header    Header_email_template? @relation(fields: [header_id], references: [id], onDelete: Cascade)
+  footer    Footer_email_template? @relation(fields: [footer_id], references: [id])
+  header    Header_email_template? @relation(fields: [header_id], references: [id])
 }
 
 model Email_template {
-  id          Int                    @id @default(autoincrement())
-  name        String
-  category_id Int
-  created_by  Int
-  created_at  DateTime
-  published   Boolean                @default(true)
-  header_id   Int?
-  body        String
-  footer_id   Int?
-  subject     String?
-  category    Sms_template_category  @relation(fields: [category_id], references: [id], onDelete: Cascade)
-  user        Users                  @relation("user", fields: [created_by], references: [id], onDelete: Cascade)
-  footer      Footer_email_template? @relation(fields: [footer_id], references: [id], onDelete: Cascade)
-  header      Header_email_template? @relation(fields: [header_id], references: [id], onDelete: Cascade)
+  id                                                                                           Int                    @id @default(autoincrement())
+  name                                                                                         String
+  category_id                                                                                  Int
+  created_by                                                                                   Int
+  created_at                                                                                   DateTime
+  published                                                                                    Boolean                @default(true)
+  header_id                                                                                    Int?
+  body                                                                                         String
+  footer_id                                                                                    Int?
+  subject                                                                                      String?
+  favorite                                                                                     Boolean                @default(false)
+  Automatic_emails_Automatic_emails_appointment_reminder_template_idToEmail_template           Automatic_emails[]     @relation("Automatic_emails_appointment_reminder_template_idToEmail_template")
+  Automatic_emails_Automatic_emails_appointment_reschedule_on_site_template_idToEmail_template Automatic_emails[]     @relation("Automatic_emails_appointment_reschedule_on_site_template_idToEmail_template")
+  Automatic_emails_Automatic_emails_appointment_reschedule_online_template_idToEmail_template  Automatic_emails[]     @relation("Automatic_emails_appointment_reschedule_online_template_idToEmail_template")
+  Automatic_emails_Automatic_emails_appointment_schedule_on_site_template_idToEmail_template   Automatic_emails[]     @relation("Automatic_emails_appointment_schedule_on_site_template_idToEmail_template")
+  Automatic_emails_Automatic_emails_appointment_schedule_online_template_idToEmail_template    Automatic_emails[]     @relation("Automatic_emails_appointment_schedule_online_template_idToEmail_template")
+  Automatic_emails_Automatic_emails_deposit_payment_recipient_template_idToEmail_template      Automatic_emails[]     @relation("Automatic_emails_deposit_payment_recipient_template_idToEmail_template")
+  Automatic_emails_Automatic_emails_internet_lead_auto_response_template_idToEmail_template    Automatic_emails[]     @relation("Automatic_emails_internet_lead_auto_response_template_idToEmail_template")
+  Automatic_emails_Automatic_emails_sold_deals_thank_you_template_idToEmail_template           Automatic_emails[]     @relation("Automatic_emails_sold_deals_thank_you_template_idToEmail_template")
+  Automatic_emails_Automatic_emails_stipulation_request_template_idToEmail_template            Automatic_emails[]     @relation("Automatic_emails_stipulation_request_template_idToEmail_template")
+  Automatic_emails_Automatic_emails_vehicle_price_drop_template_idToEmail_template             Automatic_emails[]     @relation("Automatic_emails_vehicle_price_drop_template_idToEmail_template")
+  category                                                                                     Sms_template_category  @relation(fields: [category_id], references: [id], onDelete: Cascade)
+  user                                                                                         Users                  @relation("user", fields: [created_by], references: [id], onDelete: Cascade)
+  footer                                                                                       Footer_email_template? @relation(fields: [footer_id], references: [id])
+  header                                                                                       Header_email_template? @relation(fields: [header_id], references: [id])
 }
 
 model Customer_settings {
@@ -1342,10 +1359,10 @@ model General_info {
   condition_id         Int?
   inspection_status_id Int?
   emission_status_id   Int?
-  condition            Detail_condition?       @relation("condition", fields: [condition_id], references: [id], onDelete: Cascade)
-  emission             Emission_status_data?   @relation("emission_status", fields: [emission_status_id], references: [id], onDelete: Cascade)
-  inspection           Inspection_status_data? @relation("inspection_status", fields: [inspection_status_id], references: [id], onDelete: Cascade)
-  sales_category       Sales_type_category?    @relation(fields: [sales_type_id], references: [id], onDelete: Cascade)
+  condition            Detail_condition?       @relation("condition", fields: [condition_id], references: [id])
+  emission             Emission_status_data?   @relation("emission_status", fields: [emission_status_id], references: [id])
+  inspection           Inspection_status_data? @relation("inspection_status", fields: [inspection_status_id], references: [id])
+  sales_category       Sales_type_category?    @relation(fields: [sales_type_id], references: [id])
   vehicle              Vehicles[]              @relation("general_info")
 }
 
@@ -1418,10 +1435,10 @@ model Vehicle_details_title_license {
   special_price_start_date DateTime?
   buyer_fee                String?
   lot_fee                  String?
-  license_state            Client_id_state? @relation("license_state", fields: [license_state_id], references: [id], onDelete: Cascade)
-  title_brand              Title_brand?     @relation("title_brand", fields: [title_brand_id], references: [id], onDelete: Cascade)
-  title_state              Client_id_state? @relation("title_state", fields: [title_state_id], references: [id], onDelete: Cascade)
-  title_status             Title_status?    @relation("title_status", fields: [title_status_id], references: [id], onDelete: Cascade)
+  license_state            Client_id_state? @relation("license_state", fields: [license_state_id], references: [id])
+  title_brand              Title_brand?     @relation("title_brand", fields: [title_brand_id], references: [id])
+  title_state              Client_id_state? @relation("title_state", fields: [title_state_id], references: [id])
+  title_status             Title_status?    @relation("title_status", fields: [title_status_id], references: [id])
   vehicle                  Vehicles[]       @relation("title_license")
 }
 
@@ -1446,7 +1463,7 @@ model Vehicle_details_key_info {
   payment_method_id Int?
   per_diem          String?
   memo              String?
-  payment_method    Payment_method? @relation("payment_method", fields: [payment_method_id], references: [id], onDelete: Cascade)
+  payment_method    Payment_method? @relation("payment_method", fields: [payment_method_id], references: [id])
   vehicle           Vehicles[]      @relation("key_info")
 }
 
@@ -1600,11 +1617,11 @@ model Daily_visit_history {
   decision_id         Int
   managerTurnover     Boolean
   note_id             Int?
-  assigned_manager    Users?        @relation("daily_visit_history_assigned_manager", fields: [assigned_manager_id], references: [id], onDelete: Cascade)
+  assigned_manager    Users?        @relation("daily_visit_history_assigned_manager", fields: [assigned_manager_id], references: [id])
   customer            Clients       @relation(fields: [customer_id], references: [id], onDelete: Cascade)
   decision            Client_status @relation(fields: [decision_id], references: [id])
   lead_type           Lead_types    @relation(fields: [lead_type_id], references: [id], onDelete: Cascade)
-  Notes               Notes?        @relation(fields: [note_id], references: [id], onDelete: Cascade)
+  Notes               Notes?        @relation(fields: [note_id], references: [id])
   sales_rep           Users         @relation("daily_visit_history_sales_rep", fields: [sales_rep_id], references: [id], onDelete: Cascade)
   vehicle             Vehicles      @relation(fields: [vehicle_id], references: [id], onDelete: Cascade)
 }
@@ -1653,7 +1670,7 @@ model Awaiting_unknow_client {
   mobile_phone_number String?         @unique
   email               String?         @unique
   user_id             Int?
-  user                Users?          @relation(fields: [user_id], references: [id], onDelete: Cascade)
+  user                Users?          @relation(fields: [user_id], references: [id])
   notifications       Notifications[]
   sms                 Client_sms[]    @relation("Awaiting_unknow_clientToClient_sms")
 }
@@ -1671,34 +1688,66 @@ model ReminderTime {
 }
 
 model Automatic_emails {
-  id                                          Int           @id @default(autoincrement())
-  internet_lead_auto_response                 Boolean       @default(false)
-  appointment_reminder                        Boolean       @default(false)
-  appointment_reminder_days                   String
-  appointment_scheduled_on_site               Boolean       @default(false)
-  appointment_rescheduled_on_site             Boolean       @default(false)
-  appointment_scheduled_online                Boolean       @default(false)
-  appointment_rescheduled_online              Boolean       @default(false)
-  sold_deals_thank_you                        Boolean       @default(false)
-  sold_deals_thank_you_days                   String
-  vehicle_price_drop                          Boolean       @default(false)
-  customer_status_id                          Int
-  deposit_payment_receipt                     Boolean       @default(false)
-  deposit_payment_receipt_send_immediately_id Int
-  stipulation_request                         Boolean       @default(false)
-  Client_status                               Client_status @relation(fields: [customer_status_id], references: [id], onDelete: Cascade)
-  Payment_types                               Payment_types @relation(fields: [deposit_payment_receipt_send_immediately_id], references: [id], onDelete: Cascade)
+  id                                                                                         Int             @id @default(autoincrement())
+  internet_lead_auto_response                                                                Boolean         @default(false)
+  appointment_reminder                                                                       Boolean         @default(false)
+  appointment_reminder_days                                                                  String
+  appointment_scheduled_on_site                                                              Boolean         @default(false)
+  appointment_rescheduled_on_site                                                            Boolean         @default(false)
+  appointment_scheduled_online                                                               Boolean         @default(false)
+  appointment_rescheduled_online                                                             Boolean         @default(false)
+  sold_deals_thank_you                                                                       Boolean         @default(false)
+  sold_deals_thank_you_days                                                                  String
+  vehicle_price_drop                                                                         Boolean         @default(false)
+  customer_status_id                                                                         Int
+  deposit_payment_receipt                                                                    Boolean         @default(false)
+  deposit_payment_receipt_send_immediately_id                                                Int
+  stipulation_request                                                                        Boolean         @default(false)
+  appointment_reminder_template_id                                                           Int?
+  appointment_reschedule_on_site_template_id                                                 Int?
+  appointment_reschedule_online_template_id                                                  Int?
+  appointment_schedule_on_site_template_id                                                   Int?
+  appointment_schedule_online_template_id                                                    Int?
+  deposit_payment_recipient_template_id                                                      Int?
+  internet_lead_auto_response_template_id                                                    Int?
+  sold_deals_thank_you_template_id                                                           Int?
+  stipulation_request_template_id                                                            Int?
+  vehicle_price_drop_template_id                                                             Int?
+  Email_template_Automatic_emails_appointment_reminder_template_idToEmail_template           Email_template? @relation("Automatic_emails_appointment_reminder_template_idToEmail_template", fields: [appointment_reminder_template_id], references: [id])
+  Email_template_Automatic_emails_appointment_reschedule_on_site_template_idToEmail_template Email_template? @relation("Automatic_emails_appointment_reschedule_on_site_template_idToEmail_template", fields: [appointment_reschedule_on_site_template_id], references: [id])
+  Email_template_Automatic_emails_appointment_reschedule_online_template_idToEmail_template  Email_template? @relation("Automatic_emails_appointment_reschedule_online_template_idToEmail_template", fields: [appointment_reschedule_online_template_id], references: [id])
+  Email_template_Automatic_emails_appointment_schedule_on_site_template_idToEmail_template   Email_template? @relation("Automatic_emails_appointment_schedule_on_site_template_idToEmail_template", fields: [appointment_schedule_on_site_template_id], references: [id])
+  Email_template_Automatic_emails_appointment_schedule_online_template_idToEmail_template    Email_template? @relation("Automatic_emails_appointment_schedule_online_template_idToEmail_template", fields: [appointment_schedule_online_template_id], references: [id])
+  Client_status                                                                              Client_status   @relation(fields: [customer_status_id], references: [id], onDelete: Cascade)
+  Payment_types                                                                              Payment_types   @relation(fields: [deposit_payment_receipt_send_immediately_id], references: [id], onDelete: Cascade)
+  Email_template_Automatic_emails_deposit_payment_recipient_template_idToEmail_template      Email_template? @relation("Automatic_emails_deposit_payment_recipient_template_idToEmail_template", fields: [deposit_payment_recipient_template_id], references: [id])
+  Email_template_Automatic_emails_internet_lead_auto_response_template_idToEmail_template    Email_template? @relation("Automatic_emails_internet_lead_auto_response_template_idToEmail_template", fields: [internet_lead_auto_response_template_id], references: [id])
+  Email_template_Automatic_emails_sold_deals_thank_you_template_idToEmail_template           Email_template? @relation("Automatic_emails_sold_deals_thank_you_template_idToEmail_template", fields: [sold_deals_thank_you_template_id], references: [id])
+  Email_template_Automatic_emails_stipulation_request_template_idToEmail_template            Email_template? @relation("Automatic_emails_stipulation_request_template_idToEmail_template", fields: [stipulation_request_template_id], references: [id])
+  Email_template_Automatic_emails_vehicle_price_drop_template_idToEmail_template             Email_template? @relation("Automatic_emails_vehicle_price_drop_template_idToEmail_template", fields: [vehicle_price_drop_template_id], references: [id])
 }
 
 model Automatic_sms {
-  id                            Int     @id @default(autoincrement())
-  appointment_reminder          Boolean @default(false)
-  appointment_reminder_timing   String
-  appointment_schedule_on_site  Boolean @default(false)
-  appointment_schedule_online   Boolean @default(false)
-  appointment_reschedule_onSite Boolean @default(false)
-  appointment_reschedule_online Boolean @default(false)
-  stipulation_request           Boolean @default(false)
+  id                                                                                 Int           @id @default(autoincrement())
+  appointment_reminder                                                               Boolean       @default(false)
+  appointment_reminder_timing                                                        String
+  appointment_schedule_on_site                                                       Boolean       @default(false)
+  appointment_schedule_online                                                        Boolean       @default(false)
+  appointment_reschedule_onSite                                                      Boolean       @default(false)
+  appointment_reschedule_online                                                      Boolean       @default(false)
+  stipulation_request                                                                Boolean       @default(false)
+  appointment_reminder_template_id                                                   Int?
+  appointment_reschedule_onSite_template_id                                          Int?
+  appointment_reschedule_online_template_id                                          Int?
+  appointment_schedule_on_site_template_id                                           Int?
+  appointment_schedule_online_template_id                                            Int?
+  stipulation_request_template_id                                                    Int?
+  Sms_template_Automatic_sms_appointment_reminder_template_idToSms_template          Sms_template? @relation("Automatic_sms_appointment_reminder_template_idToSms_template", fields: [appointment_reminder_template_id], references: [id])
+  Sms_template_Automatic_sms_appointment_reschedule_onSite_template_idToSms_template Sms_template? @relation("Automatic_sms_appointment_reschedule_onSite_template_idToSms_template", fields: [appointment_reschedule_onSite_template_id], references: [id])
+  Sms_template_Automatic_sms_appointment_reschedule_online_template_idToSms_template Sms_template? @relation("Automatic_sms_appointment_reschedule_online_template_idToSms_template", fields: [appointment_reschedule_online_template_id], references: [id])
+  Sms_template_Automatic_sms_appointment_schedule_on_site_template_idToSms_template  Sms_template? @relation("Automatic_sms_appointment_schedule_on_site_template_idToSms_template", fields: [appointment_schedule_on_site_template_id], references: [id])
+  Sms_template_Automatic_sms_appointment_schedule_online_template_idToSms_template   Sms_template? @relation("Automatic_sms_appointment_schedule_online_template_idToSms_template", fields: [appointment_schedule_online_template_id], references: [id])
+  Sms_template_Automatic_sms_stipulation_request_template_idToSms_template           Sms_template? @relation("Automatic_sms_stipulation_request_template_idToSms_template", fields: [stipulation_request_template_id], references: [id])
 }
 
 model Disable_select_values {
