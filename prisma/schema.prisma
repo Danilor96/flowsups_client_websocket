@@ -60,7 +60,6 @@ model Users {
   user_has                                                          Users_has_roles?
   vehicle_delivery_assigned                                         Vehicle_delivery[]              @relation("assigned")
   vehicle_delivery_creator                                          Vehicle_delivery[]              @relation("creator")
-  customer_report_permissions                                       customer_report_permissions[]
   Client_calls                                                      Client_calls[]                  @relation("Client_callsToUsers")
   sms_sender                                                        Client_sms[]                    @relation("Client_smsToUsers")
   Customer_Report_user_favorite_customer_reports                    Customer_Report[]               @relation("user_favorite_customer_reports")
@@ -1775,20 +1774,18 @@ model System_accesses {
 }
 
 model Customer_Report {
-  id                                                      Int                           @id @default(autoincrement())
+  id                                                      Int           @id @default(autoincrement())
   name                                                    String
   owner_user_id                                           Int
   filters                                                 Json
   sort_config                                             Json
   advanced_filters                                        Json
   view_type                                               ListViewTypes
-  created_at                                              DateTime                      @default(now())
+  created_at                                              DateTime      @default(now())
   columns_config                                          Json?
-  for_company                                             Boolean                       @default(false)
-  Users_Customer_Report_owner_user_idToUsers              Users                         @relation("Customer_Report_owner_user_idToUsers", fields: [owner_user_id], references: [id], onDelete: Cascade)
-  Users_Users_default_customer_report_idToCustomer_Report Users[]                       @relation("Users_default_customer_report_idToCustomer_Report")
-  customer_report_permissions                             customer_report_permissions[]
-  Users_user_favorite_customer_reports                    Users[]                       @relation("user_favorite_customer_reports")
+  Users_Customer_Report_owner_user_idToUsers              Users         @relation("Customer_Report_owner_user_idToUsers", fields: [owner_user_id], references: [id], onDelete: Cascade)
+  Users_Users_default_customer_report_idToCustomer_Report Users[]       @relation("Users_default_customer_report_idToCustomer_Report")
+  Users_user_favorite_customer_reports                    Users[]       @relation("user_favorite_customer_reports")
 }
 
 model Credit_app_code {
@@ -1797,15 +1794,6 @@ model Credit_app_code {
   token        String   @unique
   code_expired DateTime
   Clients      Clients  @relation(fields: [customer_id], references: [id], onDelete: Cascade)
-}
-
-model customer_report_permissions {
-  customer_report_id Int
-  user_id            Int
-  Customer_Report    Customer_Report @relation(fields: [customer_report_id], references: [id], onDelete: Cascade)
-  Users              Users           @relation(fields: [user_id], references: [id], onDelete: Cascade)
-
-  @@id([customer_report_id, user_id])
 }
 
 enum ListViewTypes {
