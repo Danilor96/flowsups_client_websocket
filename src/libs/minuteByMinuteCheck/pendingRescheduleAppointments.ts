@@ -3,6 +3,7 @@ import { io, sendTo } from '../../websocketServer';
 import { managerUsersArray } from './specificUsers/managerUsers';
 import { hoursSinceXDate } from './datesDifferences/hourSinceXDate';
 import { parseISO } from 'date-fns';
+import { createNotification } from '../notification/createNotification';
 
 export async function pendingRescheduleAppointments() {
   try {
@@ -24,12 +25,13 @@ export async function pendingRescheduleAppointments() {
 
       pendingReschedule.forEach(async (reAppt) => {
         if (reAppt.last_check && hoursSinceXDate(reAppt.last_check) >= 4) {
-          await prisma.notifications.create({
-            data: {
-              message: `There is still an appointment to be rescheduled`,
-              type_id: 5,
-              notification_for_managers: true,
+          await createNotification({
+            message: `There is still an appointment to be rescheduled`,
+            notificationType: {
+              warning: true,
             },
+            notificationsForManagers: true,
+            eventTypeId: 19,
           });
 
           await prisma.appointments.update({

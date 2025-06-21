@@ -1,6 +1,7 @@
 import { prisma } from '../prisma/prisma';
 import { io, sendTo } from '../../websocketServer';
 import { parseISO } from 'date-fns';
+import { createNotification } from '../notification/createNotification';
 
 export async function pendingTasks() {
   try {
@@ -19,13 +20,13 @@ export async function pendingTasks() {
 
     if (lateTasks && lateTasks.length > 0) {
       lateTasks.forEach(async (task) => {
-        const notificationTask = await prisma.notifications.create({
-          data: {
-            message: `Task '${task.description}' has expired`,
-            created_at: today,
-            user_id: task.assigned_to,
-            type_id: 1,
+        await createNotification({
+          message: `Task '${task.description}' has expired`,
+          assignedToId: task.assigned_to ? [task.assigned_to] : [],
+          notificationType: {
+            general: true,
           },
+          eventTypeId: 20,
         });
       });
     }

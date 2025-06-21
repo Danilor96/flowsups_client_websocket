@@ -186,7 +186,7 @@ export async function smsStatus(
             },
           },
         });
-
+        //
         await createNotification({
           message: `Error sending SMS to client ${to}`,
           notificationType: {
