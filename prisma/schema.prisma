@@ -44,7 +44,6 @@ model Users {
   event_creator                                                     Events[]                        @relation("event_creator")
   notes                                                             Notes[]                         @relation("creator_user")
   users_noti                                                        Notifications[]                 @relation("users_noti")
-  user_notis                                                        Notifications_preferences[]     @relation("user_notis")
   role_creator                                                      Roles[]                         @relation("creator")
   sms_template                                                      Sms_template[]                  @relation("user")
   sms_template_variables                                            Sms_template_variables_tagged[]
@@ -60,6 +59,7 @@ model Users {
   user_has                                                          Users_has_roles?
   vehicle_delivery_assigned                                         Vehicle_delivery[]              @relation("assigned")
   vehicle_delivery_creator                                          Vehicle_delivery[]              @relation("creator")
+  customer_report_permissions                                       customer_report_permissions[]
   Client_calls                                                      Client_calls[]                  @relation("Client_callsToUsers")
   sms_sender                                                        Client_sms[]                    @relation("Client_smsToUsers")
   Customer_Report_user_favorite_customer_reports                    Customer_Report[]               @relation("user_favorite_customer_reports")
@@ -570,6 +570,7 @@ model Client_status {
 model States {
   id                         Int                       @id @default(autoincrement())
   state                      String
+  state_code                 String                    @default("")
   client_address_state       Client_address[]          @relation("client_address_state")
   credit_app_address_current Credit_app_address[]      @relation("currentState")
   credit_app_address_mailing Credit_app_address[]      @relation("mailingState")
@@ -612,10 +613,10 @@ model Events {
   id            Int      @id @default(autoincrement())
   description   String
   updated_at    DateTime
-  updated_by    Int
-  client_id     Int
-  event_client  Clients  @relation("event_client", fields: [client_id], references: [id], onDelete: Cascade)
-  event_creator Users    @relation("event_creator", fields: [updated_by], references: [id], onDelete: Cascade)
+  updated_by    Int?
+  client_id     Int?
+  event_client  Clients? @relation("event_client", fields: [client_id], references: [id], onDelete: Cascade)
+  event_creator Users?   @relation("event_creator", fields: [updated_by], references: [id], onDelete: Cascade)
 }
 
 model Contact_time {
@@ -643,11 +644,11 @@ model Clients {
   created_at                        DateTime                  @default(now())
   email                             String                    @unique
   gender_id                         Int?
-  home_phone                        String
+  home_phone                        String?
   mobile_phone                      String                    @unique
   seller_id                         Int?
   social_security                   String
-  work_phone                        String
+  work_phone                        String?
   name_lastname                     String?
   client_type_id                    Int?
   intereseted_vehicle_id            Int?
@@ -823,9 +824,9 @@ model Deposits {
   processing_fee      String?
   total               String
   method_id           Int
-  reference           String
+  reference           String?
   deposit_date        DateTime
-  good_through_date   DateTime
+  good_through_date   DateTime?
   non_refundable      Boolean?
   note_id             Int?
   scanned_deposit_url String?
@@ -1094,8 +1095,10 @@ model Notifications {
   notification_for_managers Boolean?
   appointment_id            Int?                    @unique
   unregistered_customer_id  Int?
+  event_type_id             Int?
   appointment               Appointments?           @relation("appointment", fields: [appointment_id], references: [id])
   customers                 Clients?                @relation("customers_noti", fields: [customer_id], references: [id])
+  Events_types              Events_types?           @relation(fields: [event_type_id], references: [id])
   type                      Type_notification       @relation("noti_type", fields: [type_id], references: [id], onDelete: Cascade)
   unregistered_customer     Awaiting_unknow_client? @relation(fields: [unregistered_customer_id], references: [id], onDelete: Cascade)
   user                      Users?                  @relation("users_noti", fields: [user_id], references: [id])
@@ -1146,19 +1149,10 @@ model Country_phone_code {
 }
 
 model Notifications_preferences {
-  id           Int                 @id @default(autoincrement())
-  notification String
-  type_id      Int
-  active       Boolean
-  user_id      Int
-  type         Notifications_types @relation("noti_type", fields: [type_id], references: [id], onDelete: Cascade)
-  user         Users               @relation("user_notis", fields: [user_id], references: [id], onDelete: Cascade)
-}
-
-model Notifications_types {
-  id              Int                         @id @default(autoincrement())
-  type            String
-  noti_preference Notifications_preferences[] @relation("noti_type")
+  id            Int           @id @default(autoincrement())
+  event_type_id Int?          @unique
+  user_ids      Int[]         @default([])
+  Events_types  Events_types? @relation(fields: [event_type_id], references: [id])
 }
 
 model Consent_code {
@@ -1774,18 +1768,20 @@ model System_accesses {
 }
 
 model Customer_Report {
-  id                                                      Int           @id @default(autoincrement())
+  id                                                      Int                           @id @default(autoincrement())
   name                                                    String
   owner_user_id                                           Int
   filters                                                 Json
   sort_config                                             Json
   advanced_filters                                        Json
   view_type                                               ListViewTypes
-  created_at                                              DateTime      @default(now())
+  created_at                                              DateTime                      @default(now())
   columns_config                                          Json?
-  Users_Customer_Report_owner_user_idToUsers              Users         @relation("Customer_Report_owner_user_idToUsers", fields: [owner_user_id], references: [id], onDelete: Cascade)
-  Users_Users_default_customer_report_idToCustomer_Report Users[]       @relation("Users_default_customer_report_idToCustomer_Report")
-  Users_user_favorite_customer_reports                    Users[]       @relation("user_favorite_customer_reports")
+  for_company                                             Boolean                       @default(false)
+  Users_Customer_Report_owner_user_idToUsers              Users                         @relation("Customer_Report_owner_user_idToUsers", fields: [owner_user_id], references: [id], onDelete: Cascade)
+  Users_Users_default_customer_report_idToCustomer_Report Users[]                       @relation("Users_default_customer_report_idToCustomer_Report")
+  customer_report_permissions                             customer_report_permissions[]
+  Users_user_favorite_customer_reports                    Users[]                       @relation("user_favorite_customer_reports")
 }
 
 model Credit_app_code {
@@ -1794,6 +1790,22 @@ model Credit_app_code {
   token        String   @unique
   code_expired DateTime
   Clients      Clients  @relation(fields: [customer_id], references: [id], onDelete: Cascade)
+}
+
+model customer_report_permissions {
+  customer_report_id Int
+  user_id            Int
+  Customer_Report    Customer_Report @relation(fields: [customer_report_id], references: [id], onDelete: Cascade)
+  Users              Users           @relation(fields: [user_id], references: [id], onDelete: Cascade)
+
+  @@id([customer_report_id, user_id])
+}
+
+model Events_types {
+  id                        Int                        @id @default(autoincrement())
+  type                      String
+  Notifications             Notifications[]
+  Notifications_preferences Notifications_preferences?
 }
 
 enum ListViewTypes {

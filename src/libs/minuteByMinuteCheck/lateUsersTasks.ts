@@ -1,6 +1,7 @@
 import { prisma } from '../prisma/prisma';
 import { io, sendTo } from '../../websocketServer';
 import { managerUsersArray } from './specificUsers/managerUsers';
+import { createNotification } from '../notification/createNotification';
 
 export async function latesUsersTasks() {
   try {
@@ -19,12 +20,13 @@ export async function latesUsersTasks() {
         if (lateTasks.length >= 15) {
           const managerUsers = await managerUsersArray();
 
-          await prisma.notifications.create({
-            data: {
-              message: `${user.name} ${user.last_name} has already reached 15 or more missed tasks`,
-              type_id: 5,
-              notification_for_managers: true,
+          await createNotification({
+            message: `${user.name} ${user.last_name} has already reached 15 or more missed tasks`,
+            notificationType: {
+              warning: true,
             },
+            notificationsForManagers: true,
+            eventTypeId: 15,
           });
 
           if (managerUsers && managerUsers.length > 0) {

@@ -3,6 +3,7 @@ import { io } from '../../websocketServer';
 import { assignUserFromRoundRobin } from '../roundRobin/roundRobin';
 import { AppointmentData, Sms } from '../definitions';
 import { startOfToday, endOfToday } from 'date-fns';
+import { createNotification } from '../notification/createNotification';
 
 interface IncomingSmsData {
   from: any;
@@ -385,23 +386,32 @@ export async function handlingIncomingSms({ from, message, file }: IncomingSmsDa
 
         const userAppointmentId = clientIdStatusAppointments.seller?.id;
 
-        await prisma.notifications.create({
+        await createNotification({
+          message: `Customer ${clientIdStatusAppointments.first_name} ${
+            clientIdStatusAppointments.last_name
+          } has accepted the appointment for ${
+            apptData
+              ? new Date(apptData.start_date).toLocaleString('en-US', {
+                  day: '2-digit',
+                  weekday: 'short',
+                  hour: '2-digit',
+                  minute: '2-digit',
+                })
+              : ''
+          }`,
+          notificationType: {
+            appointment: true,
+          },
+          assignedToId: userAppointmentId ? [userAppointmentId] : [],
+          notificationsForManagers: true,
+          eventTypeId: 14,
+        });
+
+        await prisma.events.create({
           data: {
-            message: `Customer ${clientIdStatusAppointments.first_name} ${
-              clientIdStatusAppointments.last_name
-            } has accepted the appointment for ${
-              apptData
-                ? new Date(apptData.start_date).toLocaleString('en-US', {
-                    day: '2-digit',
-                    weekday: 'short',
-                    hour: '2-digit',
-                    minute: '2-digit',
-                  })
-                : ''
-            }`,
-            type_id: 2,
-            user_id: userAppointmentId,
-            notification_for_managers: true,
+            description: 'Appointment accepted',
+            updated_at: new Date(),
+            client_id: clientIdStatusAppointments.id,
           },
         });
 
@@ -443,14 +453,15 @@ export async function handlingIncomingSms({ from, message, file }: IncomingSmsDa
 
     // create sms notification
 
-    await prisma.notifications.create({
-      data: {
-        message: message,
-        type_id: 4,
-        user_id: userId,
-        unregistered_customer_id: unregisteredCustomerId,
-        customer_id: customerId,
+    await createNotification({
+      message: message,
+      notificationType: {
+        customer: true,
       },
+      assignedToId: userId ? [userId] : [],
+      unregisteredCustomerId: unregisteredCustomerId || undefined,
+      customerId: customerId || undefined,
+      eventTypeId: 25,
     });
 
     await prisma.$disconnect();

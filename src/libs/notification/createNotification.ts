@@ -10,6 +10,7 @@ export async function createNotification({
   notificationsForManagers,
   exclusiveManagerNotification,
   unregisteredCustomerId,
+  eventTypeId,
 }: {
   notificationType: {
     general?: boolean;
@@ -24,10 +25,25 @@ export async function createNotification({
   appointmentId?: number;
   notificationsForManagers?: boolean;
   exclusiveManagerNotification?: boolean;
+  eventTypeId?: number;
   unregisteredCustomerId?: number;
 }) {
   try {
     const { general, appointment, customer, inventory, warning } = notificationType;
+
+    const notificationsPreferences = await prisma.notifications_preferences.findMany();
+
+    const notiPreference = notificationsPreferences.find((el) => el.event_type_id === eventTypeId);
+
+    if (notiPreference && assignedToId && assignedToId.length > 0) {
+      for (let i = 0; i < assignedToId.length; i++) {
+        const el = assignedToId[i];
+
+        const exists = notiPreference.user_ids.includes(el);
+
+        if (!exists) return;
+      }
+    }
 
     const managerUsersIds: number[] = [];
 

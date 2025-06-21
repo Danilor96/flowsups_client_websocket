@@ -1,6 +1,7 @@
 import { prisma } from '../prisma/prisma';
 import { io, sendTo } from '../../websocketServer';
 import { parseISO } from 'date-fns';
+import { createNotification } from '../notification/createNotification';
 
 export async function pendingAppointments() {
   try {
@@ -57,16 +58,17 @@ export async function pendingAppointments() {
         },
       });
 
-      // set the customer status to No Show Up 
-
+      // set the customer status to No Show Up
+      //
       lateAppointments.forEach(async (appt) => {
-        const notifications = await prisma.notifications.create({
-          data: {
-            message: `The appointment with ${appt.customers.first_name} ${appt.customers.last_name} has expired`,
-            type_id: 2,
-            user_id: appt.customers.seller_id,
-            notification_for_managers: true,
+        await createNotification({
+          message: `The appointment with ${appt.customers.first_name} ${appt.customers.last_name} has expired`,
+          notificationType: {
+            appointment: true,
           },
+          assignedToId: appt.customers.seller_id ? [appt.customers.seller_id] : [],
+          notificationsForManagers: true,
+          eventTypeId: 26,
         });
       });
     }

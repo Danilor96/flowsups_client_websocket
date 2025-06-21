@@ -3,6 +3,7 @@ import { io, sendTo } from '../../websocketServer';
 import { managerUsersArray } from './specificUsers/managerUsers';
 import { hoursUntilXDate } from './datesDifferences/hoursUntilXDate';
 import { minutesSinceXDate } from './datesDifferences/minutesSinceXDate';
+import { createNotification } from '../notification/createNotification';
 
 export async function pendingDeliveries() {
   try {
@@ -27,13 +28,14 @@ export async function pendingDeliveries() {
         if (hoursUntilXDate(delivery.start_date) === 1) {
           const managerUsers = await managerUsersArray();
 
-          await prisma.notifications.create({
-            data: {
-              message: `There is a delivery scheduled in one hour with ${delivery.customer.first_name} ${delivery.customer.last_name}`,
-              type_id: 3,
-              user_id: delivery.assigned_to,
-              notification_for_managers: true,
+          await createNotification({
+            message: `There is a delivery scheduled in one hour with ${delivery.customer.first_name} ${delivery.customer.last_name}`,
+            notificationType: {
+              inventory: true,
             },
+            assignedToId: [delivery.assigned_to],
+            notificationsForManagers: true,
+            eventTypeId: 17,
           });
 
           sendTo(delivery.assigned.email, 'notifications');
@@ -46,13 +48,14 @@ export async function pendingDeliveries() {
         } else if (minutesSinceXDate(delivery.end_date) === 30) {
           const managerUsers = await managerUsersArray();
 
-          await prisma.notifications.create({
-            data: {
-              message: `The delivery with ${delivery.customer.first_name} ${delivery.customer.last_name} has expired`,
-              type_id: 5,
-              user_id: delivery.assigned_to,
-              notification_for_managers: true,
+          await createNotification({
+            message: `The delivery with ${delivery.customer.first_name} ${delivery.customer.last_name} has expired`,
+            notificationType: {
+              warning: true,
             },
+            assignedToId: [delivery.assigned_to],
+            notificationsForManagers: true,
+            eventTypeId: 18,
           });
 
           sendTo(delivery.assigned.email, 'notifications');
