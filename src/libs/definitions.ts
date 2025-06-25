@@ -67,3 +67,78 @@ export type AppointmentData = {
   client_accept_appointment: boolean;
   created_by: number;
 };
+
+export type TemplateVariablesValues =
+  | {
+      first_name: string;
+      last_name: string;
+      salutation: string | null;
+      middle_initials: string | null;
+      suffix: string | null;
+      home_phone: string | null;
+      work_phone: string | null;
+      mobile_phone: string | null;
+      email: string;
+      client_address: {
+        city: string;
+        street: string;
+        zip: string | null;
+        state: {
+          state: string;
+        };
+      };
+      lead_source: {
+        source: string;
+      };
+      seller: {
+        last_name: string | null;
+        mobile_phone: string | null;
+        email: string;
+        name: string | null;
+      } | null;
+      bdc: {
+        name: string | null;
+        id: number;
+        email: string;
+        last_name: string | null;
+        mobile_phone: string | null;
+      } | null;
+      finance_manager: {
+        name: string | null;
+        id: number;
+        email: string;
+        last_name: string | null;
+        mobile_phone: string | null;
+      } | null;
+      interested_vehicle: {
+        vehicle_models: {
+          model: string;
+        };
+        vehicle_brands: {
+          brand: string;
+        };
+        title_license: {
+          asking_price: string;
+          whole_price: string | null;
+          floor_price: string | null;
+          buy_now_price: string | null;
+        } | null;
+        exterior_vehicle_colors: {
+          color: string;
+        };
+        vehicle_mileages: {
+          mileage: string;
+        } | null;
+        vehicle_trim: {
+          trim: string;
+        } | null;
+        vehicle_identification_numbers: {
+          vin: string;
+        };
+        vehicle_manufacture_years: {
+          year: string;
+        } | null;
+      } | null;
+    }
+  | null
+  | undefined;
