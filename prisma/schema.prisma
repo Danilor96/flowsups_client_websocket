@@ -215,6 +215,7 @@ model Appointments {
   created_by                Int
   last_check                DateTime?
   confirmation_sent         Boolean             @default(false)
+  reminder_sent             Boolean             @default(false)
   creator                   Users               @relation("creator", fields: [created_by], references: [id])
   customers                 Clients             @relation("customer", fields: [customer_id], references: [id], onDelete: Cascade)
   appointments_status       Appointments_status @relation("appointment_status", fields: [status_id], references: [id])
