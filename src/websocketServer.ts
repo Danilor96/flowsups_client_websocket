@@ -295,13 +295,14 @@ io.on('connection', async (socket: Socket) => {
     // if the user has the status "new" then change it to "contacted"
 
     const from = req.body.From.replace(/\D/g, '');
+     console.log('handlo]]ing incoming sms: ', from);
 
     const message = req.body.Body;
 
     const media = req.body.MediaUrl0;
 
     let file = undefined;
-
+   
     if (media) {
       const mediaType = req.body.MediaContentType0;
 
@@ -326,7 +327,7 @@ io.on('connection', async (socket: Socket) => {
       const errorMessage = req.body.ErrorMessage;
       const errorCode = req.body.ErrorCode;
       const messageSid = req.body.MessageSid;
-
+      console.log(`Message: ${messageSid}. Status: ${status}`);
       await smsStatus(to, status, errorMessage, errorCode, messageSid);
     } catch (error) {
       console.log(error);
