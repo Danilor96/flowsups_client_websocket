@@ -27,7 +27,17 @@ export async function handlingIncomingSms({ from, message, file }: IncomingSmsDa
   try {
     const clientIdStatusAppointments = await prisma.clients.findFirst({
       where: {
-        mobile_phone: fromFormatted,
+        OR: [
+          {
+            mobile_phone: fromFormatted,
+          },
+          {
+            home_phone: fromFormatted,
+          },
+          // {
+          //   work_phone: fromFormatted,  consultar para ver si es necesario
+          // },
+        ],
       },
       select: {
         client_status_id: true,
@@ -321,7 +331,7 @@ export async function handlingIncomingSms({ from, message, file }: IncomingSmsDa
     ) {
       const userStatus = await prisma.clients.update({
         where: {
-          mobile_phone: fromFormatted,
+          id: clientIdStatusAppointments.id,
         },
         data: {
           client_status_id: 2,
