@@ -1,5 +1,5 @@
 import { ref, uploadBytesResumable, getDownloadURL } from 'firebase/storage';
-import { getSmsImageStorageRef } from '../firebase/firebase.config';
+import { smsImageStorageRef } from '../firebase/firebase.config';
 import crypto from 'crypto';
 
 export async function uploadImageForSms(
@@ -7,8 +7,6 @@ export async function uploadImageForSms(
   imageBuffer: Buffer | Uint8Array,
   contentType: string,
 ): Promise<string> {
-  const smsImageStorageRef = getSmsImageStorageRef();
-
   if (smsImageStorageRef) {
     const uuid = crypto.randomUUID();
     const filePath = `/${customerId}/${uuid}`;

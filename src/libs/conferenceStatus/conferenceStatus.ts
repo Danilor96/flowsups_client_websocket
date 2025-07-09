@@ -39,9 +39,16 @@ export async function handlingConferenceStatus({
     // first conference action sequence
     if (sequence === '1') {
       // save the conference attempt in the web data base
-      const customerData = await prisma.clients.findUnique({
+      const customerData = await prisma.clients.findFirst({
         where: {
-          mobile_phone: from,
+          OR: [
+            {
+              mobile_phone: from,
+            },
+            {
+              home_phone: from,
+            },
+          ]
         },
         select: {
           id: true,

@@ -1,6 +1,8 @@
 // Import the functions you need from the SDKs you need
-import { initializeApp } from 'firebase/app';
-import { getStorage, ref } from '@firebase/storage';
+const { initializeApp } = require('firebase/app');
+const { getStorage, ref } = require('@firebase/storage');
+import { FirebaseApp } from 'firebase/app';
+import { StorageReference, FirebaseStorage } from '@firebase/storage';
 // TODO: Add SDKs for Firebase products that you want to use
 // https://firebase.google.com/docs/web/setup#available-libraries
 
@@ -16,20 +18,23 @@ const firebaseConfig = {
   measurementId: 'G-VD23J5VYDB',
 };
 
-// Initialize Firebase
-const app = initializeApp(firebaseConfig);
-export const storage = getStorage(app);
+let app: FirebaseApp | null = null;
+let storage: StorageReference | null = null;
+export let smsImageStorageRef: FirebaseStorage | null = null;
 
-// Create a storage reference from our storage service
-export function getSmsImageStorageRef() {
-  return ref(storage, 'sms-images/images-temp');
+export async function initializeFirebaseStorage() {
+  // Initialize Firebase
+  app = initializeApp(firebaseConfig);
+  storage = getStorage(app);
 }
 
-export function getImageComplements() {
-  const smsImageStorageRef = ref(storage, 'sms-images/images-temp');
-  const scannedDepositReceiptStorageRef = ref(storage, 'deposit-receipt/');
-  return {
-    smsImageStorageRef: ref(storage, 'sms-images/images-temp'),
-    scannedDepositReceiptStorageRef: ref(storage, 'deposit-receipt/'),
-  };
-}
+initializeFirebaseStorage()
+  .then(() => {
+    if (storage) {
+      // Create a storage reference from our storage service
+      smsImageStorageRef = ref(storage, 'sms-images/images-temp');
+    }
+  })
+  .catch((error) => {
+    console.log(error);
+  });
