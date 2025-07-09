@@ -627,7 +627,7 @@ model Contact_time {
 }
 
 model Clients {
-  id                                Int                       @id @default(autoincrement())
+  id                                Int                              @id @default(autoincrement())
   current_address                   String
   previous_address                  String?
   mailing_address                   String?
@@ -638,15 +638,15 @@ model Clients {
   cash_down                         String?
   duplicate                         String?
   contact_method_id                 Int?
-  lead_source_id                    Int
+  lead_source_id                    Int?
   lead_type_id                      Int
   inquiry_type_id                   Int?
   born_date                         DateTime?
-  created_at                        DateTime                  @default(now())
-  email                             String                    @unique
+  created_at                        DateTime                         @default(now())
+  email                             String                           @unique
   gender_id                         Int?
   home_phone                        String?
-  mobile_phone                      String                    @unique
+  mobile_phone                      String                           @unique
   seller_id                         Int?
   social_security                   String
   work_phone                        String?
@@ -665,68 +665,72 @@ model Clients {
   suffix                            String?
   client_address_id                 Int
   client_language_id                Int?
-  deleted                           Boolean?                  @default(false)
+  deleted                           Boolean?                         @default(false)
   lead_temperature_id               Int?
   referrer_id                       Int?
   contact_time_id                   Int?
   last_activity                     DateTime?
   credit_app_list_status_id         Int?
-  consent_sent                      Boolean?                  @default(false)
+  consent_sent                      Boolean?                         @default(false)
   born_date_hash                    String?
-  consent_approved                  Boolean?                  @default(false)
+  consent_approved                  Boolean?                         @default(false)
   country_phone_code_id             Int?
   lost_date                         DateTime?
   bdc_id                            Int?
   finance_manager_id                Int?
   sales_manager_id                  Int?
-  appointment_confirmation_sms_sent Boolean?                  @default(false)
-  consent_to_sent_sms               Boolean?                  @default(false)
-  credit_app_forms_completed        Boolean?                  @default(false)
+  appointment_confirmation_sms_sent Boolean?                         @default(false)
+  consent_to_sent_sms               Boolean?                         @default(false)
+  credit_app_forms_completed        Boolean?                         @default(false)
   client_status_changed_at          DateTime?
-  appointment                       Appointments[]            @relation("customer")
-  calls                             Client_calls[]            @relation("client_call")
-  buyer_client                      Client_has_cobuyer?       @relation("buyer_client")
-  cobuyer_client                    Client_has_cobuyer[]      @relation("cobuyer_client")
-  client_lead                       Client_has_lead[]         @relation("cleant_lead")
-  message                           Client_sms[]              @relation("client_message")
-  tradein_client                    Client_vehicle_tradein[]  @relation("tradein_vehicle")
-  wishlist_client                   Client_vehicle_wishlist[] @relation("wishlist_client")
-  ad                                Ad_id?                    @relation("ad_id", fields: [ad_id], references: [id])
-  bdc                               Users?                    @relation("bdc", fields: [bdc_id], references: [id])
-  client_address                    Client_address            @relation("client_address", fields: [client_address_id], references: [id])
-  language                          Languages?                @relation("client_language", fields: [client_language_id], references: [id])
-  client_status                     Client_status?            @relation("client_status", fields: [client_status_id], references: [id])
-  client_type                       Client_types?             @relation("client_type", fields: [client_type_id], references: [id])
-  contact_method                    Contact_methods?          @relation("contact_method", fields: [contact_method_id], references: [id])
-  contact_time                      Contact_time?             @relation("contact_time", fields: [contact_time_id], references: [id])
-  country_code                      Country_phone_code?       @relation("country_phone_code", fields: [country_phone_code_id], references: [id])
-  credit_app_list_status            Credit_app_list_status?   @relation("credit_app_list_status", fields: [credit_app_list_status_id], references: [id])
-  finance_manager                   Users?                    @relation("finance_manager", fields: [finance_manager_id], references: [id])
-  gender                            Genders?                  @relation("gender", fields: [gender_id], references: [id])
-  inquiry_type                      Inquiry_types?            @relation("inquiry_type", fields: [inquiry_type_id], references: [id])
-  interested_vehicle                Vehicles?                 @relation("interested_vehicle", fields: [intereseted_vehicle_id], references: [id])
-  lead_source                       Lead_sources              @relation("lead_source", fields: [lead_source_id], references: [id])
-  client_lead_temperature           Lead_temperature?         @relation("lead_temperature", fields: [lead_temperature_id], references: [id])
-  lead_type                         Lead_types                @relation("lead_type", fields: [lead_type_id], references: [id])
-  sales_manager                     Users?                    @relation("sales_manager", fields: [sales_manager_id], references: [id])
-  seller                            Users?                    @relation("seller", fields: [seller_id], references: [id])
-  file                              Clients_has_files[]       @relation("client")
-  buyer_referrer                    Clients_has_referrer?     @relation("buyer_client_referrer")
-  referrer_client                   Clients_has_referrer[]    @relation("referrer_client")
-  consent_code                      Consent_code?             @relation("customer")
-  credit_app                        Credit_app?               @relation("client_credit_app")
-  credit_app_address                Credit_app_address[]      @relation("credit_app_address")
+  home_default                      Boolean                          @default(false)
+  mobile_default                    Boolean                          @default(true)
+  work_default                      Boolean                          @default(false)
+  appointment                       Appointments[]                   @relation("customer")
+  calls                             Client_calls[]                   @relation("client_call")
+  buyer_client                      Client_has_cobuyer?              @relation("buyer_client")
+  cobuyer_client                    Client_has_cobuyer[]             @relation("cobuyer_client")
+  client_lead                       Client_has_lead[]                @relation("cleant_lead")
+  message                           Client_sms[]                     @relation("client_message")
+  tradein_client                    Client_vehicle_tradein[]         @relation("tradein_vehicle")
+  wishlist_client                   Client_vehicle_wishlist[]        @relation("wishlist_client")
+  ad                                Ad_id?                           @relation("ad_id", fields: [ad_id], references: [id])
+  bdc                               Users?                           @relation("bdc", fields: [bdc_id], references: [id])
+  client_address                    Client_address                   @relation("client_address", fields: [client_address_id], references: [id])
+  language                          Languages?                       @relation("client_language", fields: [client_language_id], references: [id])
+  client_status                     Client_status?                   @relation("client_status", fields: [client_status_id], references: [id])
+  client_type                       Client_types?                    @relation("client_type", fields: [client_type_id], references: [id])
+  contact_method                    Contact_methods?                 @relation("contact_method", fields: [contact_method_id], references: [id])
+  contact_time                      Contact_time?                    @relation("contact_time", fields: [contact_time_id], references: [id])
+  country_code                      Country_phone_code?              @relation("country_phone_code", fields: [country_phone_code_id], references: [id])
+  credit_app_list_status            Credit_app_list_status?          @relation("credit_app_list_status", fields: [credit_app_list_status_id], references: [id])
+  finance_manager                   Users?                           @relation("finance_manager", fields: [finance_manager_id], references: [id])
+  gender                            Genders?                         @relation("gender", fields: [gender_id], references: [id])
+  inquiry_type                      Inquiry_types?                   @relation("inquiry_type", fields: [inquiry_type_id], references: [id])
+  interested_vehicle                Vehicles?                        @relation("interested_vehicle", fields: [intereseted_vehicle_id], references: [id])
+  lead_source                       Lead_sources?                    @relation("lead_source", fields: [lead_source_id], references: [id])
+  client_lead_temperature           Lead_temperature?                @relation("lead_temperature", fields: [lead_temperature_id], references: [id])
+  lead_type                         Lead_types                       @relation("lead_type", fields: [lead_type_id], references: [id])
+  sales_manager                     Users?                           @relation("sales_manager", fields: [sales_manager_id], references: [id])
+  seller                            Users?                           @relation("seller", fields: [seller_id], references: [id])
+  file                              Clients_has_files[]              @relation("client")
+  buyer_referrer                    Clients_has_referrer?            @relation("buyer_client_referrer")
+  referrer_client                   Clients_has_referrer[]           @relation("referrer_client")
+  consent_code                      Consent_code?                    @relation("customer")
+  credit_app                        Credit_app?                      @relation("client_credit_app")
+  credit_app_address                Credit_app_address[]             @relation("credit_app_address")
   Credit_app_code                   Credit_app_code?
   credit_app_other_income           Credit_app_other_income[]
   credit_app_reference              Credit_app_reference[]
-  client_employment                 Customer_employment[]     @relation("customer")
+  client_employment                 Customer_employment[]            @relation("customer")
   daily_visit_history               Daily_visit_history[]
   deal                              Deal[]
-  deposit_client                    Deposits[]                @relation("client_deposit")
-  event_client                      Events[]                  @relation("event_client")
-  note                              Notes[]                   @relation("note")
-  customers_noti                    Notifications[]           @relation("customers_noti")
-  customer_task                     Tasks[]                   @relation("customer_task")
+  deposit_client                    Deposits[]                       @relation("client_deposit")
+  event_client                      Events[]                         @relation("event_client")
+  note                              Notes[]                          @relation("note")
+  customers_noti                    Notifications[]                  @relation("customers_noti")
+  customer_task                     Tasks[]                          @relation("customer_task")
+  Terms_and_conditions_processed    Terms_and_conditions_processed[]
   vehicle_delivery                  Vehicle_delivery[]
 }
 
@@ -1184,6 +1188,8 @@ model Sms_template {
   Automatic_sms_Automatic_sms_appointment_reschedule_online_template_idToSms_template Automatic_sms[]       @relation("Automatic_sms_appointment_reschedule_online_template_idToSms_template")
   Automatic_sms_Automatic_sms_appointment_schedule_on_site_template_idToSms_template  Automatic_sms[]       @relation("Automatic_sms_appointment_schedule_on_site_template_idToSms_template")
   Automatic_sms_Automatic_sms_appointment_schedule_online_template_idToSms_template   Automatic_sms[]       @relation("Automatic_sms_appointment_schedule_online_template_idToSms_template")
+  Automatic_sms_Automatic_sms_consent_sms_template_idToSms_template                   Automatic_sms[]       @relation("Automatic_sms_consent_sms_template_idToSms_template")
+  Automatic_sms_Automatic_sms_credit_app_template_idToSms_template                    Automatic_sms[]       @relation("Automatic_sms_credit_app_template_idToSms_template")
   Automatic_sms_Automatic_sms_stipulation_request_template_idToSms_template           Automatic_sms[]       @relation("Automatic_sms_stipulation_request_template_idToSms_template")
   category                                                                            Sms_template_category @relation(fields: [category_id], references: [id], onDelete: Cascade)
   user                                                                                Users                 @relation("user", fields: [created_by], references: [id], onDelete: Cascade)
@@ -1736,11 +1742,17 @@ model Automatic_sms {
   appointment_schedule_on_site_template_id                                           Int?
   appointment_schedule_online_template_id                                            Int?
   stipulation_request_template_id                                                    Int?
+  consent_sms                                                                        Boolean       @default(false)
+  consent_sms_template_id                                                            Int?
+  credit_app                                                                         Boolean       @default(false)
+  credit_app_template_id                                                             Int?
   Sms_template_Automatic_sms_appointment_reminder_template_idToSms_template          Sms_template? @relation("Automatic_sms_appointment_reminder_template_idToSms_template", fields: [appointment_reminder_template_id], references: [id])
   Sms_template_Automatic_sms_appointment_reschedule_onSite_template_idToSms_template Sms_template? @relation("Automatic_sms_appointment_reschedule_onSite_template_idToSms_template", fields: [appointment_reschedule_onSite_template_id], references: [id])
   Sms_template_Automatic_sms_appointment_reschedule_online_template_idToSms_template Sms_template? @relation("Automatic_sms_appointment_reschedule_online_template_idToSms_template", fields: [appointment_reschedule_online_template_id], references: [id])
   Sms_template_Automatic_sms_appointment_schedule_on_site_template_idToSms_template  Sms_template? @relation("Automatic_sms_appointment_schedule_on_site_template_idToSms_template", fields: [appointment_schedule_on_site_template_id], references: [id])
   Sms_template_Automatic_sms_appointment_schedule_online_template_idToSms_template   Sms_template? @relation("Automatic_sms_appointment_schedule_online_template_idToSms_template", fields: [appointment_schedule_online_template_id], references: [id])
+  Sms_template_Automatic_sms_consent_sms_template_idToSms_template                   Sms_template? @relation("Automatic_sms_consent_sms_template_idToSms_template", fields: [consent_sms_template_id], references: [id])
+  Sms_template_Automatic_sms_credit_app_template_idToSms_template                    Sms_template? @relation("Automatic_sms_credit_app_template_idToSms_template", fields: [credit_app_template_id], references: [id])
   Sms_template_Automatic_sms_stipulation_request_template_idToSms_template           Sms_template? @relation("Automatic_sms_stipulation_request_template_idToSms_template", fields: [stipulation_request_template_id], references: [id])
 }
 
@@ -1807,6 +1819,48 @@ model Events_types {
   type                      String
   Notifications             Notifications[]
   Notifications_preferences Notifications_preferences?
+}
+
+model Consent_checks {
+  id                             Int                              @id @default(autoincrement())
+  description                    String
+  required                       Boolean
+  Terms_and_conditions_processed Terms_and_conditions_processed[]
+}
+
+model Consent_terms {
+  id                Int    @id @default(autoincrement())
+  consent_statement String
+  checks            Int[]  @default([])
+}
+
+model Task_due_time_limit {
+  id                                                                    Int             @id @default(autoincrement())
+  span                                                                  String
+  Task_settings_Task_settings_first_span_limit_idToTask_due_time_limit  Task_settings[] @relation("Task_settings_first_span_limit_idToTask_due_time_limit")
+  Task_settings_Task_settings_second_span_limit_idToTask_due_time_limit Task_settings[] @relation("Task_settings_second_span_limit_idToTask_due_time_limit")
+  Task_settings_Task_settings_third_span_limit_idToTask_due_time_limit  Task_settings[] @relation("Task_settings_third_span_limit_idToTask_due_time_limit")
+}
+
+model Task_settings {
+  id                                                                          Int                  @id @default(autoincrement())
+  first_span_limit_id                                                         Int?
+  second_span_limit_id                                                        Int?
+  third_span_limit_id                                                         Int?
+  Task_due_time_limit_Task_settings_first_span_limit_idToTask_due_time_limit  Task_due_time_limit? @relation("Task_settings_first_span_limit_idToTask_due_time_limit", fields: [first_span_limit_id], references: [id])
+  Task_due_time_limit_Task_settings_second_span_limit_idToTask_due_time_limit Task_due_time_limit? @relation("Task_settings_second_span_limit_idToTask_due_time_limit", fields: [second_span_limit_id], references: [id])
+  Task_due_time_limit_Task_settings_third_span_limit_idToTask_due_time_limit  Task_due_time_limit? @relation("Task_settings_third_span_limit_idToTask_due_time_limit", fields: [third_span_limit_id], references: [id])
+}
+
+model Terms_and_conditions_processed {
+  id                   Int             @id @default(autoincrement())
+  description          String
+  accepted             Boolean
+  customer_id          Int
+  term_or_condition_id Int?
+  created_at           DateTime        @default(now())
+  Clients              Clients         @relation(fields: [customer_id], references: [id], onDelete: Cascade)
+  Consent_checks       Consent_checks? @relation(fields: [term_or_condition_id], references: [id])
 }
 
 enum ListViewTypes {
