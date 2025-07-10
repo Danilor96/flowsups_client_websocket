@@ -362,7 +362,7 @@ export async function handlingIncomingSms({ from, message, file }: IncomingSmsDa
     const messageSplitted = message.split(' ');
 
     // accept appointment
-    if (messageSplitted.every((word: string) => specialCharactersToAccept.includes(word))) {
+    if (messageSplitted.every((word: string) => specialCharactersToAccept.includes(word.toUpperCase()))) {
       // check if the customer has a pending for confirmation appointment
 
       if (
