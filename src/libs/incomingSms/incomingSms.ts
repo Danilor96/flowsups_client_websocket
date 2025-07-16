@@ -109,6 +109,7 @@ export async function handlingIncomingSms({ from, message, file }: IncomingSmsDa
               },
               data: {
                 client_status_id: newStatusId,
+                last_activity: new Date(),
               },
             });
           }
@@ -335,6 +336,7 @@ export async function handlingIncomingSms({ from, message, file }: IncomingSmsDa
         },
         data: {
           client_status_id: 2,
+          last_activity: new Date(),
         },
       });
     }
@@ -391,6 +393,7 @@ export async function handlingIncomingSms({ from, message, file }: IncomingSmsDa
           },
           data: {
             client_status_id: 6,
+            last_activity: new Date()
           },
         });
 

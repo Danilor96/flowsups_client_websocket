@@ -70,15 +70,15 @@ export type AppointmentData = {
 
 export type TemplateVariablesValues =
   | {
+      email: string;
+      home_phone: string | null;
+      mobile_phone: string;
+      work_phone: string | null;
       first_name: string;
       last_name: string;
-      salutation: string | null;
       middle_initials: string | null;
+      salutation: string | null;
       suffix: string | null;
-      home_phone: string | null;
-      work_phone: string | null;
-      mobile_phone: string | null;
-      email: string;
       client_address: {
         city: string;
         street: string;
@@ -89,39 +89,39 @@ export type TemplateVariablesValues =
       };
       lead_source: {
         source: string;
-      };
+      } | null;
       seller: {
-        last_name: string | null;
-        mobile_phone: string | null;
         email: string;
+        mobile_phone: string | null;
+        last_name: string | null;
         name: string | null;
       } | null;
       bdc: {
-        name: string | null;
         id: number;
         email: string;
-        last_name: string | null;
         mobile_phone: string | null;
+        last_name: string | null;
+        name: string | null;
       } | null;
       finance_manager: {
-        name: string | null;
         id: number;
         email: string;
-        last_name: string | null;
         mobile_phone: string | null;
+        last_name: string | null;
+        name: string | null;
       } | null;
       interested_vehicle: {
-        vehicle_models: {
-          model: string;
-        };
         vehicle_brands: {
           brand: string;
         };
+        vehicle_models: {
+          model: string;
+        };
         title_license: {
           asking_price: string;
-          whole_price: string | null;
-          floor_price: string | null;
           buy_now_price: string | null;
+          floor_price: string | null;
+          whole_price: string | null;
         } | null;
         exterior_vehicle_colors: {
           color: string;
@@ -129,12 +129,12 @@ export type TemplateVariablesValues =
         vehicle_mileages: {
           mileage: string;
         } | null;
-        vehicle_trim: {
-          trim: string;
-        } | null;
         vehicle_identification_numbers: {
           vin: string;
         };
+        vehicle_trim: {
+          trim: string;
+        } | null;
         vehicle_manufacture_years: {
           year: string;
         } | null;
