@@ -24,6 +24,7 @@ import { checkSendingsSms } from './libs/checkSendingsSms/checkSendingsSms';
 import { incomingFileSave } from './libs/mediaMessage.services';
 import { setTheCallAsAnswered } from './libs/conferenceStatus/transferCall/checkIfTheCallWasAnswered';
 import { entryHandler, exitHandler } from './libs/systemAccesses/systemAccessesHandler';
+import { checkNotDispositionedLeads } from './libs/roundRobin/roundRobin';
 
 const accountSid = process.env.TWILIO_ACCOUNT_SID;
 const authToken = process.env.TWILIO_AUTH_TOKEN;
@@ -120,6 +121,8 @@ io.on('connection', async (socket: Socket) => {
     await customerStatus();
 
     await checkSendingsSms();
+
+    await checkNotDispositionedLeads();
   });
 
   // checking all customers last contacted day
@@ -295,14 +298,14 @@ io.on('connection', async (socket: Socket) => {
     // if the user has the status "new" then change it to "contacted"
 
     const from = req.body.From.replace(/\D/g, '');
-     console.log('handlo]]ing incoming sms: ', from);
+    console.log('handlo]]ing incoming sms: ', from);
 
     const message = req.body.Body;
 
     const media = req.body.MediaUrl0;
 
     let file = undefined;
-   
+
     if (media) {
       const mediaType = req.body.MediaContentType0;
 

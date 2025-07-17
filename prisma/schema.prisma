@@ -25,6 +25,7 @@ model Users {
   round_robin                                                       Boolean                         @default(false)
   round_robin_order                                                 Int?
   default_customer_report_id                                        Int?
+  monthly_vehicle_sales_goal                                        Int?
   appointmentCreatedBy                                              Appointments[]                  @relation("creator")
   appointments                                                      Appointments[]                  @relation("user")
   awaiting_customer                                                 Awaiting_unknow_client[]
@@ -44,6 +45,7 @@ model Users {
   event_creator                                                     Events[]                        @relation("event_creator")
   notes                                                             Notes[]                         @relation("creator_user")
   users_noti                                                        Notifications[]                 @relation("users_noti")
+  Pay_plan                                                          Pay_plan?
   role_creator                                                      Roles[]                         @relation("creator")
   sms_template                                                      Sms_template[]                  @relation("user")
   sms_template_variables                                            Sms_template_variables_tagged[]
@@ -1662,6 +1664,7 @@ model Round_robin {
   assign_leads_during_store_hours       Boolean    @default(false)
   assign_leads_during_shift_hours       Boolean    @default(false)
   users_must_activate_ready_for_leads   Boolean    @default(false)
+  create_task_after_assign_new_lead     Boolean    @default(false)
   span_time                             Time_span? @relation(fields: [span_time_id], references: [id])
 }
 
@@ -1670,6 +1673,8 @@ model Awaiting_unknow_client {
   mobile_phone_number String?         @unique
   email               String?         @unique
   user_id             Int?
+  created_at          DateTime        @default(now())
+  last_activity       DateTime?
   user                Users?          @relation(fields: [user_id], references: [id])
   notifications       Notifications[]
   sms                 Client_sms[]    @relation("Awaiting_unknow_clientToClient_sms")
@@ -1861,6 +1866,18 @@ model Terms_and_conditions_processed {
   created_at           DateTime        @default(now())
   Clients              Clients         @relation(fields: [customer_id], references: [id], onDelete: Cascade)
   Consent_checks       Consent_checks? @relation(fields: [term_or_condition_id], references: [id])
+}
+
+model Pay_plan {
+  id                      Int      @id @default(autoincrement())
+  user_id                 Int      @unique
+  pay_type                String
+  front_gross             Decimal? @db.Decimal(10, 2)
+  back_gross              Decimal? @db.Decimal(10, 2)
+  of_cash_down            Decimal? @db.Decimal(10, 2)
+  sales_person_id         String?
+  exclude_reserve_or_flat Boolean? @default(false)
+  Users                   Users    @relation(fields: [user_id], references: [id], onDelete: Cascade)
 }
 
 enum ListViewTypes {

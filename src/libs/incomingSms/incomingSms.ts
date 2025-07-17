@@ -25,7 +25,10 @@ export async function handlingIncomingSms({ from, message, file }: IncomingSmsDa
   let appointmentAcceptStartDate = '';
 
   try {
-    const clientIdStatusAppointments = await prisma.clients.findFirst({
+    // get the registered customer data if the incoming "from" (phone number) value exists
+    // previously in the database
+
+    const registeredCustomerData = await prisma.clients.findFirst({
       where: {
         OR: [
           {
@@ -65,13 +68,19 @@ export async function handlingIncomingSms({ from, message, file }: IncomingSmsDa
       },
     });
 
-    if (clientIdStatusAppointments && clientIdStatusAppointments.id) {
+    // check if the incoming "from" (phone number) value is related to a
+    // registered customer:
+    // - if the customer exists previously in database then keep forward
+    // - if the customer doesn't exists in database then check if the incoming "from" (phone number)
+    // is related to an unknown customer registered
+
+    if (registeredCustomerData && registeredCustomerData.id) {
       const data = await prisma.client_sms.create({
         data: {
           message: message,
           date_sent: today,
           sent_by_user: false,
-          client_id: clientIdStatusAppointments.id,
+          client_id: registeredCustomerData.id,
           status_id: 2,
           fileAttachment: file,
           client_phone_number: fromFormatted,
@@ -91,11 +100,11 @@ export async function handlingIncomingSms({ from, message, file }: IncomingSmsDa
       });
 
       userId = data?.client_message?.seller_id;
-      customerId = clientIdStatusAppointments.id;
+      customerId = registeredCustomerData.id;
 
       // set the status from customer settings if this customers has status lost
 
-      if (clientIdStatusAppointments.client_status_id === 12) {
+      if (registeredCustomerData.client_status_id === 12) {
         const customersSettings = await prisma.customer_settings.findFirst();
 
         if (customersSettings) {
@@ -105,7 +114,7 @@ export async function handlingIncomingSms({ from, message, file }: IncomingSmsDa
 
             await prisma.clients.update({
               where: {
-                id: clientIdStatusAppointments.id,
+                id: registeredCustomerData.id,
               },
               data: {
                 client_status_id: newStatusId,
@@ -116,6 +125,8 @@ export async function handlingIncomingSms({ from, message, file }: IncomingSmsDa
         }
       }
     } else {
+      // get the unknown customer data related to incoming "from" (phone number)
+
       const awaitingCustomer = await prisma.awaiting_unknow_client.findUnique({
         where: {
           mobile_phone_number: fromFormatted,
@@ -326,13 +337,13 @@ export async function handlingIncomingSms({ from, message, file }: IncomingSmsDa
     }
 
     if (
-      clientIdStatusAppointments &&
-      clientIdStatusAppointments.client_status_id &&
-      clientIdStatusAppointments.client_status_id === 1
+      registeredCustomerData &&
+      registeredCustomerData.client_status_id &&
+      registeredCustomerData.client_status_id === 1
     ) {
       const userStatus = await prisma.clients.update({
         where: {
-          id: clientIdStatusAppointments.id,
+          id: registeredCustomerData.id,
         },
         data: {
           client_status_id: 2,
@@ -343,14 +354,14 @@ export async function handlingIncomingSms({ from, message, file }: IncomingSmsDa
 
     // create a new lead register
 
-    if (clientIdStatusAppointments?.id) {
+    if (registeredCustomerData?.id) {
       const lead = await prisma.client_has_lead.create({
         data: {
           created_at: today,
-          assigned_to_id: clientIdStatusAppointments?.seller?.id || 1,
-          client_id: clientIdStatusAppointments.id,
+          assigned_to_id: registeredCustomerData?.seller?.id || 1,
+          client_id: registeredCustomerData.id,
           status_id: 2,
-          created_by_id: clientIdStatusAppointments?.seller?.id || 1,
+          created_by_id: registeredCustomerData?.seller?.id || 1,
           lead_id: 7,
         },
       });
@@ -364,16 +375,17 @@ export async function handlingIncomingSms({ from, message, file }: IncomingSmsDa
     const messageSplitted = message.split(' ');
 
     // accept appointment
-    if (messageSplitted.every((word: string) => specialCharactersToAccept.includes(word.toUpperCase()))) {
+    if (
+      messageSplitted.every((word: string) =>
+        specialCharactersToAccept.includes(word.toUpperCase()),
+      )
+    ) {
       // check if the customer has a pending for confirmation appointment
 
-      if (
-        clientIdStatusAppointments?.appointment &&
-        clientIdStatusAppointments.appointment.length > 0
-      ) {
+      if (registeredCustomerData?.appointment && registeredCustomerData.appointment.length > 0) {
         let apptData: AppointmentData | undefined;
 
-        clientIdStatusAppointments.appointment.forEach(async (el) => {
+        registeredCustomerData.appointment.forEach(async (el) => {
           if (el.status_id === 1 && new Date(el.start_date) > today) {
             apptData = await prisma.appointments.update({
               where: {
@@ -389,19 +401,19 @@ export async function handlingIncomingSms({ from, message, file }: IncomingSmsDa
 
         await prisma.clients.update({
           where: {
-            id: clientIdStatusAppointments.id,
+            id: registeredCustomerData.id,
           },
           data: {
             client_status_id: 6,
-            last_activity: new Date()
+            last_activity: new Date(),
           },
         });
 
-        const userAppointmentId = clientIdStatusAppointments.seller?.id;
+        const userAppointmentId = registeredCustomerData.seller?.id;
 
         await createNotification({
-          message: `Customer ${clientIdStatusAppointments.first_name} ${
-            clientIdStatusAppointments.last_name
+          message: `Customer ${registeredCustomerData.first_name} ${
+            registeredCustomerData.last_name
           } has accepted the appointment for ${
             apptData
               ? new Date(apptData.start_date).toLocaleString('en-US', {
@@ -424,7 +436,7 @@ export async function handlingIncomingSms({ from, message, file }: IncomingSmsDa
           data: {
             description: 'Appointment accepted',
             updated_at: new Date(),
-            client_id: clientIdStatusAppointments.id,
+            client_id: registeredCustomerData.id,
           },
         });
 
@@ -439,10 +451,10 @@ export async function handlingIncomingSms({ from, message, file }: IncomingSmsDa
     if (messageSplitted.every((word: string) => specialCharactersToCancel.includes(word))) {
       // check if the customer has a pending for confirmation appointment
 
-      if (clientIdStatusAppointments?.appointment) {
+      if (registeredCustomerData?.appointment) {
         let appointmentForToday = false;
 
-        clientIdStatusAppointments.appointment.forEach(async (el) => {
+        registeredCustomerData.appointment.forEach(async (el) => {
           if (el.status_id === 1 && new Date(el.start_date) > today) {
             await prisma.appointments.update({
               where: {
