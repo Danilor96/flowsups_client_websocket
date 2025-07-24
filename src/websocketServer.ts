@@ -25,6 +25,7 @@ import { incomingFileSave } from './libs/mediaMessage.services';
 import { setTheCallAsAnswered } from './libs/conferenceStatus/transferCall/checkIfTheCallWasAnswered';
 import { entryHandler, exitHandler } from './libs/systemAccesses/systemAccessesHandler';
 import { checkNotDispositionedLeads } from './libs/roundRobin/roundRobin';
+import { salesPointsAssignService } from './libs/salesPointsServices/salesPointServices';
 
 const accountSid = process.env.TWILIO_ACCOUNT_SID;
 const authToken = process.env.TWILIO_AUTH_TOKEN;
@@ -356,6 +357,16 @@ io.on('connection', async (socket: Socket) => {
     console.log(`User disconnected: ${connectedUsers[socket.id]}`);
 
     delete connectedUsers[socket.id];
+  });
+
+  app.post('/events/seller-activity', async (req, res) => {
+    try {
+      const body = req.body;
+      await salesPointsAssignService(body);
+    } catch (error) {
+      console.log(error);
+    }
+    res.status(204).send();
   });
 });
 

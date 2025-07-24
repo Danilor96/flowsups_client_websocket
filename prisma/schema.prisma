@@ -50,14 +50,15 @@ model Users {
   users_noti                                                        Notifications[]                 @relation("users_noti")
   Pay_plan                                                          Pay_plan?
   role_creator                                                      Roles[]                         @relation("creator")
+  Sales_activity_log                                                Sales_activity_log[]
   sms_template                                                      Sms_template[]                  @relation("user")
   sms_template_variables                                            Sms_template_variables_tagged[]
   System_accesses                                                   System_accesses[]
   task_notes                                                        Task_Notes[]
-  TasksAsSeller                                                     Tasks[]                         @relation("assignedSeller")
   TasksAsBdc                                                        Tasks[]                         @relation("assignedBdc")
-  TasksAsManager                                                    Tasks[]                         @relation("assignedManager")
   TasksAsFinanceManager                                             Tasks[]                         @relation("assignedFinanceManager")
+  TasksAsManager                                                    Tasks[]                         @relation("assignedManager")
+  TasksAsSeller                                                     Tasks[]                         @relation("assignedSeller")
   assigned_task                                                     Tasks[]                         @relation("assigned")
   completed_task                                                    Tasks[]                         @relation("completed")
   sender_task                                                       Tasks[]                         @relation("creator")
@@ -458,11 +459,11 @@ model Tasks {
   assigned_seller_id          Int?
   notes                       Task_Notes[]
   appointment                 Appointments? @relation("appointment", fields: [appointment_id], references: [id])
-  assigned                    Users?        @relation("assigned", fields: [assigned_to], references: [id], onDelete: SetNull)
-  assigned_seller             Users?        @relation("assignedSeller", fields: [assigned_seller_id], references: [id], onDelete: SetNull)
-  assigned_bdc                Users?        @relation("assignedBdc", fields: [assigned_bdc_id], references: [id], onDelete: SetNull)
-  assigned_manager            Users?        @relation("assignedManager", fields: [assigned_manager_id], references: [id], onDelete: SetNull)
-  assigned_finance_manager    Users?        @relation("assignedFinanceManager", fields: [assigned_finance_manager_id], references: [id], onDelete: SetNull)
+  assigned_bdc                Users?        @relation("assignedBdc", fields: [assigned_bdc_id], references: [id])
+  assigned_finance_manager    Users?        @relation("assignedFinanceManager", fields: [assigned_finance_manager_id], references: [id])
+  assigned_manager            Users?        @relation("assignedManager", fields: [assigned_manager_id], references: [id])
+  assigned_seller             Users?        @relation("assignedSeller", fields: [assigned_seller_id], references: [id])
+  assigned                    Users?        @relation("assigned", fields: [assigned_to], references: [id])
   completed                   Users?        @relation("completed", fields: [completed_by], references: [id])
   creator                     Users         @relation("creator", fields: [created_by], references: [id], onDelete: Cascade)
   customer                    Clients?      @relation("customer_task", fields: [customer_id], references: [id])
@@ -1933,33 +1934,45 @@ model SalesGoalsConfig {
 }
 
 model SellerActivityCounter {
-  id       Int @id @default(autoincrement())
-  sellerId Int @unique
-
-  smsSentCurrentCount Int @default(0) @map("sms_sent_current_count")
-  smsSentTotalCount   Int @default(0) @map("sms_sent_total_count")
-
-  callsMadeCurrentCount Int @default(0) @map("calls_made_current_count")
-  callsMadeTotalCount   Int @default(0) @map("calls_made_total_count")
-
-  emailsSentCurrentCount Int @default(0) @map("emails_sent_current_count")
-  emailsSentTotalCount   Int @default(0) @map("emails_sent_total_count")
-
-  appointmentsCompletedCurrentCount Int @default(0) @map("appointments_completed_current_count")
-  appointmentsCompletedTotalCount   Int @default(0) @map("appointments_completed_total_count")
-
-  appointmentsMadeCurrentCount Int @default(0) @map("appointments_made_current_count")
-  appointmentsMadeTotalCount   Int @default(0) @map("appointments_made_total_count")
-
-  soldCustomersCurrentCount Int @default(0) @map("sold_customers_current_count")
-  soldCustomersTotalCount   Int @default(0) @map("sold_customers_total_count")
-
-  user Users @relation(fields: [sellerId], references: [id], onDelete: Cascade)
+  id                                Int   @id @default(autoincrement())
+  sellerId                          Int   @unique
+  smsSentCurrentCount               Int   @default(0) @map("sms_sent_current_count")
+  smsSentTotalCount                 Int   @default(0) @map("sms_sent_total_count")
+  callsMadeCurrentCount             Int   @default(0) @map("calls_made_current_count")
+  callsMadeTotalCount               Int   @default(0) @map("calls_made_total_count")
+  emailsSentCurrentCount            Int   @default(0) @map("emails_sent_current_count")
+  emailsSentTotalCount              Int   @default(0) @map("emails_sent_total_count")
+  appointmentsCompletedCurrentCount Int   @default(0) @map("appointments_completed_current_count")
+  appointmentsCompletedTotalCount   Int   @default(0) @map("appointments_completed_total_count")
+  appointmentsMadeCurrentCount      Int   @default(0) @map("appointments_made_current_count")
+  appointmentsMadeTotalCount        Int   @default(0) @map("appointments_made_total_count")
+  soldCustomersCurrentCount         Int   @default(0) @map("sold_customers_current_count")
+  soldCustomersTotalCount           Int   @default(0) @map("sold_customers_total_count")
+  user                              Users @relation(fields: [sellerId], references: [id], onDelete: Cascade)
 
   @@map("seller_activity_counter")
+}
+
+model Sales_activity_log {
+  id            Int          @id @default(autoincrement())
+  user_id       Int
+  activity_type ActivityType
+  created_at    DateTime     @default(now())
+  Users         Users        @relation(fields: [user_id], references: [id], onDelete: Cascade)
+
+  @@index([created_at])
 }
 
 enum ListViewTypes {
   ListView
   DetailView
+}
+
+enum ActivityType {
+  SMS_SENT
+  EMAIL_SENT
+  CALL_MADE
+  APPOINTMENT_COMPLETED
+  APPOINTMENT_MADE
+  CUSTOMER_SOLD
 }

@@ -23,6 +23,13 @@ export async function salesPointsAssignService({
   });
   if (!user) return;
 
+  await prisma.sales_activity_log.create({
+    data: {
+      user_id: userId,
+      activity_type: activityType,
+    },
+  });
+
   let userActivityCounter = user.SellerActivityCounter;
   if (!userActivityCounter) {
     userActivityCounter = await prisma.sellerActivityCounter.create({
@@ -37,18 +44,24 @@ export async function salesPointsAssignService({
 
   const salesGoalsConfig = await prisma.salesGoalsConfig.findFirst();
   const target = salesGoalsConfig ? getTarget(activityType, salesGoalsConfig) : null;
-
-  let newCurrentCounterValue = counters.currentCount + 1;
-
   const hasTarget = target !== null && target > 0;
+
+  let newCurrentCounterValue = counters.currentCount
+  if(hasTarget && counters.currentCount > target ) {
+    newCurrentCounterValue = 0
+  }
+
+  // Increment current counter
+  newCurrentCounterValue = counters.currentCount + 1;
+
   if (hasTarget && newCurrentCounterValue >= target) {
-    newCurrentCounterValue = newCurrentCounterValue - target;
+    newCurrentCounterValue = newCurrentCounterValue - target
 
     const today = new Date();
     today.setHours(0, 0, 0, 0);
     const lastUpdateDate = user.sales_points_today_date ? new Date(user.sales_points_today_date) : new Date(0);
     lastUpdateDate.setHours(0, 0, 0, 0);
-
+  
     // Increment sales points
     if (lastUpdateDate.getTime() < today.getTime()) {
       //reset today's points
@@ -68,7 +81,7 @@ export async function salesPointsAssignService({
     }
   }
 
-  await prisma.sellerActivityCounter.update({
+  const result = await prisma.sellerActivityCounter.update({
     where: { sellerId: userId },
     data: {
       [counters.keysToUpdate?.currentCountKey]: newCurrentCounterValue,
@@ -99,16 +112,22 @@ function getTarget(activityType: ActivityType, salesGoalsConfig: SalesGoalsConfi
   switch (activityType) {
     case 'SMS_SENT':
       target = salesGoalsConfig.smssSentNumber;
+      break;
     case 'EMAIL_SENT':
       target = salesGoalsConfig.emailsSentNumber;
+      break;
     case 'CALL_MADE':
       target = salesGoalsConfig.callsMadeNumber;
+      break;
     case 'APPOINTMENT_COMPLETED':
       target = salesGoalsConfig.appointmentsCompletedNumber;
+      break;
     case 'APPOINTMENT_MADE':
       target = salesGoalsConfig.appointmentsMadeNumber;
+      break;
     case 'CUSTOMER_SOLD':
       target = salesGoalsConfig.soldCustomersNumber;
+      break;
     default:
       target = 0;
   }
@@ -116,7 +135,6 @@ function getTarget(activityType: ActivityType, salesGoalsConfig: SalesGoalsConfi
   if (target === null || target <= 0) {
     return 0;
   }
-
   return target;
 }
 
