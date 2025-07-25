@@ -13,6 +13,7 @@ import {
 } from './transferCall/checkIfTheCallWasAnswered';
 import { setTheUserThatResponseTheCall } from './setTheUserThatResponseTheCall';
 import { makeTaskAfterMissingACall } from './makeTaskAfterMissingACall';
+import { ActivityType, salesPointsAssignService } from '../salesPointsServices/salesPointServices';
 
 interface ConferenceData {
   conferenceSid: any;
@@ -228,6 +229,7 @@ export async function handlingConferenceStatus({
             call_date: true,
             answered_by_mobile: true,
             answered_by_web: true,
+            user_id: true,
           },
         });
 
@@ -254,6 +256,17 @@ export async function handlingConferenceStatus({
 
           if (!startConfDate.answered_by_web && !startConfDate.answered_by_mobile) {
             await makeTaskAfterMissingACall(conferenceSid);
+          }else {
+            
+            if(startConfDate.user_id && startConfDate.user_id.length > 0) {
+              for (const userId of startConfDate.user_id) {
+                // logic for assigning points to sellers (sales activity logs)
+                salesPointsAssignService({
+                  userId: userId,
+                  activityType: ActivityType.CALL_MADE
+                })
+              }
+            }
           }
         }
 

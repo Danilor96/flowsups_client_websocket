@@ -1,6 +1,7 @@
 import { prisma } from '../prisma/prisma';
 import { io, client } from '../../websocketServer';
 import { addUserThatHasRespondedToTransferCall } from './addUserThatHasRespondedToTransferCall';
+import { ActivityType, salesPointsAssignService } from '../salesPointsServices/salesPointServices';
 
 interface OutogingCallData {
   callStatus: any;
@@ -158,6 +159,19 @@ export async function handlingOutgoingCallStatus({
               io.to(el.email).emit('update_data', 'dailyTotals');
             }
           }
+        }
+      }
+    }
+    
+    if (callExists && callStatus === 'in-progress') {
+      const userIds = callExists.user_id;
+      if (userIds && userIds.length > 0) {
+        for (const userId of userIds) {
+          // logic for assigning points to sellers (sales activity logs)
+          salesPointsAssignService({
+            userId: userId,
+            activityType: ActivityType.CALL_MADE,
+          });
         }
       }
     }
