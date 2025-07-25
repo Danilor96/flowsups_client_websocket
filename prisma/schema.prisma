@@ -25,6 +25,10 @@ model Users {
   round_robin                                                       Boolean                         @default(false)
   round_robin_order                                                 Int?
   default_customer_report_id                                        Int?
+  monthly_vehicle_sales_goal                                        Int?
+  sales_points_today                                                Int                             @default(0)
+  sales_points_today_date                                           DateTime                        @default(now())
+  sales_points_total                                                Int                             @default(0)
   appointmentCreatedBy                                              Appointments[]                  @relation("creator")
   appointments                                                      Appointments[]                  @relation("user")
   awaiting_customer                                                 Awaiting_unknow_client[]
@@ -44,11 +48,17 @@ model Users {
   event_creator                                                     Events[]                        @relation("event_creator")
   notes                                                             Notes[]                         @relation("creator_user")
   users_noti                                                        Notifications[]                 @relation("users_noti")
+  Pay_plan                                                          Pay_plan?
   role_creator                                                      Roles[]                         @relation("creator")
+  Sales_activity_log                                                Sales_activity_log[]
   sms_template                                                      Sms_template[]                  @relation("user")
   sms_template_variables                                            Sms_template_variables_tagged[]
   System_accesses                                                   System_accesses[]
   task_notes                                                        Task_Notes[]
+  TasksAsBdc                                                        Tasks[]                         @relation("assignedBdc")
+  TasksAsFinanceManager                                             Tasks[]                         @relation("assignedFinanceManager")
+  TasksAsManager                                                    Tasks[]                         @relation("assignedManager")
+  TasksAsSeller                                                     Tasks[]                         @relation("assignedSeller")
   assigned_task                                                     Tasks[]                         @relation("assigned")
   completed_task                                                    Tasks[]                         @relation("completed")
   sender_task                                                       Tasks[]                         @relation("creator")
@@ -60,6 +70,7 @@ model Users {
   vehicle_delivery_assigned                                         Vehicle_delivery[]              @relation("assigned")
   vehicle_delivery_creator                                          Vehicle_delivery[]              @relation("creator")
   customer_report_permissions                                       customer_report_permissions[]
+  SellerActivityCounter                                             SellerActivityCounter?
   Client_calls                                                      Client_calls[]                  @relation("Client_callsToUsers")
   sms_sender                                                        Client_sms[]                    @relation("Client_smsToUsers")
   Customer_Report_user_favorite_customer_reports                    Customer_Report[]               @relation("user_favorite_customer_reports")
@@ -427,28 +438,36 @@ model Vehicles {
 }
 
 model Tasks {
-  id                       Int           @id @default(autoincrement())
-  title                    String
-  description              String
-  assigned_to              Int?
-  created_by               Int
-  created_at               DateTime      @default(now())
-  status                   Int
-  finished_at              DateTime?
-  updated_at               DateTime?
-  manager_task             Boolean?
-  customer_id              Int?
-  deadline                 DateTime
-  completed_by             Int?
-  assigned_to_all_managers Boolean?
-  appointment_id           Int?
-  notes                    Task_Notes[]
-  appointment              Appointments? @relation("appointment", fields: [appointment_id], references: [id])
-  assigned                 Users?        @relation("assigned", fields: [assigned_to], references: [id])
-  completed                Users?        @relation("completed", fields: [completed_by], references: [id])
-  creator                  Users         @relation("creator", fields: [created_by], references: [id], onDelete: Cascade)
-  customer                 Clients?      @relation("customer_task", fields: [customer_id], references: [id])
-  task_status              Task_status   @relation("task_status", fields: [status], references: [id], onDelete: Cascade)
+  id                          Int           @id @default(autoincrement())
+  title                       String
+  description                 String
+  assigned_to                 Int?
+  created_by                  Int
+  created_at                  DateTime      @default(now())
+  status                      Int
+  finished_at                 DateTime?
+  updated_at                  DateTime?
+  manager_task                Boolean?
+  customer_id                 Int?
+  deadline                    DateTime
+  completed_by                Int?
+  assigned_to_all_managers    Boolean?
+  appointment_id              Int?
+  assigned_bdc_id             Int?
+  assigned_finance_manager_id Int?
+  assigned_manager_id         Int?
+  assigned_seller_id          Int?
+  notes                       Task_Notes[]
+  appointment                 Appointments? @relation("appointment", fields: [appointment_id], references: [id])
+  assigned_bdc                Users?        @relation("assignedBdc", fields: [assigned_bdc_id], references: [id])
+  assigned_finance_manager    Users?        @relation("assignedFinanceManager", fields: [assigned_finance_manager_id], references: [id])
+  assigned_manager            Users?        @relation("assignedManager", fields: [assigned_manager_id], references: [id])
+  assigned_seller             Users?        @relation("assignedSeller", fields: [assigned_seller_id], references: [id])
+  assigned                    Users?        @relation("assigned", fields: [assigned_to], references: [id])
+  completed                   Users?        @relation("completed", fields: [completed_by], references: [id])
+  creator                     Users         @relation("creator", fields: [created_by], references: [id], onDelete: Cascade)
+  customer                    Clients?      @relation("customer_task", fields: [customer_id], references: [id])
+  task_status                 Task_status   @relation("task_status", fields: [status], references: [id], onDelete: Cascade)
 }
 
 model Task_status {
@@ -572,6 +591,7 @@ model States {
   id                         Int                       @id @default(autoincrement())
   state                      String
   state_code                 String                    @default("")
+  Address                    Address[]
   client_address_state       Client_address[]          @relation("client_address_state")
   credit_app_address_current Credit_app_address[]      @relation("currentState")
   credit_app_address_mailing Credit_app_address[]      @relation("mailingState")
@@ -1116,19 +1136,24 @@ model Type_notification {
 }
 
 model Business {
-  id                   Int     @id @default(autoincrement())
-  name                 String
-  image                String
-  county               String
-  county_code          String
-  ein_number           String
-  email                String
-  fax_number           String
-  mailling_address     String
-  sales_tax_license    String
-  store_alias          String?
-  store_id             String
-  store_license_number String
+  id                                  Int               @id @default(autoincrement())
+  name                                String
+  image                               String
+  county                              String?
+  county_code                         String?
+  ein_number                          String
+  email                               String
+  fax_number                          String
+  mailling_address                    String?
+  sales_tax_license                   String
+  store_alias                         String?
+  store_id                            String
+  store_license_number                String
+  is_Mailing_Address_Same_As_Physical Boolean           @default(false)
+  appointment_reminder_time_id        Int?
+  task_reminder_time_id               Int?
+  Address                             Address?
+  salesGoalsConfig                    SalesGoalsConfig?
 }
 
 model Business_websites {
@@ -1662,6 +1687,7 @@ model Round_robin {
   assign_leads_during_store_hours       Boolean    @default(false)
   assign_leads_during_shift_hours       Boolean    @default(false)
   users_must_activate_ready_for_leads   Boolean    @default(false)
+  create_task_after_assign_new_lead     Boolean    @default(false)
   span_time                             Time_span? @relation(fields: [span_time_id], references: [id])
 }
 
@@ -1670,6 +1696,8 @@ model Awaiting_unknow_client {
   mobile_phone_number String?         @unique
   email               String?         @unique
   user_id             Int?
+  created_at          DateTime        @default(now())
+  last_activity       DateTime?
   user                Users?          @relation(fields: [user_id], references: [id])
   notifications       Notifications[]
   sms                 Client_sms[]    @relation("Awaiting_unknow_clientToClient_sms")
@@ -1863,7 +1891,88 @@ model Terms_and_conditions_processed {
   Consent_checks       Consent_checks? @relation(fields: [term_or_condition_id], references: [id])
 }
 
+model Pay_plan {
+  id                      Int      @id @default(autoincrement())
+  user_id                 Int      @unique
+  pay_type                String
+  front_gross             Decimal? @db.Decimal(10, 2)
+  back_gross              Decimal? @db.Decimal(10, 2)
+  of_cash_down            Decimal? @db.Decimal(10, 2)
+  sales_person_id         String?
+  exclude_reserve_or_flat Boolean? @default(false)
+  Users                   Users    @relation(fields: [user_id], references: [id], onDelete: Cascade)
+}
+
+model Address {
+  id           Int      @id @default(autoincrement())
+  business_id  Int      @unique
+  full_address String
+  street       String
+  city         String
+  state_id     Int
+  zip          String?
+  county       String?
+  county_code  String?
+  Business     Business @relation(fields: [business_id], references: [id])
+  States       States   @relation(fields: [state_id], references: [id])
+}
+
+model SalesGoalsConfig {
+  id                          Int      @id @default(autoincrement())
+  business_id                 Int      @unique
+  monthlySalesGoal            Int?     @map("monthly_sales_goal")
+  dailySalesPointsTarget      Int?     @map("daily_sales_points_target")
+  emailsSentNumber            Int?     @map("emails_sent_number")
+  smssSentNumber              Int?     @map("smss_sent_number")
+  callsMadeNumber             Int?     @map("calls_made_number")
+  appointmentsCompletedNumber Int?     @map("appointments_completed_number")
+  appointmentsMadeNumber      Int?     @map("appointments_made_number")
+  soldCustomersNumber         Int?     @map("sold_customers_number")
+  business                    Business @relation(fields: [business_id], references: [id], onDelete: Cascade)
+
+  @@map("sales_goals_config")
+}
+
+model SellerActivityCounter {
+  id                                Int   @id @default(autoincrement())
+  sellerId                          Int   @unique
+  smsSentCurrentCount               Int   @default(0) @map("sms_sent_current_count")
+  smsSentTotalCount                 Int   @default(0) @map("sms_sent_total_count")
+  callsMadeCurrentCount             Int   @default(0) @map("calls_made_current_count")
+  callsMadeTotalCount               Int   @default(0) @map("calls_made_total_count")
+  emailsSentCurrentCount            Int   @default(0) @map("emails_sent_current_count")
+  emailsSentTotalCount              Int   @default(0) @map("emails_sent_total_count")
+  appointmentsCompletedCurrentCount Int   @default(0) @map("appointments_completed_current_count")
+  appointmentsCompletedTotalCount   Int   @default(0) @map("appointments_completed_total_count")
+  appointmentsMadeCurrentCount      Int   @default(0) @map("appointments_made_current_count")
+  appointmentsMadeTotalCount        Int   @default(0) @map("appointments_made_total_count")
+  soldCustomersCurrentCount         Int   @default(0) @map("sold_customers_current_count")
+  soldCustomersTotalCount           Int   @default(0) @map("sold_customers_total_count")
+  user                              Users @relation(fields: [sellerId], references: [id], onDelete: Cascade)
+
+  @@map("seller_activity_counter")
+}
+
+model Sales_activity_log {
+  id            Int          @id @default(autoincrement())
+  user_id       Int
+  activity_type ActivityType
+  created_at    DateTime     @default(now())
+  Users         Users        @relation(fields: [user_id], references: [id], onDelete: Cascade)
+
+  @@index([created_at])
+}
+
 enum ListViewTypes {
   ListView
   DetailView
+}
+
+enum ActivityType {
+  SMS_SENT
+  EMAIL_SENT
+  CALL_MADE
+  APPOINTMENT_COMPLETED
+  APPOINTMENT_MADE
+  CUSTOMER_SOLD
 }

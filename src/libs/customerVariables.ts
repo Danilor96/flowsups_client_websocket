@@ -7,7 +7,7 @@ import twilio from 'twilio';
 import { TemplateVariablesValues } from './definitions';
 import { prisma } from './prisma/prisma';
 import { parseISO } from 'date-fns';
-import { uploadImageForSms } from './uploadImages';
+import { uploadImageForSms } from './uploadImage.services';
 
 const client = twilio(accountSid, authToken);
 
@@ -271,7 +271,15 @@ export const sendSms = async (sms: string, to: string, senderId: string, file?: 
   try {
     const statusCallbacUrl = `${url}/smsStatus`;
 
-    const smsMediaUrl = file ? await uploadImageForSms(senderId, file) : null;
+    let smsMediaUrl: string | null = null;
+
+    if (file) {
+      const arrayBuffer = await file.arrayBuffer();
+
+      const imageBuffer = Buffer.from(arrayBuffer);
+
+      smsMediaUrl = file ? await uploadImageForSms(senderId, imageBuffer, file.type) : null;
+    }
 
     const res = await client.messages.create({
       body: sms,
