@@ -117,14 +117,14 @@ model Activation_codes {
 }
 
 model Roles {
-  id         Int                     @id @default(autoincrement())
+  id         Int                    @id @default(autoincrement())
   role       String
   status_id  Int
   created_by Int?
-  created_at DateTime?               @default(now())
-  creator    Users?                  @relation("creator", fields: [created_by], references: [id])
-  status     Role_status             @relation("status", fields: [status_id], references: [id], onDelete: Cascade)
-  roles_has  Roles_has_permissions[]
+  created_at DateTime?              @default(now())
+  creator    Users?                 @relation("creator", fields: [created_by], references: [id])
+  status     Role_status            @relation("status", fields: [status_id], references: [id], onDelete: Cascade)
+  roles_has  Roles_has_permissions?
   users_has  Users_has_roles[]
 }
 
@@ -135,17 +135,15 @@ model Role_status {
 }
 
 model Permissions {
-  id             Int                     @id @default(autoincrement())
-  permission     String
-  permission_has Roles_has_permissions[]
+  id         Int    @id @default(autoincrement())
+  permission String
 }
 
 model Roles_has_permissions {
-  id            Int         @id @default(autoincrement())
-  role_id       Int
-  permission_id Int
-  permission    Permissions @relation(fields: [permission_id], references: [id], onDelete: Cascade)
-  role          Roles       @relation(fields: [role_id], references: [id], onDelete: Cascade)
+  id            Int   @id @default(autoincrement())
+  role_id       Int   @unique
+  permission_id Int[] @default([])
+  role          Roles @relation(fields: [role_id], references: [id], onDelete: Cascade)
 }
 
 model Users_has_roles {
@@ -227,8 +225,10 @@ model Appointments {
   last_check                DateTime?
   confirmation_sent         Boolean             @default(false)
   reminder_sent             Boolean             @default(false)
+  reminder_time_id          Int?
   creator                   Users               @relation("creator", fields: [created_by], references: [id])
   customers                 Clients             @relation("customer", fields: [customer_id], references: [id], onDelete: Cascade)
+  ReminderTime              ReminderTime?       @relation(fields: [reminder_time_id], references: [id])
   appointments_status       Appointments_status @relation("appointment_status", fields: [status_id], references: [id])
   users                     Users               @relation("user", fields: [user_id], references: [id])
   lead_appointment          Client_has_lead[]   @relation("lead_appointment")
@@ -457,6 +457,8 @@ model Tasks {
   assigned_finance_manager_id Int?
   assigned_manager_id         Int?
   assigned_seller_id          Int?
+  reminder_sent               Boolean       @default(false)
+  reminder_time_id            Int?
   notes                       Task_Notes[]
   appointment                 Appointments? @relation("appointment", fields: [appointment_id], references: [id])
   assigned_bdc                Users?        @relation("assignedBdc", fields: [assigned_bdc_id], references: [id])
@@ -467,6 +469,7 @@ model Tasks {
   completed                   Users?        @relation("completed", fields: [completed_by], references: [id])
   creator                     Users         @relation("creator", fields: [created_by], references: [id], onDelete: Cascade)
   customer                    Clients?      @relation("customer_task", fields: [customer_id], references: [id])
+  ReminderTime                ReminderTime? @relation(fields: [reminder_time_id], references: [id])
   task_status                 Task_status   @relation("task_status", fields: [status], references: [id], onDelete: Cascade)
 }
 
@@ -1712,7 +1715,9 @@ model Conferences_names {
 model ReminderTime {
   id              Int               @id @default(autoincrement())
   time            String
+  Appointments    Appointments[]
   Client_has_lead Client_has_lead[]
+  Tasks           Tasks[]
 }
 
 model Automatic_emails {
@@ -1845,6 +1850,8 @@ model customer_report_permissions {
 model Events_types {
   id                        Int                        @id @default(autoincrement())
   type                      String
+  category_id               Int?
+  Event_category            Event_category?            @relation(fields: [category_id], references: [id])
   Notifications             Notifications[]
   Notifications_preferences Notifications_preferences?
 }
@@ -1961,6 +1968,12 @@ model Sales_activity_log {
   Users         Users        @relation(fields: [user_id], references: [id], onDelete: Cascade)
 
   @@index([created_at])
+}
+
+model Event_category {
+  id           Int            @id @default(autoincrement())
+  category     String
+  Events_types Events_types[]
 }
 
 enum ListViewTypes {
