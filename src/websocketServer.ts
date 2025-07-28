@@ -26,6 +26,7 @@ import { setTheCallAsAnswered } from './libs/conferenceStatus/transferCall/check
 import { entryHandler, exitHandler } from './libs/systemAccesses/systemAccessesHandler';
 import { checkNotDispositionedLeads } from './libs/roundRobin/roundRobin';
 import { salesPointsAssignService } from './libs/salesPointsServices/salesPointServices';
+import { appoitmentReminderFromReminderTimeConfig, taskReminderFromReminderTimeConfig } from './libs/minuteByMinuteCheck/reminders/reminders';
 
 const accountSid = process.env.TWILIO_ACCOUNT_SID;
 const authToken = process.env.TWILIO_AUTH_TOKEN;
@@ -124,6 +125,9 @@ io.on('connection', async (socket: Socket) => {
     await checkSendingsSms();
 
     await checkNotDispositionedLeads();
+    
+    await taskReminderFromReminderTimeConfig();
+    await appoitmentReminderFromReminderTimeConfig();
   });
 
   // checking all customers last contacted day
