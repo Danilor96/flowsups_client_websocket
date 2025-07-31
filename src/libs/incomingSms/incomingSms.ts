@@ -386,7 +386,11 @@ export async function handlingIncomingSms({ from, message, file }: IncomingSmsDa
         let apptData: AppointmentData | undefined;
 
         registeredCustomerData.appointment.forEach(async (el) => {
-          if (el.status_id === 1 && new Date(el.start_date) > today) {
+          if (
+            el.status_id === 1 &&
+            new Date(el.start_date) > startOfToday() &&
+            new Date(el.start_date) < endOfToday()
+          ) {
             apptData = await prisma.appointments.update({
               where: {
                 id: el.id,
