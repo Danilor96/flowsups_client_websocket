@@ -56,7 +56,7 @@ export async function handlingIncomingSms({ from, message, file }: IncomingSmsDa
           where: {
             status_id: 1,
             start_date: {
-              gt: today,
+              gt: startOfToday(),
             },
           },
           select: {

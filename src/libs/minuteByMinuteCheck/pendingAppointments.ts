@@ -58,6 +58,26 @@ export async function pendingAppointments() {
         },
       });
 
+      const lead = await prisma.leads.updateMany({
+        where: {
+          Clients: {
+            appointment: {
+              every: {
+                end_date: {
+                  lt: today,
+                },
+                AND: {
+                  status_id: 1,
+                },
+              },
+            },
+          },
+        },
+        data: {
+          customer_status_id: 8,
+        },
+      });
+
       // set the customer status to No Show Up
       //
       lateAppointments.forEach(async (appt) => {
