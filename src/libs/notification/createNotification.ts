@@ -95,7 +95,7 @@ export async function createNotification({
       }
     }
 
-    if (assignedToId && managerUsersIds !== assignedToId) {
+    if (assignedToId && managerUsersIds.some((el) => !assignedToId.includes(el))) {
       for (let i = 0; i < assignedToId.length; i++) {
         const userId = assignedToId[i];
 

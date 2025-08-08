@@ -26,7 +26,10 @@ import { setTheCallAsAnswered } from './libs/conferenceStatus/transferCall/check
 import { entryHandler, exitHandler } from './libs/systemAccesses/systemAccessesHandler';
 import { checkNotDispositionedLeads } from './libs/roundRobin/roundRobin';
 import { salesPointsAssignService } from './libs/salesPointsServices/salesPointServices';
-import { appoitmentReminderFromReminderTimeConfig, taskReminderFromReminderTimeConfig } from './libs/minuteByMinuteCheck/reminders/reminders';
+import {
+  appoitmentReminderFromReminderTimeConfig,
+  taskReminderFromReminderTimeConfig,
+} from './libs/minuteByMinuteCheck/reminders/reminders';
 
 const accountSid = process.env.TWILIO_ACCOUNT_SID;
 const authToken = process.env.TWILIO_AUTH_TOKEN;
@@ -112,6 +115,8 @@ io.on('connection', async (socket: Socket) => {
   // checking all pending tasks, appointments and statuses
 
   cron.schedule('* * * * 1-6', async () => {
+    console.log('Minute by minute functions');
+
     await pendingTasks();
 
     await pendingRescheduleAppointments();
@@ -125,14 +130,14 @@ io.on('connection', async (socket: Socket) => {
     await checkSendingsSms();
 
     await checkNotDispositionedLeads();
-    
+
     await taskReminderFromReminderTimeConfig();
     await appoitmentReminderFromReminderTimeConfig();
   });
 
   // checking all customers last contacted day
 
-  cron.schedule('0 0 * * 1-5', async () => {
+  cron.schedule('0 0 * * 1-6', async () => {
     const todayIsos = new Date().toISOString();
 
     const todayDate = parseISO(todayIsos);
