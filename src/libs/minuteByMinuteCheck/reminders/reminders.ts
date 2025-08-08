@@ -90,15 +90,17 @@ export async function appointmentReminder() {
 }
 
 export async function taskReminderFromReminderTimeConfig() {
-  console.log('taskReminderFromReminderTimeConfig');
   const reminderTimes = (await prisma.reminderTime.findMany())
-    .map(reminderTime => {
+    .map((reminderTime) => {
       return {
         id: reminderTime.id,
-        time: reminderTime.time && reminderTime.time !== 'none' ? Number(reminderTime.time.split(' ')[0]) : null,
+        time:
+          reminderTime.time && reminderTime.time !== 'none'
+            ? Number(reminderTime.time.split(' ')[0])
+            : null,
       };
     })
-    .filter(reminderTime => reminderTime.time !== null);
+    .filter((reminderTime) => reminderTime.time !== null);
 
   // TODO: luego obtener el business del user loggeado
   const business = await prisma.business.findFirst({ select: { task_reminder_time_id: true } });
@@ -161,7 +163,9 @@ export async function taskReminderFromReminderTimeConfig() {
       });
 
       if (tasksToNotify.length === 0) {
-        console.log(`⏳ No se encontraron tareas para notificar en el intervalo de ${currentReminderTime.time} min.`);
+        console.log(
+          `⏳ No se encontraron tareas para notificar en el intervalo de ${currentReminderTime.time} min.`,
+        );
         // if (currentReminderTime.id === 3) {
         //   console.log(`⏳ No se encontraron tareas para notificar en el intervalo de ${currentReminderTime.time} min.`);
         // }
@@ -172,23 +176,32 @@ export async function taskReminderFromReminderTimeConfig() {
         `⏳ Encontradas ${tasksToNotify.length} tareas para notificar en el intervalo de ${currentReminderTime.time} min.`,
       );
 
-      const notificationsData = tasksToNotify.map(task => ({
+      // const notificationsData = tasksToNotify.map(task => ({
+      //   message: `Task "${task.title}" is due in ${currentReminderTime.time} minutes.`,
+      //   assignedToId: task.assigned_to ? [task.assigned_to] : [],
+      //   // taskId: task.id,
+      //   notificationType: {
+      //     general: true,
+      //   },
+      // }));
+
+      const notificationsData = tasksToNotify.map((task) => ({
         message: `Task "${task.title}" is due in ${currentReminderTime.time} minutes.`,
-        assignedToId: task.assigned_to ? [task.assigned_to] : [],
-        // taskId: task.id,
-        notificationType: {
-          general: true,
-        },
+        user_id: task.assigned_to,
+        type_id: 1,
       }));
 
-      const creationResult = await Promise.all(notificationsData.map(notification => createNotification(notification)));
+      // const creationResult = await Promise.all(notificationsData.map(notification => createNotification(notification)));
+      const creationResult = await prisma.notifications.createMany({
+        data: notificationsData,
+      });
 
       // const creationResult = await prisma.notification.createMany({
       //   data: notificationsData,
       // });
-      console.log(`🚀 Creadas ${creationResult.length} notificaciones.`);
+      console.log(`🚀 Creadas ${creationResult.count} notificaciones.`);
 
-      const taskIdsToUpdate = tasksToNotify.map(task => task.id);
+      const taskIdsToUpdate = tasksToNotify.map((task) => task.id);
       await prisma.tasks.updateMany({
         where: { id: { in: taskIdsToUpdate } },
         data: { reminder_sent: true },
@@ -204,13 +217,16 @@ export async function taskReminderFromReminderTimeConfig() {
 export async function appoitmentReminderFromReminderTimeConfig() {
   console.log('taskReminderFromReminderTimeConfig');
   const reminderTimes = (await prisma.reminderTime.findMany())
-    .map(reminderTime => {
+    .map((reminderTime) => {
       return {
         id: reminderTime.id,
-        time: reminderTime.time && reminderTime.time !== 'none' ? Number(reminderTime.time.split(' ')[0]) : null,
+        time:
+          reminderTime.time && reminderTime.time !== 'none'
+            ? Number(reminderTime.time.split(' ')[0])
+            : null,
       };
     })
-    .filter(reminderTime => reminderTime.time !== null);
+    .filter((reminderTime) => reminderTime.time !== null);
 
   // TODO: luego obtener el business del user loggeado
   const business = await prisma.business.findFirst({ select: { task_reminder_time_id: true } });
@@ -287,10 +303,10 @@ export async function appoitmentReminderFromReminderTimeConfig() {
         `⏳ Encontradas ${appoimentToNotify.length} appoitments para notificar en el intervalo de ${currentReminderTime.time} min.`,
       );
 
-      const notificationsData = appoimentToNotify.map(appoiment => ({
-        message: `Appoitment with customer ${appoiment.customers.name_lastname || appoiment.customers.first_name} in ${
-          currentReminderTime.time
-        } minutes.`,
+      const notificationsData = appoimentToNotify.map((appoiment) => ({
+        message: `Appoitment with customer ${
+          appoiment.customers.name_lastname || appoiment.customers.first_name
+        } in ${currentReminderTime.time} minutes.`,
         assignedToId: appoiment.user_id ? [appoiment.user_id] : [],
         // taskId: task.id,
         notificationType: {
@@ -299,14 +315,16 @@ export async function appoitmentReminderFromReminderTimeConfig() {
         appoimentId: appoiment.id,
       }));
 
-      const creationResult = await Promise.all(notificationsData.map(notification => createNotification(notification)));
+      const creationResult = await Promise.all(
+        notificationsData.map((notification) => createNotification(notification)),
+      );
 
       // const creationResult = await prisma.notification.createMany({
       //   data: notificationsData,
       // });
       console.log(`🚀 Creadas ${creationResult.length} notificaciones.`);
 
-      const appoimentIdsToUpdate = appoimentToNotify.map(task => task.id);
+      const appoimentIdsToUpdate = appoimentToNotify.map((task) => task.id);
       await prisma.appointments.updateMany({
         where: { id: { in: appoimentIdsToUpdate } },
         data: { reminder_sent: true },

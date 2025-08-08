@@ -19,16 +19,38 @@ export async function pendingTasks() {
     });
 
     if (lateTasks && lateTasks.length > 0) {
-      lateTasks.forEach(async (task) => {
-        await createNotification({
-          message: `Task '${task.description}' has expired`,
-          assignedToId: task.assigned_to ? [task.assigned_to] : [],
-          notificationType: {
-            general: true,
+      for (let i = 0; i < lateTasks.length; i++) {
+        const task = lateTasks[i];
+
+        //-------------------------------------------------------
+        console.log(`Tareas tardes: ${lateTasks.length}`);
+
+        const notification = await prisma.notifications.create({
+          data: {
+            message: `Task '${task.description}' has expired`,
+            user_id: task.assigned_to,
+            // customer_id: customerId,
+            type_id: 1,
+            // appointment_id: appointmentId,
+            created_at: new Date(),
+            is_read: false,
+            is_deleted: false,
+            notification_for_managers: false,
+            // unregistered_customer_id: unregisteredCustomerId,
           },
-          eventTypeId: 20,
         });
-      });
+
+        //-------------------------------------------------------
+
+        // await createNotification({
+        //   message: `Task '${task.description}' has expired`,
+        //   assignedToId: task.assigned_to ? [task.assigned_to] : [],
+        //   notificationType: {
+        //     general: true,
+        //   },
+        //   eventTypeId: 20,
+        // });
+      }
     }
 
     const tasks = await prisma.tasks.updateMany({
