@@ -112,71 +112,6 @@ io.on('connection', async (socket: Socket) => {
     }
   }
 
-  // checking all pending tasks, appointments and statuses
-
-  cron.schedule('* * * * 1-6', async () => {
-    console.log('Minute by minute functions');
-
-    await pendingTasks();
-
-    await pendingRescheduleAppointments();
-
-    await latesUsersTasks();
-
-    await pendingDeliveries();
-
-    await customerStatus();
-
-    await checkSendingsSms();
-
-    await checkNotDispositionedLeads();
-
-    await taskReminderFromReminderTimeConfig();
-    await appoitmentReminderFromReminderTimeConfig();
-  });
-
-  // checking all customers last contacted day
-
-  cron.schedule('0 0 * * 1-6', async () => {
-    const todayIsos = new Date().toISOString();
-
-    const todayDate = parseISO(todayIsos);
-
-    const customers = await prisma.clients.findMany();
-
-    const customerSettings = await prisma.customer_settings.findFirst();
-
-    const daysUntilLost = customerSettings?.lead_lost_after;
-
-    for (let i = 0; i < customers.length; i++) {
-      const element = customers[i];
-
-      if (element.last_activity && daysUntilLost) {
-        const timeSinceLastActivity = element.last_activity.getTime() - todayDate.getTime();
-
-        const daysSinceLastActivity = Math.ceil(timeSinceLastActivity / (1000 * 3600 * 24));
-
-        if (daysSinceLastActivity >= daysUntilLost) {
-          await prisma.clients.update({
-            where: {
-              id: element.id,
-            },
-            data: {
-              client_status_id: 12,
-              lost_date: todayDate,
-            },
-          });
-        }
-      }
-    }
-
-    await prisma.$disconnect();
-
-    await pendingAppointments();
-
-    io.emit('update_data', 'dailyTotals');
-  });
-
   app.post('/getCurrentCallStatus', async (req, res) => {
     const callSid = req.body.CallSid;
     const parentCallSid = req.body.ParentCallSid;
@@ -377,6 +312,71 @@ io.on('connection', async (socket: Socket) => {
     }
     res.status(204).send();
   });
+});
+
+// checking all pending tasks, appointments and statuses
+
+cron.schedule('* * * * 1-6', async () => {
+  console.log('Minute by minute functions');
+
+  await pendingTasks();
+
+  await pendingRescheduleAppointments();
+
+  await latesUsersTasks();
+
+  await pendingDeliveries();
+
+  await customerStatus();
+
+  await checkSendingsSms();
+
+  await checkNotDispositionedLeads();
+
+  await taskReminderFromReminderTimeConfig();
+  await appoitmentReminderFromReminderTimeConfig();
+});
+
+// checking all customers last contacted day
+
+cron.schedule('0 0 * * 1-6', async () => {
+  const todayIsos = new Date().toISOString();
+
+  const todayDate = parseISO(todayIsos);
+
+  const customers = await prisma.clients.findMany();
+
+  const customerSettings = await prisma.customer_settings.findFirst();
+
+  const daysUntilLost = customerSettings?.lead_lost_after;
+
+  for (let i = 0; i < customers.length; i++) {
+    const element = customers[i];
+
+    if (element.last_activity && daysUntilLost) {
+      const timeSinceLastActivity = element.last_activity.getTime() - todayDate.getTime();
+
+      const daysSinceLastActivity = Math.ceil(timeSinceLastActivity / (1000 * 3600 * 24));
+
+      if (daysSinceLastActivity >= daysUntilLost) {
+        await prisma.clients.update({
+          where: {
+            id: element.id,
+          },
+          data: {
+            client_status_id: 12,
+            lost_date: todayDate,
+          },
+        });
+      }
+    }
+  }
+
+  await prisma.$disconnect();
+
+  await pendingAppointments();
+
+  io.emit('update_data', 'dailyTotals');
 });
 
 const port = env.WEBSOCKET_PORT;
