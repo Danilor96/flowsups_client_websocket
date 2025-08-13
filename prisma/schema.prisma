@@ -29,6 +29,7 @@ model Users {
   sales_points_today                                                Int                             @default(0)
   sales_points_today_date                                           DateTime                        @default(now())
   sales_points_total                                                Int                             @default(0)
+  daily_points_target                                               Int?
   appointmentCreatedBy                                              Appointments[]                  @relation("creator")
   appointments                                                      Appointments[]                  @relation("user")
   awaiting_customer                                                 Awaiting_unknow_client[]
