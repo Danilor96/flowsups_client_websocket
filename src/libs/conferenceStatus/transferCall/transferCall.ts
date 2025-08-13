@@ -34,33 +34,34 @@ export async function transferCall(
     const salesrepnum = assignedUsers?.seller?.mobile_phone;
     const bdcnum = assignedUsers?.bdc?.mobile_phone;
 
-    const callCreation = async (phoneNumber: string) => {
-      await client
-        .conferences(conferenceSid)
-        .participants.create({
-          from: accountPhoneNumber,
-          to: `+1${phoneNumber}`,
-          statusCallback: `${websocketPublicUrl}/getCurrentConferenceCallStatus/${conferenceName}`,
-          statusCallbackEvent: ['answered', 'completed', 'initiated', 'ringing'],
-          statusCallbackMethod: 'POST',
-          endConferenceOnExit: true,
-          timeout: 12,
-        })
-        .catch((reason) => {
-          console.log(reason);
-        });
-    };
-
     if (conferenceInProgess.status !== 'completed' && participantsList.length > 0) {
       if (salesrepnum) {
-        await callCreation(salesrepnum);
+        await callCreation(conferenceSid, conferenceName, salesrepnum);
       }
 
       if (bdcnum) {
-        await callCreation(bdcnum);
+        await callCreation(conferenceSid, conferenceName, bdcnum);
       }
     }
   } catch (error) {
     console.log(error);
   }
 }
+
+export async function callCreation(conferenceSid: string, conferenceName: string, phoneNumber: string) {
+  await client
+    .conferences(conferenceSid)
+    .participants.create({
+      from: accountPhoneNumber,
+      to: `+1${phoneNumber}`,
+      statusCallback: `${websocketPublicUrl}/getCurrentConferenceCallStatus/${conferenceName}`,
+      statusCallbackEvent: ['answered', 'completed', 'initiated', 'ringing'],
+      statusCallbackMethod: 'POST',
+      endConferenceOnExit: true,
+      timeout: 12,
+    })
+    .catch(reason => {
+      console.log(reason);
+    });
+}
+
