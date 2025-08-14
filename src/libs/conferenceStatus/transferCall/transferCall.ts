@@ -48,7 +48,11 @@ export async function transferCall(
   }
 }
 
-export async function callCreation(conferenceSid: string, conferenceName: string, phoneNumber: string) {
+export async function callCreation(
+  conferenceSid: string,
+  conferenceName: string,
+  phoneNumber: string,
+) {
   await client
     .conferences(conferenceSid)
     .participants.create({
@@ -60,8 +64,7 @@ export async function callCreation(conferenceSid: string, conferenceName: string
       endConferenceOnExit: true,
       timeout: 12,
     })
-    .catch(reason => {
+    .catch((reason) => {
       console.log(reason);
     });
 }
-

@@ -180,7 +180,11 @@ io.on('connection', async (socket: Socket) => {
         io.emit('update_data', 'transferCompleted', { conferenceName });
       }
 
-      console.log('Verifica sid: ', conferenceSid);
+      const hangUpConference = async () => {
+        await client.conferences(conferenceSid).update({
+          status: 'completed',
+        });
+      };
 
       if (conferenceSid) {
         const conferenceParticipants = await client.conferences(conferenceSid).participants.list();
@@ -188,13 +192,7 @@ io.on('connection', async (socket: Socket) => {
         const customerCall = conferenceParticipants.find((participant) => participant.hold);
 
         if (customerCall) {
-          const hangUpConference = async () => {
-            await client.conferences(conferenceSid).update({
-              status: 'completed',
-            });
-          };
-
-          if (callStatus === 'in-progress' && conferenceSid) {
+          if (callStatus === 'in-progress') {
             const conferenceParticipants = await client
               .conferences(conferenceSid)
               .participants.list();
@@ -212,43 +210,28 @@ io.on('connection', async (socket: Socket) => {
           if (callStatus === 'completed') {
             await hangUpConference();
           }
+        }
+      }
 
-          if (callStatus === 'no-answer') {
-            console.log('Verifica backup');
+      if (callStatus === 'no-answer') {
+        const conferenceParticipants = await client.conferences(conferenceSid).participants.list();
 
-            const conferenceParticipants = await client
-              .conferences(conferenceSid)
-              .participants.list();
-            const hasParticipants = conferenceParticipants.length > 1;
+        const hasParticipants = conferenceParticipants.length > 1;
 
-            console.log(conferenceParticipants);
+        // await hangUpConference();
+        //deberia ser (multi tenant)
+        const businessSettings = await prisma.voice_and_sms.findFirst({
+          select: { forward_incoming_calls_to: true },
+        });
 
-            console.log(hasParticipants);
-
-            // await hangUpConference();
-            //deberia ser (multi tenant)
-            const businessSettings = await prisma.voice_and_sms.findFirst({
-              select: { forward_incoming_calls_to: true },
-            });
-
-            console.log(businessSettings);
-
-            console.log(hasParticipants);
-
-            if (!hasParticipants && businessSettings?.forward_incoming_calls_to) {
-              console.log('hasParticipants');
-
-              await callCreation(
-                conferenceSid,
-                conferenceName,
-                businessSettings?.forward_incoming_calls_to,
-              );
-            } else {
-              console.log('hangUpConference');
-
-              await hangUpConference();
-            }
-          }
+        if (!hasParticipants && businessSettings?.forward_incoming_calls_to) {
+          await callCreation(
+            conferenceSid,
+            conferenceName,
+            businessSettings?.forward_incoming_calls_to,
+          );
+        } else {
+          await hangUpConference();
         }
       }
 
