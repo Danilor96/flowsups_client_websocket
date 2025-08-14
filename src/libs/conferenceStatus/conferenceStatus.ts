@@ -206,7 +206,7 @@ export async function handlingConferenceStatus({
     const stuckStatuses = ['participant-join', 'conference-start', 'participant-leave'];
 
     if (
-      sequence >= 4 &&
+      sequence >= 3 &&
       stuckStatuses.includes(conferenceStatus) &&
       conferenceParticipansList.length === 1
     ) {
@@ -219,6 +219,8 @@ export async function handlingConferenceStatus({
 
         voiceSystemBackupNumber(conferenceSid, conferenceName, from, conferenceParticipansList);
       }, 12000);
+
+      if (conferenceStatus === 'participant-leave') return;
     }
 
     if (conferenceStatus !== 'conference-end') {
@@ -437,11 +439,11 @@ export async function handlingConferenceStatus({
 
         const customerInHold = participants.find((call) => call.hold === true);
 
-        // if (conferenceParticipansList.length === 1 && !customerInHold) {
-        //   const currentConference = client.conferences(conferenceSid);
+        if (conferenceParticipansList.length === 1 && !customerInHold) {
+          const currentConference = client.conferences(conferenceSid);
 
-        //   currentConference.update({ status: 'completed' });
-        // }
+          currentConference.update({ status: 'completed' });
+        }
         break;
 
       case 'conference-start':
