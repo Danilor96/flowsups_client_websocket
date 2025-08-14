@@ -58,7 +58,7 @@ export async function callCreation(
     .participants.create({
       from: accountPhoneNumber,
       to: `+1${phoneNumber}`,
-      statusCallback: `${websocketPublicUrl}/getCurrentConferenceCallStatus/${conferenceName}`,
+      statusCallback: `${websocketPublicUrl}/getCurrentConferenceCallStatus/${conferenceName}.${conferenceSid}`,
       statusCallbackEvent: ['answered', 'completed', 'initiated', 'ringing'],
       statusCallbackMethod: 'POST',
       endConferenceOnExit: true,
