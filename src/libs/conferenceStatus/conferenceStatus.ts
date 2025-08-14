@@ -206,7 +206,7 @@ export async function handlingConferenceStatus({
     const stuckStatuses = ['participant-join', 'conference-start', 'participant-leave'];
 
     if (
-      sequence >= 3 &&
+      sequence === 3 &&
       stuckStatuses.includes(conferenceStatus) &&
       conferenceParticipansList.length === 1
     ) {

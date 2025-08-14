@@ -147,6 +147,16 @@ export async function assignUserFromRoundRobin(
             },
             data: {
               seller_id: firstInRoundRobinOrder.id,
+              Leads: {
+                updateMany: {
+                  where: {
+                    has_ended: false,
+                  },
+                  data: {
+                    sales_rep_id: registeredCustomerId.id,
+                  },
+                },
+              },
             },
             select: {
               id: true,
