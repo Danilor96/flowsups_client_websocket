@@ -8,7 +8,7 @@ import cors from 'cors';
 import cron from 'node-cron';
 import twilio from 'twilio';
 import { prisma } from './libs/prisma/prisma';
-import { handlingConferenceStatus } from './libs/conferenceStatus/conferenceStatus';
+import { handlingConferenceStatus, sendCallToWeb } from './libs/conferenceStatus/conferenceStatus';
 import { handlingIncomingCall } from './libs/incomingCall/incomingCall';
 import { handlingIncomingSms } from './libs/incomingSms/incomingSms';
 import { handlingOutgoingCallStatus } from './libs/outgoingCallStatus/outgoinCallStatus';
@@ -175,6 +175,8 @@ io.on('connection', async (socket: Socket) => {
       const conferenceName = param.split('.')[0];
       const conferenceSid = param.split('.')[1];
       const sequence = req.body.SequenceNumber;
+      const customerPhone = req.query.customerPhone as string;
+      const conferenceParticipants = await client.conferences(conferenceSid).participants.list();
 
       if (sequence === '0') {
         io.emit('update_data', 'transferCompleted', { conferenceName });
@@ -187,8 +189,6 @@ io.on('connection', async (socket: Socket) => {
       };
 
       if (conferenceSid) {
-        const conferenceParticipants = await client.conferences(conferenceSid).participants.list();
-
         const customerCall = conferenceParticipants.find((participant) => participant.hold);
 
         if (customerCall) {
@@ -214,25 +214,7 @@ io.on('connection', async (socket: Socket) => {
       }
 
       if (callStatus === 'no-answer') {
-        const conferenceParticipants = await client.conferences(conferenceSid).participants.list();
-
-        const hasParticipants = conferenceParticipants.length > 1;
-
-        // await hangUpConference();
-        //deberia ser (multi tenant)
-        const businessSettings = await prisma.voice_and_sms.findFirst({
-          select: { forward_incoming_calls_to: true },
-        });
-
-        if (!hasParticipants && businessSettings?.forward_incoming_calls_to) {
-          await callCreation(
-            conferenceSid,
-            conferenceName,
-            businessSettings?.forward_incoming_calls_to,
-          );
-        } else {
-          await hangUpConference();
-        }
+        await sendCallToWeb(conferenceName, conferenceSid, customerPhone);
       }
 
       console.log(`Call: ${callSid}. Status: ${callStatus}`);

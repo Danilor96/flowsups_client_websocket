@@ -14,6 +14,7 @@ import {
 import { setTheUserThatResponseTheCall } from './setTheUserThatResponseTheCall';
 import { makeTaskAfterMissingACall } from './makeTaskAfterMissingACall';
 import { ActivityType, salesPointsAssignService } from '../salesPointsServices/salesPointServices';
+import { voiceSystemBackupNumber } from './transferCall/transferCall';
 
 interface ConferenceData {
   conferenceSid: any;
@@ -49,7 +50,7 @@ export async function handlingConferenceStatus({
             {
               home_phone: from,
             },
-          ]
+          ],
         },
         select: {
           id: true,
@@ -200,6 +201,26 @@ export async function handlingConferenceStatus({
       checkIfTheCallWasAnswered(from, conferenceSid, conferenceName, conferenceParticipants);
     }
 
+    // check if the call is stuck in web
+
+    const stuckStatuses = ['participant-join', 'conference-start', 'participant-leave'];
+
+    if (
+      sequence >= 4 &&
+      stuckStatuses.includes(conferenceStatus) &&
+      conferenceParticipansList.length === 1
+    ) {
+      setTimeout(() => {
+        io.emit('update_data', 'lastParticipant', {
+          userEmail: '',
+          inProgressConferenceName: conferenceName,
+          conferenceSid: conferenceSid,
+        });
+
+        voiceSystemBackupNumber(conferenceSid, conferenceName, from, conferenceParticipansList);
+      }, 12000);
+    }
+
     if (conferenceStatus !== 'conference-end') {
       const conferenceParticipants = await client.conferences(conferenceSid).participants.list();
 
@@ -256,15 +277,14 @@ export async function handlingConferenceStatus({
 
           if (!startConfDate.answered_by_web && !startConfDate.answered_by_mobile) {
             await makeTaskAfterMissingACall(conferenceSid);
-          }else {
-            
-            if(startConfDate.user_id && startConfDate.user_id.length > 0) {
+          } else {
+            if (startConfDate.user_id && startConfDate.user_id.length > 0) {
               for (const userId of startConfDate.user_id) {
                 // logic for assigning points to sellers (sales activity logs)
                 salesPointsAssignService({
                   userId: userId,
-                  activityType: ActivityType.CALL_MADE
-                })
+                  activityType: ActivityType.CALL_MADE,
+                });
               }
             }
           }
@@ -435,4 +455,27 @@ export async function handlingConferenceStatus({
       endedConferenceSid: conferenceSid,
     });
   }
+}
+
+export async function sendCallToWeb(
+  conferenceName: string,
+  conferenceSid: string,
+  customerPhone: string,
+  userEmail?: string,
+) {
+  if (userEmail) {
+    sendTo(userEmail, 'joinConference', {
+      conferenceName,
+      conferenceSid,
+      phoneNumber: customerPhone,
+    });
+
+    return;
+  }
+
+  io.emit('update_data', 'joinConference', {
+    conferenceName,
+    conferenceSid,
+    phoneNumber: customerPhone,
+  });
 }
