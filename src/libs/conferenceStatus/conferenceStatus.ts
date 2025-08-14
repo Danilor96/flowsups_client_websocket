@@ -437,11 +437,11 @@ export async function handlingConferenceStatus({
 
         const customerInHold = participants.find((call) => call.hold === true);
 
-        if (conferenceParticipansList.length === 1 && !customerInHold) {
-          const currentConference = client.conferences(conferenceSid);
+        // if (conferenceParticipansList.length === 1 && !customerInHold) {
+        //   const currentConference = client.conferences(conferenceSid);
 
-          currentConference.update({ status: 'completed' });
-        }
+        //   currentConference.update({ status: 'completed' });
+        // }
         break;
 
       case 'conference-start':
