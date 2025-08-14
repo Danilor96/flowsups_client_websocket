@@ -212,20 +212,38 @@ io.on('connection', async (socket: Socket) => {
           }
 
           if (callStatus === 'no-answer' && conferenceSid) {
+            console.log('Verifica backup');
+
             const conferenceParticipants = await client
               .conferences(conferenceSid)
               .participants.list();
             const hasParticipants = conferenceParticipants.length > 1;
+
+            console.log(conferenceParticipants);
+
+            console.log(hasParticipants);
 
             // await hangUpConference();
             //deberia ser (multi tenant)
             const businessSettings = await prisma.voice_and_sms.findFirst({
               select: { forward_incoming_calls_to: true },
             });
-            
+
+            console.log(businessSettings);
+
+            console.log(hasParticipants);
+
             if (!hasParticipants && businessSettings?.forward_incoming_calls_to) {
-              await callCreation(conferenceSid, conferenceName, businessSettings?.forward_incoming_calls_to);
+              console.log('hasParticipants');
+
+              await callCreation(
+                conferenceSid,
+                conferenceName,
+                businessSettings?.forward_incoming_calls_to,
+              );
             } else {
+              console.log('hangUpConference');
+
               await hangUpConference();
             }
           }
