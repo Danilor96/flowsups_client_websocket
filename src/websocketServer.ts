@@ -180,6 +180,8 @@ io.on('connection', async (socket: Socket) => {
         io.emit('update_data', 'transferCompleted', { conferenceName });
       }
 
+      console.log('Verifica sid: ', conferenceSid);
+
       if (conferenceSid) {
         const conferenceParticipants = await client.conferences(conferenceSid).participants.list();
 
@@ -211,7 +213,7 @@ io.on('connection', async (socket: Socket) => {
             await hangUpConference();
           }
 
-          if (callStatus === 'no-answer' && conferenceSid) {
+          if (callStatus === 'no-answer') {
             console.log('Verifica backup');
 
             const conferenceParticipants = await client
