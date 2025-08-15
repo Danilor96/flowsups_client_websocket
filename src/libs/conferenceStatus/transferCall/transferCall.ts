@@ -67,7 +67,7 @@ export async function callCreation(
       from: accountPhoneNumber,
       to: phoneNumber.includes('+58') ? phoneNumber : `+1${phoneNumber}`,
       statusCallback: `${websocketPublicUrl}/getCurrentConferenceCallStatus/${conferenceName}.${conferenceSid}?customerPhone=${customerPhone}${
-        backupCalled ? '?backupCalled=true' : ''
+        backupCalled ? '&backupCalled=true' : ''
       }`,
       statusCallbackEvent: ['answered', 'completed', 'initiated', 'ringing'],
       statusCallbackMethod: 'POST',
