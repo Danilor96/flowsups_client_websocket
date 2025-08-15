@@ -40,6 +40,10 @@ export async function handlingConferenceStatus({
 
     // first conference action sequence
     if (sequence === '1') {
+      // variable for call backup phone number after bdc/sales rep transfer call
+
+      let backupCalled = false;
+
       // save the conference attempt in the web data base
       const customerData = await prisma.clients.findFirst({
         where: {
@@ -55,6 +59,12 @@ export async function handlingConferenceStatus({
         select: {
           id: true,
           seller: {
+            select: {
+              id: true,
+              email: true,
+            },
+          },
+          bdc: {
             select: {
               id: true,
               email: true,
@@ -118,6 +128,8 @@ export async function handlingConferenceStatus({
             });
           } else {
             // if there is not a new user assigned, then calls to every web users
+
+            backupCalled = true;
 
             io.emit('update_data', 'joinConference', {
               conferenceName,
@@ -198,7 +210,13 @@ export async function handlingConferenceStatus({
 
       const conferenceParticipants = conferenceParticipansList.map((el) => el.callSid);
 
-      checkIfTheCallWasAnswered(from, conferenceSid, conferenceName, conferenceParticipants);
+      checkIfTheCallWasAnswered(
+        from,
+        conferenceSid,
+        conferenceName,
+        conferenceParticipants,
+        backupCalled,
+      );
     }
 
     // check if the call is stuck in web

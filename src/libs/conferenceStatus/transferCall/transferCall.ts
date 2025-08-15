@@ -10,6 +10,7 @@ export async function transferCall(
   customerNumber: string,
   conferenceSid: string,
   conferenceName: string,
+  backupCalled?: boolean,
 ) {
   try {
     const conferenceInProgess = await client.conferences(conferenceSid).fetch();
@@ -38,15 +39,26 @@ export async function transferCall(
 
     if (conferenceInProgess.status !== 'completed' && participantsList.length > 0) {
       if (salesrepnum) {
-        await callCreation(conferenceSid, conferenceName, salesrepnum, customerNumber);
+        await callCreation(
+          conferenceSid,
+          conferenceName,
+          salesrepnum,
+          customerNumber,
+          backupCalled,
+        );
       }
 
       if (bdcnum) {
-        await callCreation(conferenceSid, conferenceName, bdcnum, customerNumber);
+        await callCreation(conferenceSid, conferenceName, bdcnum, customerNumber, backupCalled);
       }
 
       if (!bdcnum && !salesrepnum) {
-        await sendCallToWeb(conferenceName, conferenceSid, customerNumber);
+        await voiceSystemBackupNumber(
+          conferenceSid,
+          conferenceName,
+          customerNumber,
+          participantsList,
+        );
       }
     }
   } catch (error) {
