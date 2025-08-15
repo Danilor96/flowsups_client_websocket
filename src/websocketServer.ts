@@ -141,9 +141,12 @@ io.on('connection', async (socket: Socket) => {
       const sequence = req.body.SequenceNumber;
       const eventTimestamp = req.body.Timestamp;
       const callSid = req.body.CallSid;
+      const participantCallStatus = req.body.ParticipantCallStatus;
       const conferenceParticipansList = await (await client.conferences(conferenceSid).fetch())
         .participants()
         .list();
+
+      console.log('participantCallStatus: ', participantCallStatus);
 
       // function that handle all active conference statuses
 
@@ -216,8 +219,12 @@ io.on('connection', async (socket: Socket) => {
         }
       }
 
+      console.log('req.query.backupCalled: ', backupCalled);
+
       if (callStatus === 'no-answer') {
         if (backupCalled) {
+          console.log('req.query.backupCalled: ', backupCalled);
+
           hangUpConference();
         } else {
           await sendCallToWeb(conferenceName, conferenceSid, customerPhone);
