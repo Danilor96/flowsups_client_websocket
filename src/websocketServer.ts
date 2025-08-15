@@ -176,7 +176,10 @@ io.on('connection', async (socket: Socket) => {
       const conferenceSid = param.split('.')[1];
       const sequence = req.body.SequenceNumber;
       const customerPhone = req.query.customerPhone as string;
+      let backupCalled = '';
       const conferenceParticipants = await client.conferences(conferenceSid).participants.list();
+
+      if (req.query.backupCalled) backupCalled = req.query.backupCalled as string;
 
       if (sequence === '0') {
         io.emit('update_data', 'transferCompleted', { conferenceName });
@@ -214,7 +217,11 @@ io.on('connection', async (socket: Socket) => {
       }
 
       if (callStatus === 'no-answer') {
-        await sendCallToWeb(conferenceName, conferenceSid, customerPhone);
+        if (backupCalled) {
+          hangUpConference();
+        } else {
+          await sendCallToWeb(conferenceName, conferenceSid, customerPhone);
+        }
       }
 
       console.log(`Call: ${callSid}. Status: ${callStatus}`);

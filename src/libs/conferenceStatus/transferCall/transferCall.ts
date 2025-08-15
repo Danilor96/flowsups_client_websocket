@@ -59,13 +59,16 @@ export async function callCreation(
   conferenceName: string,
   phoneNumber: string,
   customerPhone: string,
+  backupCalled?: boolean,
 ) {
   await client
     .conferences(conferenceSid)
     .participants.create({
       from: accountPhoneNumber,
       to: phoneNumber.includes('+58') ? phoneNumber : `+1${phoneNumber}`,
-      statusCallback: `${websocketPublicUrl}/getCurrentConferenceCallStatus/${conferenceName}.${conferenceSid}?customerPhone=${customerPhone}`,
+      statusCallback: `${websocketPublicUrl}/getCurrentConferenceCallStatus/${conferenceName}.${conferenceSid}?customerPhone=${customerPhone}${
+        backupCalled ? '?backupCalled=true' : ''
+      }`,
       statusCallbackEvent: ['answered', 'completed', 'initiated', 'ringing'],
       statusCallbackMethod: 'POST',
       endConferenceOnExit: true,
@@ -96,6 +99,7 @@ export async function voiceSystemBackupNumber(
       conferenceName,
       businessSettings?.forward_incoming_calls_to,
       customerPhone,
+      true,
     );
   } else {
     await client.conferences(conferenceSid).update({
