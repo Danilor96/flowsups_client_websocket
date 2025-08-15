@@ -235,7 +235,7 @@ io.on('connection', async (socket: Socket) => {
         }
 
         if (backupCalled) {
-          hangUpConference();
+          // hangUpConference();
         }
 
         if (!callBackup && !backupCalled) {
