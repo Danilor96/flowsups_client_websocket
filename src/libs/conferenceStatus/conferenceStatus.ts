@@ -23,6 +23,7 @@ interface ConferenceData {
   sequence: any;
   eventTimestamp: any;
   callSid: any;
+  participantCallStatus: any;
   conferenceParticipansList: ParticipantInstance[];
 }
 
@@ -33,6 +34,7 @@ export async function handlingConferenceStatus({
   sequence,
   eventTimestamp,
   callSid,
+  participantCallStatus,
   conferenceParticipansList,
 }: ConferenceData) {
   try {
@@ -217,29 +219,6 @@ export async function handlingConferenceStatus({
         conferenceParticipants,
         callBackup,
       );
-    }
-
-    // check if the call is stuck in web
-
-    const stuckStatuses = ['participant-join', 'conference-start', 'participant-leave'];
-
-    if (
-      sequence > 2 &&
-      sequence < 5 &&
-      stuckStatuses.includes(conferenceStatus) &&
-      conferenceParticipansList.length === 1
-    ) {
-      setTimeout(() => {
-        io.emit('update_data', 'lastParticipant', {
-          userEmail: '',
-          inProgressConferenceName: conferenceName,
-          conferenceSid: conferenceSid,
-        });
-
-        voiceSystemBackupNumber(conferenceSid, conferenceName, from, conferenceParticipansList);
-      }, 12000);
-
-      if (conferenceStatus === 'participant-leave') return;
     }
 
     if (conferenceStatus !== 'conference-end') {

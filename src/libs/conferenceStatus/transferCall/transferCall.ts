@@ -1,5 +1,5 @@
 import { ParticipantInstance } from 'twilio/lib/rest/api/v2010/account/conference/participant';
-import { client } from '../../../websocketServer';
+import { client, io } from '../../../websocketServer';
 import { prisma } from '../../prisma/prisma';
 
 const websocketPublicUrl = process.env.TWILIO_WEBSOCKET_URL;
@@ -105,6 +105,12 @@ export async function voiceSystemBackupNumber(
   customerPhone: string,
   participantInstance: ParticipantInstance[],
 ) {
+  io.emit('update_data', 'lastParticipant', {
+    userEmail: '',
+    inProgressConferenceName: conferenceName,
+    conferenceSid: conferenceSid,
+  });
+
   const hasParticipants = participantInstance.length > 1;
 
   // await hangUpConference();

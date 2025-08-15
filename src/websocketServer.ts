@@ -161,6 +161,7 @@ io.on('connection', async (socket: Socket) => {
         conferenceStatus,
         eventTimestamp,
         sequence,
+        participantCallStatus,
       });
     } catch (error) {
       console.log(error);
@@ -235,11 +236,20 @@ io.on('connection', async (socket: Socket) => {
         }
 
         if (backupCalled) {
-          // hangUpConference();
+          hangUpConference();
         }
 
         if (!callBackup && !backupCalled) {
           await sendCallToWeb(conferenceName, conferenceSid, customerPhone);
+
+          setTimeout(async () => {
+            await voiceSystemBackupNumber(
+              conferenceSid,
+              conferenceName,
+              customerPhone,
+              conferenceParticipants,
+            );
+          }, 12000);
         }
       }
 
