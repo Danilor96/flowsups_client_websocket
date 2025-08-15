@@ -8,7 +8,7 @@ export async function checkIfTheCallWasAnswered(
   conferenceSid: string,
   conferenceName: string,
   conferenceParticipants: string[],
-  backupCalled?: boolean,
+  callBackup?: boolean,
 ) {
   try {
     setTimeout(async () => {
@@ -33,7 +33,7 @@ export async function checkIfTheCallWasAnswered(
       if (!answered?.answered) {
         io.emit('update_data', 'transferCompleted', { conferenceName });
 
-        await transferCall(customerNumber, conferenceSid, conferenceName, backupCalled);
+        await transferCall(customerNumber, conferenceSid, conferenceName, callBackup);
       }
 
       if (conferenceCustomerData && !conferenceCustomerData.client_id && !answered?.answered) {

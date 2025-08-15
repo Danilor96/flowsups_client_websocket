@@ -1,7 +1,6 @@
 import { ParticipantInstance } from 'twilio/lib/rest/api/v2010/account/conference/participant';
 import { client } from '../../../websocketServer';
 import { prisma } from '../../prisma/prisma';
-import { sendCallToWeb } from '../conferenceStatus';
 
 const websocketPublicUrl = process.env.TWILIO_WEBSOCKET_URL;
 const accountPhoneNumber: string = process.env.TWILIO_PHONE_NUMBER || '';
@@ -10,7 +9,7 @@ export async function transferCall(
   customerNumber: string,
   conferenceSid: string,
   conferenceName: string,
-  backupCalled?: boolean,
+  callBackup?: boolean,
 ) {
   try {
     const conferenceInProgess = await client.conferences(conferenceSid).fetch();
@@ -44,12 +43,20 @@ export async function transferCall(
           conferenceName,
           salesrepnum,
           customerNumber,
-          backupCalled,
+          undefined,
+          callBackup,
         );
       }
 
       if (bdcnum) {
-        await callCreation(conferenceSid, conferenceName, bdcnum, customerNumber, backupCalled);
+        await callCreation(
+          conferenceSid,
+          conferenceName,
+          bdcnum,
+          customerNumber,
+          undefined,
+          callBackup,
+        );
       }
 
       if (!bdcnum && !salesrepnum) {
@@ -72,6 +79,7 @@ export async function callCreation(
   phoneNumber: string,
   customerPhone: string,
   backupCalled?: boolean,
+  callBackup?: boolean,
 ) {
   await client
     .conferences(conferenceSid)
@@ -80,7 +88,7 @@ export async function callCreation(
       to: phoneNumber.includes('+58') ? phoneNumber : `+1${phoneNumber}`,
       statusCallback: `${websocketPublicUrl}/getCurrentConferenceCallStatus/${conferenceName}.${conferenceSid}?customerPhone=${customerPhone}${
         backupCalled ? '&backupCalled=true' : ''
-      }`,
+      }${callBackup ? '&callBackup=true' : ''}`,
       statusCallbackEvent: ['answered', 'completed', 'initiated', 'ringing'],
       statusCallbackMethod: 'POST',
       endConferenceOnExit: true,

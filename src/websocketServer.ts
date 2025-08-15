@@ -30,7 +30,10 @@ import {
   appoitmentReminderFromReminderTimeConfig,
   taskReminderFromReminderTimeConfig,
 } from './libs/minuteByMinuteCheck/reminders/reminders';
-import { callCreation } from './libs/conferenceStatus/transferCall/transferCall';
+import {
+  callCreation,
+  voiceSystemBackupNumber,
+} from './libs/conferenceStatus/transferCall/transferCall';
 
 const accountSid = process.env.TWILIO_ACCOUNT_SID;
 const authToken = process.env.TWILIO_AUTH_TOKEN;
@@ -180,9 +183,11 @@ io.on('connection', async (socket: Socket) => {
       const sequence = req.body.SequenceNumber;
       const customerPhone = req.query.customerPhone as string;
       let backupCalled = '';
+      let callBackup = '';
       const conferenceParticipants = await client.conferences(conferenceSid).participants.list();
 
       if (req.query.backupCalled) backupCalled = req.query.backupCalled as string;
+      if (req.query.callBackup) callBackup = req.query.callBackup as string;
 
       if (sequence === '0') {
         io.emit('update_data', 'transferCompleted', { conferenceName });
@@ -220,9 +225,20 @@ io.on('connection', async (socket: Socket) => {
       }
 
       if (callStatus === 'no-answer') {
+        if (callBackup) {
+          await voiceSystemBackupNumber(
+            conferenceSid,
+            conferenceName,
+            customerPhone,
+            conferenceParticipants,
+          );
+        }
+
         if (backupCalled) {
           hangUpConference();
-        } else {
+        }
+
+        if (!callBackup && !backupCalled) {
           await sendCallToWeb(conferenceName, conferenceSid, customerPhone);
         }
       }

@@ -42,7 +42,7 @@ export async function handlingConferenceStatus({
     if (sequence === '1') {
       // variable for call backup phone number after bdc/sales rep transfer call
 
-      let backupCalled = false;
+      let callBackup = false;
 
       // save the conference attempt in the web data base
       const customerData = await prisma.clients.findFirst({
@@ -129,7 +129,7 @@ export async function handlingConferenceStatus({
           } else {
             // if there is not a new user assigned, then calls to every web users
 
-            backupCalled = true;
+            callBackup = true;
 
             io.emit('update_data', 'joinConference', {
               conferenceName,
@@ -215,7 +215,7 @@ export async function handlingConferenceStatus({
         conferenceSid,
         conferenceName,
         conferenceParticipants,
-        backupCalled,
+        callBackup,
       );
     }
 
