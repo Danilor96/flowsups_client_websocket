@@ -221,6 +221,14 @@ export async function handlingConferenceStatus({
       );
     }
 
+    // check if the call is stuck in web
+
+    const stuckStatuses = ['no-answer'];
+
+    if (stuckStatuses.includes(participantCallStatus) && conferenceParticipansList.length === 1) {
+      if (conferenceStatus === 'participant-leave') return;
+    }
+
     if (conferenceStatus !== 'conference-end') {
       const conferenceParticipants = await client.conferences(conferenceSid).participants.list();
 
