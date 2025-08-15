@@ -219,11 +219,16 @@ io.on('connection', async (socket: Socket) => {
         }
       }
 
-      console.log('req.query.backupCalled: ', backupCalled);
+      console.log('req.query.backupCalled fuera: ', backupCalled, '----', req.query.backupCalled);
 
       if (callStatus === 'no-answer') {
         if (backupCalled) {
-          console.log('req.query.backupCalled: ', backupCalled);
+          console.log(
+            'req.query.backupCalled dentro: ',
+            backupCalled,
+            '----',
+            req.query.backupCalled,
+          );
 
           hangUpConference();
         } else {
