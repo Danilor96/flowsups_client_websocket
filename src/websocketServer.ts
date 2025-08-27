@@ -203,9 +203,7 @@ io.on('connection', async (socket: Socket) => {
       if (conferenceSid) {
         const customerCall = conferenceParticipants.find((participant) => participant.hold);
 
-        console.log(callStatus);
-
-        console.log(conferenceParticipants);
+        console.log('conferenceParticipants (call): ', conferenceParticipants);
 
         if (customerCall) {
           if (callStatus === 'in-progress') {
@@ -214,6 +212,8 @@ io.on('connection', async (socket: Socket) => {
               .participants.list();
 
             const userThatNoAnswer = conferenceParticipants.find((el) => el.status === 'ringing');
+
+            console.log(userThatNoAnswer);
 
             if (userThatNoAnswer) {
               userThatNoAnswer.remove();
@@ -227,6 +227,10 @@ io.on('connection', async (socket: Socket) => {
                 endConferenceOnExit: true,
               });
             }
+          }
+
+          if (callStatus === 'ringing') {
+            console.log('conferenceParticipants (ringing): ', conferenceParticipants);
           }
 
           if (callStatus === 'completed') {
