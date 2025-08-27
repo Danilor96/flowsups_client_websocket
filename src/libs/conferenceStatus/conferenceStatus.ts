@@ -14,7 +14,6 @@ import {
 import { setTheUserThatResponseTheCall } from './setTheUserThatResponseTheCall';
 import { makeTaskAfterMissingACall } from './makeTaskAfterMissingACall';
 import { ActivityType, salesPointsAssignService } from '../salesPointsServices/salesPointServices';
-import { voiceSystemBackupNumber } from './transferCall/transferCall';
 
 interface ConferenceData {
   conferenceSid: any;
@@ -313,6 +312,14 @@ export async function handlingConferenceStatus({
         // check if the first two participants are just the caller customer and
         // the first user that accept the call. Disconnect the rest of the web users from
         // this call
+
+        const userThatNotReponse = conferenceParticipansList.find((el) => el.status === 'ringing');
+
+        if (userThatNotReponse) {
+          userThatNotReponse.remove();
+        }
+
+        console.log('conferenceParticipansList: ', conferenceParticipansList);
 
         const regexCorreo = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
