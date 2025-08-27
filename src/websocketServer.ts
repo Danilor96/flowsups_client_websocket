@@ -228,10 +228,6 @@ io.on('connection', async (socket: Socket) => {
       if (callStatus === 'no-answer') {
         // call to backup number (web users didn't answer the call)
 
-        console.log('callBackup: ', callBackup);
-        console.log('backupCalled: ', backupCalled);
-        console.log('conferenceParticipants: ', conferenceParticipants);
-
         if (callBackup) {
           await voiceSystemBackupNumber(
             conferenceSid,

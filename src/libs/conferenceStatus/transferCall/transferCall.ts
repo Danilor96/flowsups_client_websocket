@@ -119,6 +119,10 @@ export async function voiceSystemBackupNumber(
     select: { forward_incoming_calls_to: true },
   });
 
+  if (hasParticipants) {
+    return;
+  }
+
   if (!hasParticipants && businessSettings?.forward_incoming_calls_to) {
     await callCreation(
       conferenceSid,
