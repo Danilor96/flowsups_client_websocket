@@ -203,11 +203,21 @@ io.on('connection', async (socket: Socket) => {
       if (conferenceSid) {
         const customerCall = conferenceParticipants.find((participant) => participant.hold);
 
+        console.log(callStatus);
+
+        console.log(conferenceParticipants);
+
         if (customerCall) {
           if (callStatus === 'in-progress') {
             const conferenceParticipants = await client
               .conferences(conferenceSid)
               .participants.list();
+
+            const userThatNoAnswer = conferenceParticipants.find((el) => el.status === 'ringing');
+
+            if (userThatNoAnswer) {
+              userThatNoAnswer.remove();
+            }
 
             const customerCall = conferenceParticipants.find((participant) => participant.hold);
 
