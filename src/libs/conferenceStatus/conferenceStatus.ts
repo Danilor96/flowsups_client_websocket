@@ -14,6 +14,7 @@ import {
 import { setTheUserThatResponseTheCall } from './setTheUserThatResponseTheCall';
 import { makeTaskAfterMissingACall } from './makeTaskAfterMissingACall';
 import { ActivityType, salesPointsAssignService } from '../salesPointsServices/salesPointServices';
+import { Prisma } from '@prisma/client';
 
 interface ConferenceData {
   conferenceSid: any;
@@ -309,6 +310,39 @@ export async function handlingConferenceStatus({
         break;
 
       case 'participant-join':
+        // check if there is a transfer in progress
+        // if there is a transfer in progress, then check who pick up the call first
+        // and drop the other transfer
+
+        const usersAssignedCallSid = await prisma.client_calls.findUnique({
+          where: {
+            call_sid: conferenceSid,
+          },
+          select: {
+            usersAssignedCallSid: true,
+          },
+        });
+
+        const callSidArray = usersAssignedCallSid?.usersAssignedCallSid as Prisma.JsonArray;
+
+        if (usersAssignedCallSid?.usersAssignedCallSid && callSidArray.length > 1) {
+          const userThatJoins = conferenceParticipansList.find((el) =>
+            callSidArray.includes(el.callSid),
+          );
+
+          if (userThatJoins) {
+            const callSidToDisconnect = callSidArray.find((el) => el !== userThatJoins.callSid) as
+              | string
+              | undefined;
+
+            if (callSidToDisconnect) {
+              await client.calls(callSidToDisconnect).update({
+                status: 'canceled',
+              });
+            }
+          }
+        }
+
         // check if the first two participants are just the caller customer and
         // the first user that accept the call. Disconnect the rest of the web users from
         // this call

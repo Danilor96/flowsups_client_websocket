@@ -149,20 +149,6 @@ io.on('connection', async (socket: Socket) => {
         .participants()
         .list();
 
-      const activeConference = await client.conferences(conferenceSid).fetch();
-
-      const part = await client.conferences(conferenceSid).participants.list();
-
-      const prueba = conferenceParticipansList.map((el) => el.callSid);
-
-      console.log('activeConference: ', activeConference);
-
-      console.log('prueba: ', prueba);
-
-      console.log('get: ', activeConference.participants().get(callSid));
-
-      console.log('part: ', part);
-
       // function that handle all active conference statuses
 
       await handlingConferenceStatus({

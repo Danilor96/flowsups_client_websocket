@@ -36,9 +36,11 @@ export async function transferCall(
     const salesrepnum = assignedUsers?.seller?.mobile_phone;
     const bdcnum = assignedUsers?.bdc?.mobile_phone;
 
+    const participantsCallSid: string[] = [];
+
     if (conferenceInProgess.status !== 'completed' && participantsList.length > 0) {
       if (salesrepnum) {
-        await callCreation(
+        const salesCallSid = await callCreation(
           conferenceSid,
           conferenceName,
           salesrepnum,
@@ -46,10 +48,14 @@ export async function transferCall(
           undefined,
           callBackup,
         );
+
+        if (salesCallSid) {
+          participantsCallSid.push(salesCallSid.callSid);
+        }
       }
 
       if (bdcnum) {
-        await callCreation(
+        const bdcCallSid = await callCreation(
           conferenceSid,
           conferenceName,
           bdcnum,
@@ -57,6 +63,21 @@ export async function transferCall(
           undefined,
           callBackup,
         );
+
+        if (bdcCallSid) {
+          participantsCallSid.push(bdcCallSid.callSid);
+        }
+      }
+
+      if (participantsCallSid.length > 1) {
+        await prisma.client_calls.update({
+          where: {
+            call_sid: conferenceSid,
+          },
+          data: {
+            usersAssignedCallSid: participantsCallSid,
+          },
+        });
       }
 
       if (!bdcnum && !salesrepnum) {
@@ -81,7 +102,7 @@ export async function callCreation(
   backupCalled?: boolean,
   callBackup?: boolean,
 ) {
-  await client
+  const callInstance = await client
     .conferences(conferenceSid)
     .participants.create({
       from: accountPhoneNumber,
@@ -97,6 +118,8 @@ export async function callCreation(
     .catch((reason) => {
       console.log(reason);
     });
+
+  return callInstance;
 }
 
 export async function voiceSystemBackupNumber(

@@ -384,6 +384,7 @@ model Vehicles {
   daily_visit_history            Daily_visit_history[]
   deposit_vehicle                Deposits[]                     @relation("client_deposit_vehicle")
   Leads                          Leads[]
+  Tasks                          Tasks[]
   vehicle_delivery               Vehicle_delivery[]
   body_type                      Vehicle_body_types             @relation("body_type", fields: [body_type_id], references: [id], onDelete: Cascade)
   vehicle_conditions             Vehicle_conditions             @relation("vehicle_condition", fields: [condition_id], references: [id])
@@ -432,6 +433,7 @@ model Tasks {
   assigned_seller_id          Int?
   reminder_sent               Boolean       @default(false)
   reminder_time_id            Int?
+  interested_vehicle_id       Int?
   notes                       Task_Notes[]
   appointment                 Appointments? @relation("appointment", fields: [appointment_id], references: [id])
   assigned_bdc                Users?        @relation("assignedBdc", fields: [assigned_bdc_id], references: [id])
@@ -442,6 +444,7 @@ model Tasks {
   completed                   Users?        @relation("completed", fields: [completed_by], references: [id])
   creator                     Users         @relation("creator", fields: [created_by], references: [id], onDelete: Cascade)
   customer                    Clients?      @relation("customer_task", fields: [customer_id], references: [id])
+  Vehicles                    Vehicles?     @relation(fields: [interested_vehicle_id], references: [id])
   ReminderTime                ReminderTime? @relation(fields: [reminder_time_id], references: [id])
   task_status                 Task_status   @relation("task_status", fields: [status], references: [id], onDelete: Cascade)
 }
@@ -767,22 +770,23 @@ model Sms_status {
 }
 
 model Client_calls {
-  id                 Int            @id @default(autoincrement())
-  client_id          Int?
-  call_date          DateTime
-  call_status_id     Int
-  call_direction_id  Int
-  call_duration      String
-  call_sid           String         @unique
-  unknow_call_number String?
-  phone_number       String?
-  answered_by_mobile Boolean        @default(false)
-  answered_by_web    Boolean        @default(false)
-  user_id            Int[]          @default([])
-  call_direction     Call_direction @relation(fields: [call_direction_id], references: [id], onDelete: Cascade)
-  call_status        Call_statuses  @relation("status", fields: [call_status_id], references: [id])
-  client_call        Clients?       @relation("client_call", fields: [client_id], references: [id])
-  Users              Users[]        @relation("Client_callsToUsers")
+  id                   Int            @id @default(autoincrement())
+  client_id            Int?
+  call_date            DateTime
+  call_status_id       Int
+  call_direction_id    Int
+  call_duration        String
+  call_sid             String         @unique
+  unknow_call_number   String?
+  phone_number         String?
+  answered_by_mobile   Boolean        @default(false)
+  answered_by_web      Boolean        @default(false)
+  user_id              Int[]          @default([])
+  usersAssignedCallSid Json?
+  call_direction       Call_direction @relation(fields: [call_direction_id], references: [id], onDelete: Cascade)
+  call_status          Call_statuses  @relation("status", fields: [call_status_id], references: [id])
+  client_call          Clients?       @relation("client_call", fields: [client_id], references: [id])
+  Users                Users[]        @relation("Client_callsToUsers")
 }
 
 model Suspension {
@@ -1120,7 +1124,7 @@ model Type_notification {
 }
 
 model Business {
-  id                                  Int               @id @default(autoincrement())
+  id                                  Int                      @id @default(autoincrement())
   name                                String
   image                               String
   county                              String?
@@ -1133,10 +1137,11 @@ model Business {
   store_alias                         String?
   store_id                            String
   store_license_number                String
-  is_Mailing_Address_Same_As_Physical Boolean           @default(false)
+  is_Mailing_Address_Same_As_Physical Boolean                  @default(false)
   appointment_reminder_time_id        Int?
   task_reminder_time_id               Int?
   Address                             Address?
+  Business_phone_numbers              Business_phone_numbers[]
   salesGoalsConfig                    SalesGoalsConfig?
 }
 
@@ -1633,6 +1638,7 @@ model Daily_visit_history {
   decision_id         Int
   managerTurnover     Boolean
   note_id             Int?
+  created_at          DateTime      @default(now())
   assigned_manager    Users?        @relation("daily_visit_history_assigned_manager", fields: [assigned_manager_id], references: [id])
   customer            Clients       @relation(fields: [customer_id], references: [id], onDelete: Cascade)
   decision            Client_status @relation(fields: [decision_id], references: [id])
@@ -2021,6 +2027,16 @@ model Leads {
   Users_Leads_sales_rep_idToUsers       Users?                   @relation("Leads_sales_rep_idToUsers", fields: [sales_rep_id], references: [id])
   Vehicle_delivery                      Vehicle_delivery?        @relation(fields: [vehicle_delivery_id], references: [id])
   Vehicles                              Vehicles?                @relation(fields: [vehicle_id], references: [id])
+}
+
+model Business_phone_numbers {
+  id                   Int       @id @default(autoincrement())
+  twilio_sid           String
+  phone_number         String
+  friendly_name        String
+  business_id          Int?
+  is_publishing_number Boolean   @default(false)
+  Business             Business? @relation(fields: [business_id], references: [id])
 }
 
 enum ListViewTypes {
