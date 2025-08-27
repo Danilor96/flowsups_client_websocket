@@ -226,6 +226,12 @@ io.on('connection', async (socket: Socket) => {
       }
 
       if (callStatus === 'no-answer') {
+        // call to backup number (web users didn't answer the call)
+
+        console.log('callBackup: ', callBackup);
+        console.log('backupCalled: ', backupCalled);
+        console.log('conferenceParticipants: ', conferenceParticipants);
+
         if (callBackup) {
           await voiceSystemBackupNumber(
             conferenceSid,
@@ -235,9 +241,14 @@ io.on('connection', async (socket: Socket) => {
           );
         }
 
+        // drop call if the backup number doesn't responds
+
         if (backupCalled) {
           hangUpConference();
         }
+
+        // call to every user in the web (bdc and sales rep didn't answer the call)
+        // if the web users doesn't responds in 12 seconds, then call to backup number
 
         if (!callBackup && !backupCalled) {
           await sendCallToWeb(conferenceName, conferenceSid, customerPhone);
