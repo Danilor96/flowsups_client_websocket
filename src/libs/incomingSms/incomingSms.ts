@@ -23,6 +23,7 @@ export async function handlingIncomingSms({ from, message, file }: IncomingSmsDa
   let unregisteredCustomerId: number | null = null;
   let appointmentAccepted = '';
   let appointmentAcceptStartDate = '';
+  let smsForAppointment = false;
 
   try {
     // get the registered customer data if the incoming "from" (phone number) value exists
@@ -446,7 +447,7 @@ export async function handlingIncomingSms({ from, message, file }: IncomingSmsDa
 
         appointmentAccepted = '1';
         appointmentAcceptStartDate = apptData?.start_date ? apptData.start_date.toISOString() : '';
-
+        smsForAppointment = true;
         io.emit('update_data', 'dailyAppointmentsList');
       }
     }
@@ -469,11 +470,11 @@ export async function handlingIncomingSms({ from, message, file }: IncomingSmsDa
                 client_accept_appointment: true,
               },
             });
-
+                        
+            smsForAppointment = true;
             if (new Date(el.start_date) < endOfToday()) appointmentForToday = true;
           }
         });
-
         if (appointmentForToday) {
           io.emit('update_data', 'dailyAppointmentsList');
         }
@@ -493,6 +494,13 @@ export async function handlingIncomingSms({ from, message, file }: IncomingSmsDa
       eventTypeId: 25,
     });
 
+    if (!smsForAppointment) {
+      await updateConversationForCustomer({
+        registeredCustomerId: customerId || undefined,
+        unregisteredCustomerId: unregisteredCustomerId || undefined,
+      });
+    }
+
     await prisma.$disconnect();
 
     io.emit('update_data', 'customerMessage', {
@@ -504,5 +512,41 @@ export async function handlingIncomingSms({ from, message, file }: IncomingSmsDa
     io.emit('update_data', 'smsModal');
   } catch (error) {
     console.log(error);
+  }
+}
+
+async function updateConversationForCustomer({registeredCustomerId, unregisteredCustomerId} : {registeredCustomerId?: number, unregisteredCustomerId?: number}) {
+  if (registeredCustomerId) {
+   await prisma.conversations.upsert({
+      where: { client_id: registeredCustomerId },
+      update: {
+        pending_reply_count: { increment: 1 },
+        last_message_from_client: true,
+        last_message_date: new Date().toISOString(),
+      },
+      create: {
+        client_id: registeredCustomerId,
+        pending_reply_count: 1,
+        last_message_from_client: true,
+        last_message_date: new Date().toISOString(),
+      },
+    });
+  }
+
+  if (unregisteredCustomerId) {
+    await prisma.conversations.upsert({
+      where: { unregistered_customer_id: unregisteredCustomerId },
+      update: {
+        pending_reply_count: { increment: 1 },
+        last_message_from_client: true,
+        last_message_date: new Date().toISOString(),
+      },
+      create: {
+        unregistered_customer_id: unregisteredCustomerId,
+        pending_reply_count: 1,
+        last_message_from_client: true,
+        last_message_date: new Date().toISOString(),
+      },
+    });
   }
 }

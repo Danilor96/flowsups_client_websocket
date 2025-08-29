@@ -142,3 +142,11 @@ export type TemplateVariablesValues =
     }
   | null
   | undefined;
+
+
+export const enum SMS_STATUS_ID {
+  READ = 1,
+  UNREAD = 2,
+  REPLIED = 3,
+  UNREPLIED = 4,
+}

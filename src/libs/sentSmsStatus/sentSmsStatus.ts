@@ -1,6 +1,7 @@
 import { prisma } from '../prisma/prisma';
 import { io } from '../../websocketServer';
 import { createNotification } from '../notification/createNotification';
+import { SMS_STATUS_ID } from '../definitions';
 
 export async function smsStatus(
   to: string,
@@ -31,6 +32,11 @@ export async function smsStatus(
                 mobile_phone: true,
               },
             },
+            unregistered_customer: {
+              select: {
+                mobile_phone_number: true,
+              },
+            },
             user: {
               select: {
                 id: true,
@@ -38,6 +44,34 @@ export async function smsStatus(
             },
           },
         });
+
+        const previousSms = await prisma.client_sms.findFirst({
+          where: {
+            client_id: sms.client_id,
+            id: { not: sms.id },
+          },
+          orderBy: {
+            date_sent: 'desc',
+          },
+        });
+
+        if (previousSms?.status_id === SMS_STATUS_ID.REPLIED || !previousSms?.sent_by_user) {
+          if (previousSms?.client_id) {
+            const data = {
+              pending_reply_count: 0,
+              last_message_from_client: false,
+              last_message_date: new Date().toISOString(),
+            };
+            await prisma.conversations.upsert({
+              where: { client_id: previousSms.client_id },
+              update: data,
+              create: {
+                client_id: previousSms.client_id,
+                ...data,
+              },
+            });
+          }
+        }
 
         const customerActivity = await prisma.clients.update({
           where: {
@@ -136,7 +170,7 @@ export async function smsStatus(
               id: sms.id,
             },
             data: {
-              status_id: 3,
+              status_id: SMS_STATUS_ID.REPLIED,
             },
           });
         }

@@ -735,6 +735,7 @@ model Clients {
   customer_task                     Tasks[]                          @relation("customer_task")
   Terms_and_conditions_processed    Terms_and_conditions_processed[]
   vehicle_delivery                  Vehicle_delivery[]
+  conversations                     conversations?
 }
 
 model Credit_app_list_status {
@@ -1698,6 +1699,7 @@ model Awaiting_unknow_client {
   last_activity       DateTime?
   user                Users?          @relation(fields: [user_id], references: [id])
   notifications       Notifications[]
+  conversations       conversations?
   sms                 Client_sms[]    @relation("Awaiting_unknow_clientToClient_sms")
 }
 
@@ -2037,6 +2039,17 @@ model Business_phone_numbers {
   business_id          Int?
   is_publishing_number Boolean   @default(false)
   Business             Business? @relation(fields: [business_id], references: [id])
+}
+
+model conversations {
+  id                       Int                     @id @default(autoincrement())
+  client_id                Int?                    @unique
+  pending_reply_count      Int                     @default(0)
+  last_message_from_client Boolean                 @default(false)
+  last_message_date        DateTime                @default(now())
+  unregistered_customer_id Int?                    @unique
+  Clients                  Clients?                @relation(fields: [client_id], references: [id], onDelete: Cascade)
+  Awaiting_unknow_client   Awaiting_unknow_client? @relation(fields: [unregistered_customer_id], references: [id], onDelete: Cascade)
 }
 
 enum ListViewTypes {
