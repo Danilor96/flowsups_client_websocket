@@ -8,7 +8,7 @@ import { createNotification } from '../notification/createNotification';
 interface IncomingSmsData {
   from: any;
   message: any;
-  file?: { url?: string; name: string };
+  file?: { url?: string; name: string }[];
 }
 
 export async function handlingIncomingSms({ from, message, file }: IncomingSmsData) {
