@@ -92,6 +92,13 @@ app.post('/getZapier', (req, res) => {
 
 export const connectedUsers: { [id: string]: string } = {};
 
+export const usersConnectedArray = Object.values(connectedUsers);
+
+// function to check if the related web user is connected
+export const isConnected = (email: string) => {
+  return usersConnectedArray.includes(email);
+};
+
 //function for specify a user in the websocket with email
 
 export const sendTo = (email: string, dataToUpdate: string, extraData?: any) => {
@@ -289,7 +296,6 @@ io.on('connection', async (socket: Socket) => {
     const media = req.body.MediaUrl0;
     const customerId = req.body.From;
 
-
     let files: { url?: string; name: string }[] | undefined = undefined;
 
     if (numMedia > 0) {
@@ -299,18 +305,18 @@ io.on('connection', async (socket: Socket) => {
         if (!mediaUrl || !mediaType) return Promise.resolve(null);
 
         return incomingFileSave(mediaUrl, mediaType, customerId)
-          .then(fileUrl => ({
+          .then((fileUrl) => ({
             url: fileUrl,
             name: `${messageSid}_${i}.${mediaType}`,
           }))
-          .catch(err => {
+          .catch((err) => {
             console.error(`Error saving media ${i}:`, err);
             return null;
           });
       });
 
       const results = await Promise.all(mediaPromises);
-      files = results.filter(result => result !== null);
+      files = results.filter((result) => result !== null);
     }
 
     await handlingIncomingSms({ from, message, file: files });

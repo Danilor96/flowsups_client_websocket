@@ -1,6 +1,13 @@
 import { ParticipantInstance } from 'twilio/lib/rest/api/v2010/account/conference/participant';
 import { prisma } from '../prisma/prisma';
-import { io, sendTo, client, connectedUsers } from '../../websocketServer';
+import {
+  io,
+  sendTo,
+  client,
+  connectedUsers,
+  isConnected,
+  usersConnectedArray,
+} from '../../websocketServer';
 import { createCallStatusInDatabase } from './createCallStatusInDatabase';
 import { deleteConferenceName } from './deleteConferenceName';
 import { checkIfCustomerIsInAwaitingTable } from './checkIfCustomerIsInAwaitingTable';
@@ -45,6 +52,8 @@ export async function handlingConferenceStatus({
       // variable for call backup phone number after bdc/sales rep transfer call
 
       let callBackup = false;
+      let callSendedToSalesRepWeb = false;
+      let bdcEmail = '';
 
       // save the conference attempt in the web data base
       const customerData = await prisma.clients.findFirst({
@@ -88,28 +97,35 @@ export async function handlingConferenceStatus({
 
       // advise the web users of the incoming call (conference)
 
-      const usersConnectedArray = Object.values(connectedUsers);
-
-      // function to check if the related web user is connected
-      const isConnected = (email: string) => {
-        return usersConnectedArray.includes(email);
-      };
+      const hasSalesRep = customerData?.seller;
+      const hasBdc = customerData?.bdc;
 
       // check if the phone number of the incoming call is related to a registered customer
-      // and if the customer already has a user assigned
 
-      if (customerData && customerData.seller && customerData.seller.email) {
-        //check if the assigned user is connected
+      if (customerData) {
+        const isSalesRepConnected = hasSalesRep && isConnected(hasSalesRep.email);
 
-        if (isConnected(customerData.seller.email)) {
-          sendTo(customerData.seller.email, 'joinConference', {
+        if (isSalesRepConnected) {
+          callSendedToSalesRepWeb = true;
+
+          bdcEmail = hasBdc?.email || '';
+
+          sendTo(hasSalesRep.email, 'joinConference', {
             conferenceName,
             conferenceSid,
             phoneNumber: from,
           });
+        }
 
-          // if the assigned web user is not connected, then reassigns customer to another user
-        } else {
+        if (!isSalesRepConnected && hasBdc && isConnected(hasBdc.email)) {
+          sendTo(hasBdc.email, 'joinConference', {
+            conferenceName,
+            conferenceSid,
+            phoneNumber: from,
+          });
+        }
+
+        if (!hasSalesRep && !hasBdc) {
           let newAssignedUser = await assignUserFromRoundRobin(from, true);
 
           let i = 0;
@@ -130,7 +146,6 @@ export async function handlingConferenceStatus({
             });
           } else {
             // if there is not a new user assigned, then calls to every web users
-
             callBackup = true;
 
             io.emit('update_data', 'joinConference', {
@@ -218,6 +233,8 @@ export async function handlingConferenceStatus({
         conferenceName,
         conferenceParticipants,
         callBackup,
+        callSendedToSalesRepWeb,
+        bdcEmail,
       );
     }
 

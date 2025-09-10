@@ -1,6 +1,6 @@
 import { transferCall } from './transferCall';
 import { prisma } from '../../prisma/prisma';
-import { io } from '../../../websocketServer';
+import { io, isConnected, sendTo } from '../../../websocketServer';
 import { missedCallFromUnknowCustomer } from './missedCallFromUnknowCustomer/missedCallFromUnknowCustomer';
 
 export async function checkIfTheCallWasAnswered(
@@ -9,6 +9,8 @@ export async function checkIfTheCallWasAnswered(
   conferenceName: string,
   conferenceParticipants: string[],
   callBackup?: boolean,
+  callSendedToSalesRepWeb?: boolean,
+  bdcEmail?: string,
 ) {
   try {
     setTimeout(async () => {
@@ -33,7 +35,22 @@ export async function checkIfTheCallWasAnswered(
       if (!answered?.answered) {
         io.emit('update_data', 'transferCompleted', { conferenceName });
 
-        await transferCall(customerNumber, conferenceSid, conferenceName, callBackup);
+        if (callSendedToSalesRepWeb && bdcEmail && isConnected(bdcEmail)) {
+          checkIfTheCallWasAnswered(
+            customerNumber,
+            conferenceSid,
+            conferenceName,
+            conferenceParticipants,
+          );
+
+          sendTo(bdcEmail, 'joinConference', {
+            conferenceName,
+            conferenceSid,
+            phoneNumber: customerNumber,
+          });
+        } else {
+          await transferCall(customerNumber, conferenceSid, conferenceName, callBackup);
+        }
       }
 
       if (conferenceCustomerData && !conferenceCustomerData.client_id && !answered?.answered) {
