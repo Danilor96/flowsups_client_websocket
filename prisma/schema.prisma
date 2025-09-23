@@ -35,6 +35,7 @@ model Users {
   awaiting_customer                                                 Awaiting_unknow_client[]
   recipient_messages                                                Chat_messages[]                 @relation("recipient")
   sender_messages                                                   Chat_messages[]                 @relation("sender")
+  Client_Bulk_sms                                                   Client_Bulk_sms[]
   assigned_client_lead                                              Client_has_lead[]               @relation("client_lead_seller")
   leads                                                             Client_has_lead[]               @relation("lead_created_by")
   client_bdc                                                        Clients[]                       @relation("bdc")
@@ -434,6 +435,7 @@ model Tasks {
   reminder_sent               Boolean       @default(false)
   reminder_time_id            Int?
   interested_vehicle_id       Int?
+  related_task_id             Int?
   notes                       Task_Notes[]
   appointment                 Appointments? @relation("appointment", fields: [appointment_id], references: [id])
   assigned_bdc                Users?        @relation("assignedBdc", fields: [assigned_bdc_id], references: [id])
@@ -630,7 +632,7 @@ model Contact_time {
 
 model Clients {
   id                                Int                              @id @default(autoincrement())
-  current_address                   String
+  current_address                   String?
   previous_address                  String?
   mailing_address                   String?
   current_job                       String?
@@ -665,7 +667,7 @@ model Clients {
   nickname                          String?
   salutation                        String?
   suffix                            String?
-  client_address_id                 Int
+  client_address_id                 Int?
   client_language_id                Int?
   deleted                           Boolean?                         @default(false)
   lead_temperature_id               Int?
@@ -698,7 +700,7 @@ model Clients {
   Client_vehicle_wishlist           Client_vehicle_wishlist[]
   ad                                Ad_id?                           @relation("ad_id", fields: [ad_id], references: [id])
   bdc                               Users?                           @relation("bdc", fields: [bdc_id], references: [id])
-  client_address                    Client_address                   @relation("client_address", fields: [client_address_id], references: [id])
+  client_address                    Client_address?                  @relation("client_address", fields: [client_address_id], references: [id])
   language                          Languages?                       @relation("client_language", fields: [client_language_id], references: [id])
   client_status                     Client_status?                   @relation("client_status", fields: [client_status_id], references: [id])
   client_type                       Client_types?                    @relation("client_type", fields: [client_type_id], references: [id])
@@ -722,6 +724,7 @@ model Clients {
   credit_app                        Credit_app?                      @relation("client_credit_app")
   credit_app_address                Credit_app_address[]             @relation("credit_app_address")
   Credit_app_code                   Credit_app_code?
+  Credit_app_navigation             Credit_app_navigation?
   credit_app_other_income           Credit_app_other_income[]
   credit_app_reference              Credit_app_reference[]
   client_employment                 Customer_employment[]            @relation("customer")
@@ -758,6 +761,7 @@ model Client_sms {
   message_sid           String?                  @unique
   sent                  Boolean                  @default(false)
   client_phone_number   String                   @default("")
+  is_consent_message    Boolean                  @default(false)
   client_message        Clients?                 @relation("client_message", fields: [client_id], references: [id])
   status                Sms_status               @relation("status", fields: [status_id], references: [id], onDelete: Cascade)
   unregistered_customer Awaiting_unknow_client[] @relation("Awaiting_unknow_clientToClient_sms")
@@ -962,6 +966,7 @@ model Credit_app {
   client_id          Int              @unique
   gender_id          Int?
   created_at         DateTime         @default(now())
+  no_id              Boolean?
   client             Clients          @relation("client_credit_app", fields: [client_id], references: [id], onDelete: Cascade)
   gender             Genders?         @relation("cresit_app_gender", fields: [gender_id], references: [id])
   id_state           Client_id_state? @relation("id_state", fields: [id_state_id], references: [id])
@@ -987,6 +992,7 @@ model Credit_app_address {
   mailing_zip             String?
   current_state_id        Int?
   mailing_state_id        Int?
+  mailing_same_as_current Boolean?
   client                  Clients                    @relation("credit_app_address", fields: [client_id], references: [id], onDelete: Cascade)
   current_type            Credit_app_address_type?   @relation("current_type", fields: [current_address_type_id], references: [id])
   current_month           Credit_app_address_months? @relation("current_month", fields: [current_month_id], references: [id])
@@ -1046,19 +1052,21 @@ model Client_id_state {
 model Customer_employment {
   id                          Int                           @id @default(autoincrement())
   client_id                   Int
-  employment_status_id        Int
+  employment_status_id        Int?
   current_employer_name       String?
   previous_employer_name      String?
-  occupation_id               Int
-  year                        String
-  month_id                    Int
-  income_type_id              Int
-  montly_income               String
+  occupation_id               Int?
+  year                        String?
+  month_id                    Int?
+  income_type_id              Int?
+  montly_income               String?
+  hourlyWage                  String?
+  yearToDate                  String?
   client                      Clients                       @relation("customer", fields: [client_id], references: [id], onDelete: Cascade)
-  employment_status           Employment_statuses           @relation("employment_status", fields: [employment_status_id], references: [id], onDelete: Cascade)
-  income_type                 Customer_income_type          @relation("income_type", fields: [income_type_id], references: [id], onDelete: Cascade)
-  month                       Credit_app_address_months     @relation("employment_months", fields: [month_id], references: [id], onDelete: Cascade)
-  occupation                  Customer_occupation           @relation("customer_occupation", fields: [occupation_id], references: [id], onDelete: Cascade)
+  employment_status           Employment_statuses?          @relation("employment_status", fields: [employment_status_id], references: [id], onDelete: Cascade)
+  income_type                 Customer_income_type?         @relation("income_type", fields: [income_type_id], references: [id], onDelete: Cascade)
+  month                       Credit_app_address_months?    @relation("employment_months", fields: [month_id], references: [id], onDelete: Cascade)
+  occupation                  Customer_occupation?          @relation("customer_occupation", fields: [occupation_id], references: [id], onDelete: Cascade)
   customer_employment_address Customer_employment_address[]
 }
 
@@ -2050,6 +2058,28 @@ model conversations {
   unregistered_customer_id Int?                    @unique
   Clients                  Clients?                @relation(fields: [client_id], references: [id], onDelete: Cascade)
   Awaiting_unknow_client   Awaiting_unknow_client? @relation(fields: [unregistered_customer_id], references: [id], onDelete: Cascade)
+}
+
+model Client_Bulk_sms {
+  id                Int       @id @default(autoincrement())
+  message           String
+  date_sent         DateTime  @default(now())
+  created_at        DateTime  @default(now())
+  completed_at      DateTime?
+  sent_by_user_id   Int?
+  total_recipients  Int
+  successfully_sent Int
+  failed_to_send    Int
+  Users             Users?    @relation(fields: [sent_by_user_id], references: [id])
+}
+
+model Credit_app_navigation {
+  id                     Int     @id @default(autoincrement())
+  customer_id            Int     @unique
+  nextToAddress          Boolean @default(false)
+  nextToEmploymentStatus Boolean @default(false)
+  nextToReferences       Boolean @default(false)
+  Clients                Clients @relation(fields: [customer_id], references: [id], onDelete: Cascade)
 }
 
 enum ListViewTypes {

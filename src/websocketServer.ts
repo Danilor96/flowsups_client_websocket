@@ -70,22 +70,54 @@ app.use(
   }),
 );
 
-app.post('/getZapier', (req, res) => {
-  console.log(req.body.adf.prospect.customer.contact.name[0]._);
-  console.log(req.body.adf.prospect.customer.contact.name[1]._);
-  console.log(req.body.adf.prospect.customer.contact.email);
-  console.log(req.body.adf.prospect.customer.contact.phone);
-  console.log(req.body.adf.prospect.customer.comments);
-  console.log(req.body.adf.prospect.vehicle.$.interest);
-  console.log(req.body.adf.prospect.vehicle.$.status);
-  console.log(req.body.adf.prospect.vehicle.make);
-  console.log(req.body.adf.prospect.vehicle.model);
-  console.log(req.body.adf.prospect.vehicle.year);
-  console.log(req.body.adf.prospect.vehicle.odometer._);
-  console.log(req.body.adf.prospect.vehicle.odometer.$.units);
-  console.log(req.body.adf.prospect.vehicle.trim);
+app.post('/getZapier', async (req, res) => {
+  const { email, full_name, lastname, name, phone_number, status, timezone, user_id } = req.body;
 
-  res.send('Llegó');
+  console.log(req.body);
+
+  try {
+    const mobilePhoneFormatted = phone_number.slice(-10);
+
+    const newCustomerFromZapier = await prisma.clients.create({
+      data: {
+        email: '',
+        first_name: name,
+        last_name: lastname,
+        mobile_phone: mobilePhoneFormatted,
+        social_security: '',
+        lead_type_id: 1,
+      },
+    });
+
+    res.send('Llegó');
+  } catch (error) {
+    console.log(error);
+
+    res.send('Error: ' + error);
+  }
+
+  // email: 'romerodaniel908@gmail.com',
+  // full_name: 'Daniel Romero',
+  // lastname: 'Romero',
+  // name: 'Daniel',
+  // phone_number: '+12243109214',
+  // status: 'active',
+  // timezone: 'UTC±00',
+  // user_id: '496772552'
+
+  // console.log(req.body.adf.prospect.customer.contact.name[0]._);
+  // console.log(req.body.adf.prospect.customer.contact.name[1]._);
+  // console.log(req.body.adf.prospect.customer.contact.email);
+  // console.log(req.body.adf.prospect.customer.contact.phone);
+  // console.log(req.body.adf.prospect.customer.comments);
+  // console.log(req.body.adf.prospect.vehicle.$.interest);
+  // console.log(req.body.adf.prospect.vehicle.$.status);
+  // console.log(req.body.adf.prospect.vehicle.make);
+  // console.log(req.body.adf.prospect.vehicle.model);
+  // console.log(req.body.adf.prospect.vehicle.year);
+  // console.log(req.body.adf.prospect.vehicle.odometer._);
+  // console.log(req.body.adf.prospect.vehicle.odometer.$.units);
+  // console.log(req.body.adf.prospect.vehicle.trim);
 });
 
 // object to save current flowsups connected users
