@@ -36,12 +36,16 @@ export async function checkIfTheCallWasAnswered(
         io.emit('update_data', 'transferCompleted', { conferenceName });
 
         if (callSendedToSalesRepWeb && bdcEmail && isConnected(bdcEmail)) {
+          console.log('conferenceName 1: ', conferenceName);
+
           checkIfTheCallWasAnswered(
             customerNumber,
             conferenceSid,
             conferenceName,
             conferenceParticipants,
           );
+
+          console.log('conferenceName 2: ', conferenceName);
 
           sendTo(bdcEmail, 'joinConference', {
             conferenceName,

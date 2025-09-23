@@ -42,8 +42,6 @@ export async function handlingConferenceStatus({
 
     const usersConnectedArray = Object.values(connectedUsers);
 
-    console.log('usersConnectedArray: ', usersConnectedArray);
-
     // first conference action sequence
     if (sequence === '1') {
       // variable for call backup phone number after bdc/sales rep transfer call
@@ -526,6 +524,8 @@ export async function sendCallToWeb(
   customerPhone: string,
   userEmail?: string,
 ) {
+  console.log('conferenceName sendCallToWeb: ', conferenceName);
+
   if (userEmail) {
     sendTo(userEmail, 'joinConference', {
       conferenceName,
