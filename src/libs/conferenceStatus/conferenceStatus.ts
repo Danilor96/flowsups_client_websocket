@@ -1,13 +1,6 @@
 import { ParticipantInstance } from 'twilio/lib/rest/api/v2010/account/conference/participant';
 import { prisma } from '../prisma/prisma';
-import {
-  io,
-  sendTo,
-  client,
-  connectedUsers,
-  isConnected,
-  usersConnectedArray,
-} from '../../websocketServer';
+import { io, sendTo, client, connectedUsers, isConnected } from '../../websocketServer';
 import { createCallStatusInDatabase } from './createCallStatusInDatabase';
 import { deleteConferenceName } from './deleteConferenceName';
 import { checkIfCustomerIsInAwaitingTable } from './checkIfCustomerIsInAwaitingTable';
@@ -46,6 +39,10 @@ export async function handlingConferenceStatus({
 }: ConferenceData) {
   try {
     const from = callSid ? (await client.calls(callSid).fetch()).from.slice(2) : '';
+
+    const usersConnectedArray = Object.values(connectedUsers);
+
+    console.log('usersConnectedArray: ', usersConnectedArray);
 
     // first conference action sequence
     if (sequence === '1') {
@@ -105,10 +102,6 @@ export async function handlingConferenceStatus({
       if (customerData) {
         const isSalesRepConnected = hasSalesRep && isConnected(hasSalesRep.email);
 
-        console.log('isConnected(hasSalesRep.email): ', isConnected(hasSalesRep?.email || ''));
-        console.log('hasSalesRep: ', hasSalesRep);
-        console.log('isSalesRepConnected: ', isSalesRepConnected);
-        
         if (isSalesRepConnected) {
           callSendedToSalesRepWeb = true;
 

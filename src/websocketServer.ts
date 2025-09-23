@@ -92,12 +92,11 @@ app.post('/getZapier', (req, res) => {
 
 export const connectedUsers: { [id: string]: string } = {};
 
-export const usersConnectedArray = Object.values(connectedUsers);
-
 // function to check if the related web user is connected
 export const isConnected = (email: string) => {
-  // return usersConnectedArray.includes(email);
-  return true;
+  const usersConnectedArray = Object.values(connectedUsers);
+
+  return usersConnectedArray.includes(email);
 };
 
 //function for specify a user in the websocket with email
