@@ -105,6 +105,10 @@ export async function handlingConferenceStatus({
       if (customerData) {
         const isSalesRepConnected = hasSalesRep && isConnected(hasSalesRep.email);
 
+        console.log('isConnected(hasSalesRep.email): ', isConnected(hasSalesRep?.email || ''));
+        console.log('hasSalesRep: ', hasSalesRep);
+        console.log('isSalesRepConnected: ', isSalesRepConnected);
+        
         if (isSalesRepConnected) {
           callSendedToSalesRepWeb = true;
 

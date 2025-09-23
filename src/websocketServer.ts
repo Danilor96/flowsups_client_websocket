@@ -96,7 +96,8 @@ export const usersConnectedArray = Object.values(connectedUsers);
 
 // function to check if the related web user is connected
 export const isConnected = (email: string) => {
-  return usersConnectedArray.includes(email);
+  // return usersConnectedArray.includes(email);
+  return true;
 };
 
 //function for specify a user in the websocket with email
