@@ -83,9 +83,10 @@ app.post('/getZapier', async (req, res) => {
         city: '',
         street: '',
         state_id: 1,
+        current_data_from_webhook: true,
       },
     });
-
+    
     const newCustomerFromZapier = await prisma.clients.create({
       data: {
         email: '',
@@ -96,6 +97,7 @@ app.post('/getZapier', async (req, res) => {
         lead_type_id: 1,
         client_address_id: randomCustomerAddress.id,
         current_address: '',
+        current_data_from_webhook: true,
       },
     });
 
