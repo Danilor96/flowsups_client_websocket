@@ -78,6 +78,14 @@ app.post('/getZapier', async (req, res) => {
   try {
     const mobilePhoneFormatted = phone_number.slice(-10);
 
+    const randomCustomerAddress = await prisma.client_address.create({
+      data: {
+        city: '',
+        street: '',
+        state_id: 1,
+      },
+    });
+
     const newCustomerFromZapier = await prisma.clients.create({
       data: {
         email: '',
@@ -86,6 +94,8 @@ app.post('/getZapier', async (req, res) => {
         mobile_phone: mobilePhoneFormatted,
         social_security: '',
         lead_type_id: 1,
+        client_address_id: randomCustomerAddress.id,
+        current_address: '',
       },
     });
 

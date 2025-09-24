@@ -588,15 +588,16 @@ model County {
 }
 
 model Client_address {
-  id             Int       @id @default(autoincrement())
-  city           String
-  street         String
-  state_id       Int
-  county_id      Int?
-  zip            String?
-  county         County?   @relation("client_address_county", fields: [county_id], references: [id])
-  state          States    @relation("client_address_state", fields: [state_id], references: [id])
-  client_address Clients[] @relation("client_address")
+  id                        Int       @id @default(autoincrement())
+  city                      String
+  street                    String
+  state_id                  Int
+  county_id                 Int?
+  zip                       String?
+  current_data_from_webhook Boolean   @default(false)
+  county                    County?   @relation("client_address_county", fields: [county_id], references: [id])
+  state                     States    @relation("client_address_state", fields: [state_id], references: [id])
+  client_address            Clients[] @relation("client_address")
 }
 
 model Clients_has_referrer {
@@ -632,7 +633,7 @@ model Contact_time {
 
 model Clients {
   id                                Int                              @id @default(autoincrement())
-  current_address                   String?
+  current_address                   String
   previous_address                  String?
   mailing_address                   String?
   current_job                       String?
@@ -667,7 +668,7 @@ model Clients {
   nickname                          String?
   salutation                        String?
   suffix                            String?
-  client_address_id                 Int?
+  client_address_id                 Int
   client_language_id                Int?
   deleted                           Boolean?                         @default(false)
   lead_temperature_id               Int?
@@ -690,6 +691,7 @@ model Clients {
   home_default                      Boolean                          @default(false)
   mobile_default                    Boolean                          @default(true)
   work_default                      Boolean                          @default(false)
+  current_data_from_webhook         Boolean                          @default(false)
   appointment                       Appointments[]                   @relation("customer")
   calls                             Client_calls[]                   @relation("client_call")
   buyer_client                      Client_has_cobuyer?              @relation("buyer_client")
@@ -700,7 +702,7 @@ model Clients {
   Client_vehicle_wishlist           Client_vehicle_wishlist[]
   ad                                Ad_id?                           @relation("ad_id", fields: [ad_id], references: [id])
   bdc                               Users?                           @relation("bdc", fields: [bdc_id], references: [id])
-  client_address                    Client_address?                  @relation("client_address", fields: [client_address_id], references: [id])
+  client_address                    Client_address                   @relation("client_address", fields: [client_address_id], references: [id])
   language                          Languages?                       @relation("client_language", fields: [client_language_id], references: [id])
   client_status                     Client_status?                   @relation("client_status", fields: [client_status_id], references: [id])
   client_type                       Client_types?                    @relation("client_type", fields: [client_type_id], references: [id])
