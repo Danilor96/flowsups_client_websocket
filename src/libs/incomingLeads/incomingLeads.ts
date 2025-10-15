@@ -1,3 +1,4 @@
+import { io } from '../../websocketServer';
 import { prisma } from '../prisma/prisma';
 import { ADFData } from './types';
 
@@ -24,12 +25,42 @@ export async function incomingLeads(adfData: ADFData) {
         mobile_phone: phone,
         first_name: first._ || '',
         last_name: last._ || '',
+        name_lastname: `${first._ || ''} ${last._ || ''}`,
         social_security: '',
         lead_type_id: 1,
         client_address_id: address.id,
         lead_source_id: 7,
+        client_status_id: 1,
       },
     });
+
+    const lead = await prisma.leads.create({
+      data: {
+        customer_id: newUser.id,
+        customer_status_id: 1,
+      },
+    });
+
+    const event = await prisma?.events.create({
+      data: {
+        description: `Customer created from email`,
+        updated_at: new Date(),
+        client_id: newUser.id,
+        updated_by: 1,
+      },
+    });
+
+    await prisma?.notifications.create({
+      data: {
+        message: `New customer created: ${newUser.first_name ?? ''} ${newUser.last_name ?? ''}`,
+        type_id: 1,
+        user_id: 1,
+        customer_id: newUser.id,
+        notification_for_managers: true,
+      },
+    });
+
+    io.emit('update_data', 'notifications');
 
     console.log('Guardado');
   } catch (error) {
