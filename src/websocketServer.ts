@@ -120,6 +120,10 @@ async function processComplexHtmlBody(htmlBody: string): Promise<any | null> {
 
 app.post('/getZapier', async (req, res) => {
   try {
+    console.log("Este es el req: ", req);
+    console.log("Este es el body: ", req.body);
+    console.log("Este es el html: ", req.body.html);
+
     const rawHtml = req.body.html;
   
     const xmlProcessed = await processComplexHtmlBody(rawHtml);
