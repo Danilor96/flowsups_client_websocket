@@ -119,15 +119,17 @@ async function processComplexHtmlBody(htmlBody: string): Promise<any | null> {
 }
 
 app.post('/getZapier', async (req, res) => {
-  const rawHtml = req.body.html;
-
-  const xmlProcessed = await processComplexHtmlBody(rawHtml);
-
-  // console.dir(xmlProcessed, { depth: null });
-
-  const { adf } = xmlProcessed;
-
-  await incomingLeads(adf);
+  try {
+    const rawHtml = req.body.html;
+  
+    const xmlProcessed = await processComplexHtmlBody(rawHtml);
+  
+    const { adf } = xmlProcessed;
+  
+    await incomingLeads(adf);
+  } catch (error) {
+   console.log(error);
+  }
 
   res.send('Llegó');
 });
