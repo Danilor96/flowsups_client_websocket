@@ -72,6 +72,7 @@ model Users {
   Customer_Report_Users_default_customer_report_idToCustomer_Report Customer_Report?                @relation("Users_default_customer_report_idToCustomer_Report", fields: [default_customer_report_id], references: [id])
   users_status                                                      User_status?                    @relation("status", fields: [status_id], references: [id])
   user_code                                                         Users_has_codes?
+  Users_has_customers                                               Users_has_customers[]
   user_has                                                          Users_has_roles?
   vehicle_delivery_assigned                                         Vehicle_delivery[]              @relation("assigned")
   vehicle_delivery_creator                                          Vehicle_delivery[]              @relation("creator")
@@ -644,14 +645,14 @@ model Clients {
   duplicate                         String?
   contact_method_id                 Int?
   lead_source_id                    Int?
-  lead_type_id                      Int
+  lead_type_id                      Int?
   inquiry_type_id                   Int?
   born_date                         DateTime?
   created_at                        DateTime                         @default(now())
-  email                             String                           @unique
+  email                             String?                          @unique
   gender_id                         Int?
   home_phone                        String?
-  mobile_phone                      String                           @unique
+  mobile_phone                      String?                          @unique
   seller_id                         Int?
   social_security                   String
   work_phone                        String?
@@ -692,6 +693,7 @@ model Clients {
   mobile_default                    Boolean                          @default(true)
   work_default                      Boolean                          @default(false)
   current_data_from_webhook         Boolean                          @default(false)
+  funding_list_status_id            Int?
   appointment                       Appointments[]                   @relation("customer")
   calls                             Client_calls[]                   @relation("client_call")
   buyer_client                      Client_has_cobuyer?              @relation("buyer_client")
@@ -711,12 +713,13 @@ model Clients {
   country_code                      Country_phone_code?              @relation("country_phone_code", fields: [country_phone_code_id], references: [id])
   credit_app_list_status            Credit_app_list_status?          @relation("credit_app_list_status", fields: [credit_app_list_status_id], references: [id])
   finance_manager                   Users?                           @relation("finance_manager", fields: [finance_manager_id], references: [id])
+  Funding_list_status               Funding_list_status?             @relation(fields: [funding_list_status_id], references: [id])
   gender                            Genders?                         @relation("gender", fields: [gender_id], references: [id])
   inquiry_type                      Inquiry_types?                   @relation("inquiry_type", fields: [inquiry_type_id], references: [id])
   interested_vehicle                Vehicles?                        @relation("interested_vehicle", fields: [intereseted_vehicle_id], references: [id])
   lead_source                       Lead_sources?                    @relation("lead_source", fields: [lead_source_id], references: [id])
   client_lead_temperature           Lead_temperature?                @relation("lead_temperature", fields: [lead_temperature_id], references: [id])
-  lead_type                         Lead_types                       @relation("lead_type", fields: [lead_type_id], references: [id])
+  lead_type                         Lead_types?                      @relation("lead_type", fields: [lead_type_id], references: [id])
   sales_manager                     Users?                           @relation("sales_manager", fields: [sales_manager_id], references: [id])
   seller                            Users?                           @relation("seller", fields: [seller_id], references: [id])
   file                              Clients_has_files[]              @relation("client")
@@ -739,6 +742,7 @@ model Clients {
   customers_noti                    Notifications[]                  @relation("customers_noti")
   customer_task                     Tasks[]                          @relation("customer_task")
   Terms_and_conditions_processed    Terms_and_conditions_processed[]
+  Users_has_customers               Users_has_customers[]
   vehicle_delivery                  Vehicle_delivery[]
   conversations                     conversations?
 }
@@ -764,6 +768,7 @@ model Client_sms {
   sent                  Boolean                  @default(false)
   client_phone_number   String                   @default("")
   is_consent_message    Boolean                  @default(false)
+  manual_sent           Boolean                  @default(true)
   client_message        Clients?                 @relation("client_message", fields: [client_id], references: [id])
   status                Sms_status               @relation("status", fields: [status_id], references: [id], onDelete: Cascade)
   unregistered_customer Awaiting_unknow_client[] @relation("Awaiting_unknow_clientToClient_sms")
@@ -1597,19 +1602,19 @@ model AmountPerDate {
 }
 
 model Vehicle_delivery {
-  id            Int      @id @default(autoincrement())
+  id            Int       @id @default(autoincrement())
   customer_id   Int
   created_by    Int
   assigned_to   Int
   vehicle_id    Int
   start_date    DateTime
-  end_date      DateTime
+  end_date      DateTime?
   reminder_time Int
   Leads         Leads[]
-  assigned      Users    @relation("assigned", fields: [assigned_to], references: [id], onDelete: Cascade)
-  creator       Users    @relation("creator", fields: [created_by], references: [id], onDelete: Cascade)
-  customer      Clients  @relation(fields: [customer_id], references: [id], onDelete: Cascade)
-  vehicle       Vehicles @relation(fields: [vehicle_id], references: [id], onDelete: Cascade)
+  assigned      Users     @relation("assigned", fields: [assigned_to], references: [id], onDelete: Cascade)
+  creator       Users     @relation("creator", fields: [created_by], references: [id], onDelete: Cascade)
+  customer      Clients   @relation(fields: [customer_id], references: [id], onDelete: Cascade)
+  vehicle       Vehicles  @relation(fields: [vehicle_id], references: [id], onDelete: Cascade)
 }
 
 model Credit_app_reference_relationship {
@@ -2021,12 +2026,14 @@ model Leads {
   deposit_id                            Int[]                    @default([])
   client_has_lead_id                    Int[]                    @default([])
   is_active                             Boolean                  @default(true)
+  customer_funding_list_status_id       Int?
   AmountPerDate                         AmountPerDate?           @relation(fields: [amountPerDate_id], references: [id])
   Users_Leads_bdc_idToUsers             Users?                   @relation("Leads_bdc_idToUsers", fields: [bdc_id], references: [id])
   Client_vehicle_tradein                Client_vehicle_tradein?  @relation(fields: [client_vehicle_tradein_id], references: [id])
   Client_vehicle_wishlist               Client_vehicle_wishlist? @relation(fields: [client_vehicle_wishlist_id], references: [id])
   Client_has_cobuyer                    Client_has_cobuyer?      @relation(fields: [customer_cobuyer_id], references: [id])
   Credit_app_list_status                Credit_app_list_status?  @relation(fields: [customer_credit_app_list_status_id], references: [id])
+  Funding_list_status                   Funding_list_status?     @relation(fields: [customer_funding_list_status_id], references: [id])
   Clients                               Clients                  @relation(fields: [customer_id], references: [id], onDelete: Cascade)
   Clients_has_referrer                  Clients_has_referrer?    @relation(fields: [customer_referrer_id], references: [id])
   Client_status                         Client_status?           @relation(fields: [customer_status_id], references: [id])
@@ -2082,6 +2089,22 @@ model Credit_app_navigation {
   nextToEmploymentStatus Boolean @default(false)
   nextToReferences       Boolean @default(false)
   Clients                Clients @relation(fields: [customer_id], references: [id], onDelete: Cascade)
+}
+
+model Funding_list_status {
+  id      Int       @id @default(autoincrement())
+  status  String
+  Clients Clients[]
+  Leads   Leads[]
+}
+
+model Users_has_customers {
+  user_id     Int
+  customer_id Int
+  created_at  DateTime @default(now())
+  id          Int      @id @default(autoincrement())
+  Clients     Clients  @relation(fields: [customer_id], references: [id], onDelete: Cascade)
+  Users       Users    @relation(fields: [user_id], references: [id], onDelete: Cascade)
 }
 
 enum ListViewTypes {

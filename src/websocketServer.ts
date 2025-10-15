@@ -34,6 +34,10 @@ import {
   callCreation,
   voiceSystemBackupNumber,
 } from './libs/conferenceStatus/transferCall/transferCall';
+import { decode } from 'html-entities';
+import { Parser, processors } from 'xml2js';
+import * as cheerio from 'cheerio';
+import { incomingLeads } from './libs/incomingLeads/incomingLeads';
 
 const accountSid = process.env.TWILIO_ACCOUNT_SID;
 const authToken = process.env.TWILIO_AUTH_TOKEN;
@@ -70,66 +74,62 @@ app.use(
   }),
 );
 
-app.post('/getZapier', async (req, res) => {
-  const { email, full_name, lastname, name, phone_number, status, timezone, user_id } = req.body;
-
-  console.log(req.body);
-
+async function processComplexHtmlBody(htmlBody: string): Promise<any | null> {
   try {
-    const mobilePhoneFormatted = phone_number.slice(-10);
+    // 1. Cargar el HTML completo en Cheerio
+    const $ = cheerio.load(htmlBody);
 
-    const randomCustomerAddress = await prisma.client_address.create({
-      data: {
-        city: '',
-        street: '',
-        state_id: 1,
-        current_data_from_webhook: true,
-      },
-    });
-    
-    const newCustomerFromZapier = await prisma.clients.create({
-      data: {
-        email: '',
-        first_name: name,
-        last_name: lastname,
-        mobile_phone: mobilePhoneFormatted,
-        social_security: '',
-        lead_type_id: 1,
-        client_address_id: randomCustomerAddress.id,
-        current_address: '',
-        current_data_from_webhook: true,
-      },
-    });
+    // 2. Extraer TODO el texto plano del documento. Cheerio se encarga de
+    // juntar el texto de todos los <span> y descartar las etiquetas.
+    const allText = $.text();
 
-    res.send('Llegó');
+    // 3. ¡AHORA sí usamos una RegEx sobre el texto ya limpio!
+    // La 's' al final es importante: permite que el '.' incluya saltos de línea.
+    // Nota: Tu XML no tiene el prefijo "adf:", así que lo quité de la regex.
+    const xmlRegex = /(<\?xml[\s\S]*?<\/adf>)/;
+    const match = allText.match(xmlRegex);
+
+    if (!match || !match[0]) {
+      console.log('No se encontró el bloque XML en el texto extraído del HTML.');
+      // Opcional: Imprime el texto extraído para depurar
+      // console.log('Texto extraído:', allText);
+      return null;
+    }
+
+    const xmlString = match[0];
+    console.log('XML extraído del texto plano:', xmlString.substring(0, 90) + '...');
+
+    // 4. Decodificar por si alguna entidad HTML persiste (buena práctica)
+    const decodedXml = decode(xmlString);
+
+    // 5. Convertir a JSON
+    const parser = new Parser({
+      explicitArray: false,
+      trim: true,
+      // No necesitamos procesador de prefijos si el XML no los tiene
+    });
+    const jsonObject = await parser.parseStringPromise(decodedXml);
+
+    // Aquí puedes reincorporar tu función para aplanar el objeto si lo deseas
+    return jsonObject;
   } catch (error) {
-    console.log(error);
-
-    res.send('Error: ' + error);
+    console.error('Error durante el proceso:', error);
+    return null;
   }
+}
 
-  // email: 'romerodaniel908@gmail.com',
-  // full_name: 'Daniel Romero',
-  // lastname: 'Romero',
-  // name: 'Daniel',
-  // phone_number: '+12243109214',
-  // status: 'active',
-  // timezone: 'UTC±00',
-  // user_id: '496772552'
+app.post('/getZapier', async (req, res) => {
+  const rawHtml = req.body.html;
 
-  // console.log(req.body.adf.prospect.customer.contact.name[0]._);
-  // console.log(req.body.adf.prospect.customer.contact.name[1]._);
-  // console.log(req.body.adf.prospect.customer.contact.email);
-  // console.log(req.body.adf.prospect.customer.contact.phone);
-  // console.log(req.body.adf.prospect.customer.comments);
-  // console.log(req.body.adf.prospect.vehicle.$.interest);
-  // console.log(req.body.adf.prospect.vehicle.$.status);
-  // console.log(req.body.adf.prospect.vehicle.make);
-  // console.log(req.body.adf.prospect.vehicle.model);
-  // console.log(req.body.adf.prospect.vehicle.year);
-  // console.log(req.body.adf.prospect.vehicle.odometer._);
-  // console.log(req.body.adf.prospect.vehicle.odometer.$.units);
-  // console.log(req.body.adf.prospect.vehicle.trim);
+  const xmlProcessed = await processComplexHtmlBody(rawHtml);
+
+  // console.dir(xmlProcessed, { depth: null });
+
+  const { adf } = xmlProcessed;
+
+  await incomingLeads(adf);
+
+  res.send('Llegó');
 });
 
 // object to save current flowsups connected users

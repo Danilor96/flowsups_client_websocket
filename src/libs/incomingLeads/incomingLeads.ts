@@ -1,0 +1,67 @@
+import { prisma } from '../prisma/prisma';
+import { ADFData } from './types';
+
+export async function incomingLeads(adfData: ADFData) {
+  try {
+    const { customer, provider, requestdate, vehicle, vendor } = adfData.prospect;
+
+    const { email, name, phone } = customer.contact;
+
+    const [first, last] = name;
+
+    const address = await prisma.client_address.create({
+      data: {
+        city: '',
+        street: '',
+        state_id: 1,
+      },
+    });
+
+    const newUser = await prisma.clients.create({
+      data: {
+        current_address: '',
+        email: email,
+        mobile_phone: phone,
+        first_name: first._ || '',
+        last_name: last._ || '',
+        social_security: '',
+        lead_type_id: 1,
+        client_address_id: address.id,
+        lead_source_id: 7,
+      },
+    });
+
+    console.log('Guardado');
+  } catch (error) {
+    console.log(error);
+  }
+}
+
+// {
+//   adf: {
+//     prospect: {
+//       requestdate: '[]',
+//       provider: { name: 'Facebook K Bots', service: '[]', url: '' },
+//       vendor: { vendorname: 'Zapier' },
+//       customer: {
+//         contact: {
+//           name: [
+//             { _: 'Pablo', '$': { part: 'first' } },
+//             { _: 'Perez', '$': { part: 'last' } }
+//           ],
+//           email: 'mail@example.com',
+//           phone: '444444444'
+//         },
+//         comments: 'Esta persona dejo su numero en Facebook, llamar {{178175579__user__custom_fields__Hour_tocall}}.'
+//       },
+//       vehicle: {
+//         '$': { interest: 'buy', status: 'used' },
+//         make: '[Make]',
+//         model: '[Model]',
+//         year: '[Year]',
+//         odometer: { _: '[Odometer Reading]', '$': { units: 'mi' } },
+//         trim: '[Trim level]'
+//       }
+//     }
+//   }
+// }
