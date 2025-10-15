@@ -46,7 +46,6 @@ export async function incomingLeads(adfData: ADFData) {
         description: `Customer created from email`,
         updated_at: new Date(),
         client_id: newUser.id,
-        updated_by: 1,
       },
     });
 
@@ -54,7 +53,6 @@ export async function incomingLeads(adfData: ADFData) {
       data: {
         message: `New customer created: ${newUser.first_name ?? ''} ${newUser.last_name ?? ''}`,
         type_id: 1,
-        user_id: 1,
         customer_id: newUser.id,
         notification_for_managers: true,
       },
