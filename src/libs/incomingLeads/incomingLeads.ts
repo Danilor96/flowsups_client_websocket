@@ -21,8 +21,8 @@ export async function incomingLeads(adfData: ADFData) {
     const newUser = await prisma.clients.create({
       data: {
         current_address: '',
-        email: email,
-        mobile_phone: phone,
+        email: email || null,
+        mobile_phone: phone || null,
         first_name: first._ || '',
         last_name: last._ || '',
         name_lastname: `${first._ || ''} ${last._ || ''}`,
