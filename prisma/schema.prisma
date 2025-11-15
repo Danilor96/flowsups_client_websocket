@@ -786,6 +786,7 @@ model Client_sms {
   is_reply_to_user                           Boolean                  @default(false)
   replied_to_user_id                         Int?
   sender_user_id                             Int?
+  has_customer_reply                         Boolean                  @default(false)
   client_message                             Clients?                 @relation("client_message", fields: [client_id], references: [id])
   Users_Client_sms_replied_to_user_idToUsers Users?                   @relation("Client_sms_replied_to_user_idToUsers", fields: [replied_to_user_id], references: [id])
   Users_Client_sms_sender_user_idToUsers     Users?                   @relation("Client_sms_sender_user_idToUsers", fields: [sender_user_id], references: [id])

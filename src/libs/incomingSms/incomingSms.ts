@@ -113,6 +113,17 @@ export async function handlingIncomingSms({ from, message, file }: IncomingSmsDa
         },
       });
 
+      if(lastSms && lastSmsIsSentByUser) {
+        await prisma.client_sms.update({
+          where: {
+            id: lastSms?.id,
+          },
+          data: {
+            has_customer_reply: true,
+          }
+        })
+      }
+
       userId = data?.client_message?.seller_id;
       customerId = registeredCustomerData.id;
 
@@ -195,6 +206,17 @@ export async function handlingIncomingSms({ from, message, file }: IncomingSmsDa
               },
             },
           });
+
+          if (lastSms && lastSmsIsSentByUser) {
+            await prisma.client_sms.update({
+              where: {
+                id: lastSms?.id,
+              },
+              data: {
+                has_customer_reply: true,
+              },
+            });
+          }
 
           userId = data.client_message?.seller_id;
         } else {
