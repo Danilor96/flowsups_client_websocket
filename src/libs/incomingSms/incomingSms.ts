@@ -76,6 +76,16 @@ export async function handlingIncomingSms({ from, message, file }: IncomingSmsDa
     // is related to an unknown customer registered
 
     if (registeredCustomerData && registeredCustomerData.id) {
+      const lastSms = await prisma.client_sms.findFirst({
+        where: {
+          client_id: registeredCustomerData.id,
+        },
+        orderBy: {
+          date_sent: 'desc',
+        },
+      })
+      const lastSmsIsSentByUser = lastSms?.sent_by_user || false;
+
       const data = await prisma.client_sms.create({
         data: {
           message: message,
@@ -85,6 +95,9 @@ export async function handlingIncomingSms({ from, message, file }: IncomingSmsDa
           status_id: 2,
           fileAttachment: file,
           client_phone_number: fromFormatted,
+
+          is_reply_to_user: lastSmsIsSentByUser,
+          replied_to_user_id: lastSms?.sender_user_id,
         },
         include: {
           user: {
@@ -138,6 +151,16 @@ export async function handlingIncomingSms({ from, message, file }: IncomingSmsDa
 
       if (awaitingCustomer) {
         if (awaitingCustomer.user_id) {
+          const lastSms = await prisma.client_sms.findFirst({
+            where: {
+              client_phone_number: fromFormatted,
+            },
+            orderBy: {
+              date_sent: 'desc',
+            },
+          });
+          const lastSmsIsSentByUser = lastSms?.sent_by_user || false;
+
           const data = await prisma.client_sms.create({
             data: {
               message: message,
@@ -146,6 +169,8 @@ export async function handlingIncomingSms({ from, message, file }: IncomingSmsDa
               status_id: 2,
               fileAttachment: file,
               client_phone_number: fromFormatted,
+              is_reply_to_user: lastSmsIsSentByUser,
+              replied_to_user_id: lastSms?.sender_user_id,
               unregistered_customer: {
                 connect: {
                   id: awaitingCustomer.id,
