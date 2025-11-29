@@ -208,9 +208,27 @@ export async function smsStatus(
 
     if (errorCode && errorMessage && typeof messageSid === 'string') {
       if (status === 'failed') {
-        const sms = await prisma.client_sms.delete({
+        // const sms = await prisma.client_sms.delete({
+        //   where: {
+        //     message_sid: messageSid,
+        //   },
+        //   include: {
+        //     user: {
+        //       select: {
+        //         id: true,
+        //       },
+        //     },
+        //   },
+        // });
+        
+        const sms = await prisma.client_sms.update({
           where: {
             message_sid: messageSid,
+          },
+          data: {
+            delivered: false,
+            sent: false,
+            failed: true,
           },
           include: {
             user: {
@@ -220,7 +238,7 @@ export async function smsStatus(
             },
           },
         });
-        //
+
         await createNotification({
           message: `Error sending SMS to client ${to}`,
           notificationType: {
