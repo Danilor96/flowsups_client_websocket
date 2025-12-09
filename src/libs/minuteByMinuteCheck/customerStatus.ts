@@ -1,64 +1,89 @@
 import {} from 'date-fns';
 import { prisma } from '../prisma/prisma';
-import { daysSinceXDate } from './datesDifferences/daysSinceXDate';
-import { io } from '../../websocketServer';
+import { CustomersStatuses, io } from '../../websocketServer';
 
-export async function customerStatus() {
+export async function customerStatusLostChecking() {
   try {
     // get the customers settings
 
     const customerSettings = await prisma.customer_settings.findFirst();
 
-    // get the customers with any status except "lost"
-
-    const customers = await prisma.clients.findMany({
-      where: {
-        client_status_id: {
-          not: 12,
-        },
-      },
-    });
-
-    let modifiedRows = 0;
-    const modifiedCustomersId: number[] = [];
-
     // check if there are clients with any status except "lost" and if already exists a customers configuration
 
-    if (customers && customers.length > 0 && customerSettings) {
-      // get the days after a lead is going to be setted as "lost"
-      const daysAfterSetLeadAsLost = customerSettings.lead_lost_after;
+    const lostCustomerChangeSetting = customerSettings && customerSettings.lead_lost_after > 0;
 
-      for (const customer of customers) {
-        if (customer.last_activity) {
-          const lastActivityDate = new Date(customer.last_activity);
+    if (lostCustomerChangeSetting) {
+      const dateCutoff = new Date();
+      dateCutoff.setDate(dateCutoff.getDate() - customerSettings.lead_lost_after);
 
-          const daysSinceLastActivity = daysSinceXDate(lastActivityDate);
+      await prisma.leads.updateMany({
+        where: {
+          has_ended: false,
+          Clients: {
+            last_activity: {
+              lte: dateCutoff,
+            },
+          },
+        },
+        data: {
+          customer_status_id: CustomersStatuses.Lost,
+        },
+      });
 
-          if (daysAfterSetLeadAsLost && daysSinceLastActivity > daysAfterSetLeadAsLost) {
-            // if there is a customer with a "last activity day" that exceed the
-            // "day after been considered lost", then changes the status to "lost"
+      await prisma.clients.updateMany({
+        where: {
+          Leads: {
+            some: {
+              has_ended: false,
+            },
+          },
+          last_activity: {
+            lte: dateCutoff,
+          },
+        },
+        data: {
+          client_status_id: CustomersStatuses.Lost,
+          lost_date: new Date().toISOString(),
+        },
+      });
 
-            const data = await prisma.clients.update({
-              where: {
-                id: customer.id,
-              },
-              data: {
-                client_status_id: 12,
-              },
-            });
+      const description = 'Lead setted to lost from system automated settings';
 
-            modifiedRows += 1;
-            modifiedCustomersId.push(data.id);
-          }
-        }
-      }
-    }
+      const clientsId = await prisma.clients.findMany({
+        where: {
+          Leads: {
+            some: {
+              has_ended: false,
+            },
+          },
+          last_activity: {
+            lte: dateCutoff,
+          },
+        },
+        select: {
+          id: true,
+        },
+      });
 
-    if (modifiedRows > 0) {
-      io.emit('update_data', 'lostCustomers', {
-        modifiedCustomersId,
+      const commonData = {
+        description,
+        updated_at: new Date().toISOString(),
+        updated_by: 1,
+      };
+
+      const eventsToCreate = clientsId.map((customer) => ({
+        ...commonData,
+        client_id: customer.id,
+      }));
+
+      await prisma.events.createMany({
+        data: eventsToCreate,
       });
     }
+
+    // io.emit('update_data', 'lostCustomers', {
+    //   modifiedCustomersId,
+    // });
   } catch (error) {
     console.log(error);
   }

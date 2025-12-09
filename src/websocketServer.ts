@@ -17,7 +17,7 @@ import { pendingAppointments } from './libs/minuteByMinuteCheck/pendingAppointme
 import { pendingRescheduleAppointments } from './libs/minuteByMinuteCheck/pendingRescheduleAppointments';
 import { latesUsersTasks } from './libs/minuteByMinuteCheck/lateUsersTasks';
 import { pendingDeliveries } from './libs/minuteByMinuteCheck/pendingDeliveries';
-import { customerStatus } from './libs/minuteByMinuteCheck/customerStatus';
+import { customerStatusLostChecking } from './libs/minuteByMinuteCheck/customerStatus';
 import { parseISO } from 'date-fns';
 import { smsStatus } from './libs/sentSmsStatus/sentSmsStatus';
 import { checkSendingsSms } from './libs/checkSendingsSms/checkSendingsSms';
@@ -38,6 +38,21 @@ import { decode } from 'html-entities';
 import { Parser, processors } from 'xml2js';
 import * as cheerio from 'cheerio';
 import { incomingLeads } from './libs/incomingLeads/incomingLeads';
+
+export enum CustomersStatuses {
+  New = 1,
+  Contacted = 2,
+  CreditApp = 3,
+  Delivery = 4,
+  Undelivery = 5,
+  Appointment = 6,
+  Show = 7,
+  NoShowUp = 8,
+  Deposit = 9,
+  Sold = 10,
+  Funding = 11,
+  Lost = 12,
+}
 
 const accountSid = process.env.TWILIO_ACCOUNT_SID;
 const authToken = process.env.TWILIO_AUTH_TOKEN;
@@ -147,8 +162,13 @@ export const isConnected = (email: string) => {
 
 //function for specify a user in the websocket with email
 
-export const sendTo = (email: string, dataToUpdate: string, extraData?: any) => {
-  io.to(email).emit('update_data', dataToUpdate, extraData);
+export const sendTo = (
+  email: string,
+  dataToUpdate: string,
+  extraData?: any,
+  emiterUser?: string,
+) => {
+  io.to(email).emit('update_data', dataToUpdate, extraData, emiterUser);
 };
 
 io.on('connection', async (socket: Socket) => {
@@ -388,11 +408,11 @@ io.on('connection', async (socket: Socket) => {
 
   socket.on(
     'ask_for_update_data',
-    (dataToUpdate, specificUser = false, userEmail = null, extraData = null) => {
+    (dataToUpdate, specificUser = false, userEmail = null, extraData = null, emiterUser) => {
       if (specificUser && userEmail) {
-        sendTo(userEmail, dataToUpdate, extraData);
+        sendTo(userEmail, dataToUpdate, extraData, emiterUser);
       } else {
-        io.emit('update_data', dataToUpdate, extraData);
+        io.emit('update_data', dataToUpdate, extraData, emiterUser);
       }
     },
   );
@@ -417,10 +437,8 @@ io.on('connection', async (socket: Socket) => {
 });
 
 // checking all pending tasks, appointments and statuses
-
-cron.schedule('* * * * 1-6', async () => {
-  console.log('Minute by minute functions');
-
+const everySingleMinute = '* * * * 1-6';
+cron.schedule(everySingleMinute, async () => {
   await pendingTasks();
 
   await pendingRescheduleAppointments();
@@ -429,54 +447,21 @@ cron.schedule('* * * * 1-6', async () => {
 
   await pendingDeliveries();
 
-  await customerStatus();
-
   await checkSendingsSms();
 
   await checkNotDispositionedLeads();
 
   await taskReminderFromReminderTimeConfig();
+
   await appoitmentReminderFromReminderTimeConfig();
 });
 
 // checking all customers last contacted day
-
-cron.schedule('0 0 * * 1-6', async () => {
-  const todayIsos = new Date().toISOString();
-
-  const todayDate = parseISO(todayIsos);
-
-  const customers = await prisma.clients.findMany();
-
-  const customerSettings = await prisma.customer_settings.findFirst();
-
-  const daysUntilLost = customerSettings?.lead_lost_after;
-
-  for (let i = 0; i < customers.length; i++) {
-    const element = customers[i];
-
-    if (element.last_activity && daysUntilLost) {
-      const timeSinceLastActivity = element.last_activity.getTime() - todayDate.getTime();
-
-      const daysSinceLastActivity = Math.ceil(timeSinceLastActivity / (1000 * 3600 * 24));
-
-      if (daysSinceLastActivity >= daysUntilLost) {
-        await prisma.clients.update({
-          where: {
-            id: element.id,
-          },
-          data: {
-            client_status_id: 12,
-            lost_date: todayDate,
-          },
-        });
-      }
-    }
-  }
-
-  await prisma.$disconnect();
-
+const everyMiddleNight = '0 0 * * 1-6';
+cron.schedule(everyMiddleNight, async () => {
   await pendingAppointments();
+
+  await customerStatusLostChecking();
 
   io.emit('update_data', 'dailyTotals');
 });

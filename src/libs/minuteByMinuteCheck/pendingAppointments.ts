@@ -42,16 +42,21 @@ export async function pendingAppointments() {
 
       const appt = await prisma.clients.updateMany({
         where: {
-          appointment: {
-            every: {
-              end_date: {
-                lt: today,
-              },
-              AND: {
-                status_id: 1,
+          AND: [
+            {
+              appointment: {
+                every: {
+                  end_date: { lt: today },
+                  AND: { status_id: 1 },
+                },
               },
             },
-          },
+            {
+              appointment: {
+                some: {},
+              },
+            },
+          ],
         },
         data: {
           client_status_id: 8,
@@ -61,16 +66,21 @@ export async function pendingAppointments() {
       const lead = await prisma.leads.updateMany({
         where: {
           Clients: {
-            appointment: {
-              every: {
-                end_date: {
-                  lt: today,
-                },
-                AND: {
-                  status_id: 1,
+            AND: [
+              {
+                appointment: {
+                  every: {
+                    end_date: { lt: today },
+                    AND: { status_id: 1 },
+                  },
                 },
               },
-            },
+              {
+                appointment: {
+                  some: {},
+                },
+              },
+            ],
           },
         },
         data: {

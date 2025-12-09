@@ -45,7 +45,7 @@ export async function pendingDeliveries() {
               sendTo(user.email, 'notifications');
             });
           }
-        } else if (minutesSinceXDate(delivery.end_date) === 30) {
+        } else if (delivery.end_date && minutesSinceXDate(delivery.end_date) === 30) {
           const managerUsers = await managerUsersArray();
 
           await createNotification({
