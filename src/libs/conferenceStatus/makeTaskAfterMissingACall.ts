@@ -79,19 +79,17 @@ export async function makeTaskAfterMissingACall(conferenceSid: string) {
             title: 'Missing call',
             deadline: new Date(),
             status: 1,
-            created_by: 1,
             assigned_to: assignedUser?.id,
             customer_id: conferenceCustomerData?.client_call?.id,
             notes: {
               create: {
                 created_at: new Date(),
                 note: `To call ${customer} ${customerMobilePhoneNumber}`,
-                created_by_id: 1,
               },
             },
           },
         });
-        //
+
         await createNotification({
           message: `There is a missing call from ${customer} ${customerMobilePhoneNumber}`,
           notificationType: {
@@ -118,14 +116,12 @@ export async function makeTaskAfterMissingACall(conferenceSid: string) {
             title: 'Missing call',
             deadline: new Date(),
             status: 1,
-            created_by: 1,
             assigned_to_all_managers: true,
             customer_id: conferenceCustomerData?.client_call?.id,
             notes: {
               create: {
                 created_at: new Date(),
                 note: `To call ${customer} ${customerMobilePhoneNumber}`,
-                created_by_id: 1,
               },
             },
           },
@@ -153,14 +149,12 @@ export async function makeTaskAfterMissingACall(conferenceSid: string) {
           title: 'Missing call',
           deadline: new Date(),
           status: 1,
-          created_by: 1,
           assigned_to_all_managers: true,
           customer_id: conferenceCustomerData?.client_call?.id,
           notes: {
             create: {
               created_at: new Date(),
               note: `To call ${numberFormatted}`,
-              created_by_id: 1,
             },
           },
         },
