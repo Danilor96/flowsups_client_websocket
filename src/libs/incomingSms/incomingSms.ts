@@ -1,5 +1,5 @@
 import { prisma } from '../prisma/prisma';
-import { io } from '../../websocketServer';
+import { CustomersStatuses, io } from '../../websocketServer';
 import { assignUserFromRoundRobin } from '../roundRobin/roundRobin';
 import { AppointmentData, Sms } from '../definitions';
 import { startOfToday, endOfToday } from 'date-fns';
@@ -83,7 +83,7 @@ export async function handlingIncomingSms({ from, message, file }: IncomingSmsDa
         orderBy: {
           date_sent: 'desc',
         },
-      })
+      });
       const lastSmsIsSentByUser = lastSms?.sent_by_user || false;
 
       const data = await prisma.client_sms.create({
@@ -113,15 +113,15 @@ export async function handlingIncomingSms({ from, message, file }: IncomingSmsDa
         },
       });
 
-      if(lastSms && lastSmsIsSentByUser) {
+      if (lastSms && lastSmsIsSentByUser) {
         await prisma.client_sms.update({
           where: {
             id: lastSms?.id,
           },
           data: {
             has_customer_reply: true,
-          }
-        })
+          },
+        });
       }
 
       userId = data?.client_message?.seller_id;
@@ -394,8 +394,18 @@ export async function handlingIncomingSms({ from, message, file }: IncomingSmsDa
           id: registeredCustomerData.id,
         },
         data: {
-          client_status_id: 2,
+          client_status_id: CustomersStatuses.Contacted,
           last_activity: new Date(),
+          Leads: {
+            updateMany: {
+              where: {
+                is_active: true,
+              },
+              data: {
+                customer_status_id: CustomersStatuses.Contacted,
+              },
+            },
+          },
         },
       });
     }
@@ -517,7 +527,7 @@ export async function handlingIncomingSms({ from, message, file }: IncomingSmsDa
                 client_accept_appointment: true,
               },
             });
-                        
+
             smsForAppointment = true;
             if (new Date(el.start_date) < endOfToday()) appointmentForToday = true;
           }
@@ -562,9 +572,15 @@ export async function handlingIncomingSms({ from, message, file }: IncomingSmsDa
   }
 }
 
-async function updateConversationForCustomer({registeredCustomerId, unregisteredCustomerId} : {registeredCustomerId?: number, unregisteredCustomerId?: number}) {
+async function updateConversationForCustomer({
+  registeredCustomerId,
+  unregisteredCustomerId,
+}: {
+  registeredCustomerId?: number;
+  unregisteredCustomerId?: number;
+}) {
   if (registeredCustomerId) {
-   await prisma.conversations.upsert({
+    await prisma.conversations.upsert({
       where: { client_id: registeredCustomerId },
       update: {
         pending_reply_count: { increment: 1 },
