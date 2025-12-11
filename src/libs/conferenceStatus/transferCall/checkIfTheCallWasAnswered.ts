@@ -12,16 +12,24 @@ export async function checkIfTheCallWasAnswered(
   callSendedToSalesRepWeb?: boolean,
   bdcEmail?: string,
 ) {
+  // const conferenceInProgess = await client.conferences(conferenceSid).fetch();
+  // const participantsList = await conferenceInProgess.participants().list();
+
   try {
     setTimeout(async () => {
-      const answered = await prisma.conferences_names.findUnique({
+      const updatedCall = await prisma.client_calls.updateMany({
         where: {
-          conference_name: conferenceName,
+          call_sid: conferenceSid,
+          isBlockedForAnswering: false,
         },
-        select: {
-          answered: true,
+        data: {
+          isBlockedForAnswering: true,
         },
       });
+
+      if (updatedCall.count === 0) {
+        return;
+      }
 
       const conferenceCustomerData = await prisma.client_calls.findUnique({
         where: {
@@ -32,31 +40,45 @@ export async function checkIfTheCallWasAnswered(
         },
       });
 
-      if (!answered?.answered) {
-        io.emit('update_data', 'transferCompleted', { conferenceName });
+      const isCustomerRegistered = conferenceCustomerData && conferenceCustomerData.client_id;
 
-        if (callSendedToSalesRepWeb && bdcEmail && isConnected(bdcEmail)) {
-          checkIfTheCallWasAnswered(
-            customerNumber,
-            conferenceSid,
-            conferenceName,
-            conferenceParticipants,
-          );
+      io.emit('update_data', 'transferCompleted', { conferenceName });
 
-          sendTo(bdcEmail, 'joinConference', {
-            conferenceName,
-            conferenceSid,
-            phoneNumber: customerNumber,
-          });
-        } else {
-          await transferCall(customerNumber, conferenceSid, conferenceName, callBackup);
-        }
+      if (callSendedToSalesRepWeb && bdcEmail && isConnected(bdcEmail)) {
+        await prisma.client_calls.updateMany({
+          where: {
+            call_sid: conferenceSid,
+            isBlockedForAnswering: true,
+          },
+          data: {
+            isBlockedForAnswering: false,
+          },
+        });
+
+        checkIfTheCallWasAnswered(
+          customerNumber,
+          conferenceSid,
+          conferenceName,
+          conferenceParticipants,
+        );
+
+        sendTo(bdcEmail, 'joinConference', {
+          conferenceName,
+          conferenceSid,
+          phoneNumber: customerNumber,
+        });
+      } else if (isCustomerRegistered) {
+        await transferCall(customerNumber, conferenceSid, conferenceName, callBackup);
       }
 
-      if (conferenceCustomerData && !conferenceCustomerData.client_id && !answered?.answered) {
-        await missedCallFromUnknowCustomer(conferenceSid);
+      if (!isCustomerRegistered) {
+        await missedCallFromUnknowCustomer({
+          conferenceSid,
+          conferenceName,
+          customerPhone: customerNumber,
+        });
       }
-    }, 12000);
+    }, 20000);
   } catch (error) {
     console.log(error);
   }

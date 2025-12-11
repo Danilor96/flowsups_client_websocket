@@ -23,6 +23,7 @@
     "cheerio": "^1.1.2",
     "date-fns": "^4.1.0",
     "date-fns-tz": "^3.2.0",
+    "errorhandler": "^1.5.1",
     "express": "^4.21.1",
     "firebase": "^11.3.1",
     "html-entities": "^2.6.0",
@@ -35,6 +36,7 @@
   },
   "devDependencies": {
     "@types/body-parser-xml": "^2.0.5",
+    "@types/errorhandler": "^1.5.3",
     "@types/express": "^5.0.0",
     "@types/node": "^22.10.7",
     "@types/node-cron": "^3.0.11",

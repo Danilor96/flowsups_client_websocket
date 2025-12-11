@@ -34,11 +34,12 @@ export async function transferCall(
     });
 
     const salesrepnum = assignedUsers?.seller?.mobile_phone;
+    // const salesrepnum = '2243109219';
     const bdcnum = assignedUsers?.bdc?.mobile_phone;
 
     const participantsCallSid: string[] = [];
 
-    if (conferenceInProgess.status !== 'completed' && participantsList.length > 0) {
+    if (conferenceInProgess.status !== 'completed') {
       if (salesrepnum) {
         const salesCallSid = await callCreation(
           conferenceSid,
@@ -128,6 +129,20 @@ export async function voiceSystemBackupNumber(
   customerPhone: string,
   participantInstance: ParticipantInstance[],
 ) {
+  const updatedCall = await prisma.client_calls.updateMany({
+    where: {
+      call_sid: conferenceSid,
+      isBlockedForAnswering: false,
+    },
+    data: {
+      isBlockedForAnswering: true,
+    },
+  });
+
+  if (updatedCall.count === 0) {
+    return;
+  }
+
   io.emit('update_data', 'lastParticipant', {
     userEmail: '',
     inProgressConferenceName: conferenceName,

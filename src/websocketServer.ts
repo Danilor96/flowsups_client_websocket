@@ -1,4 +1,4 @@
-import express from 'express';
+import express, { NextFunction, Request, Response } from 'express';
 import { createServer } from 'http';
 import { Server, Socket } from 'socket.io';
 import { env } from 'process';
@@ -38,6 +38,7 @@ import { decode } from 'html-entities';
 import { Parser, processors } from 'xml2js';
 import * as cheerio from 'cheerio';
 import { incomingLeads } from './libs/incomingLeads/incomingLeads';
+import errorhandler from 'errorhandler';
 
 export enum CustomersStatuses {
   New = 1,
@@ -62,14 +63,16 @@ const app = express();
 const server = createServer(app);
 export const io = new Server(server, {
   cors: {
-    origin: [process.env.CORS_ORIGIN1 || '', process.env.CORS_ORIGIN2 || ''],
+    // origin: [process.env.CORS_ORIGIN1 || '', process.env.CORS_ORIGIN2 || ''],
+    origin: '*',
     optionsSuccessStatus: 200,
   },
 });
 
 app.use(
   cors({
-    origin: process.env.CORS_ORIGIN1,
+    // origin: process.env.CORS_ORIGIN1,
+    origin: '*',
     optionsSuccessStatus: 200,
   }),
 );
@@ -88,6 +91,8 @@ app.use(
     },
   }),
 );
+
+app.use(errorhandler());
 
 async function processComplexHtmlBody(htmlBody: string): Promise<any | null> {
   try {
@@ -234,11 +239,13 @@ io.on('connection', async (socket: Socket) => {
         sequence,
         participantCallStatus,
       });
+
+      res.status(204).send();
     } catch (error) {
       console.log(error);
-    }
 
-    res.status(204).send();
+      res.status(500).send();
+    }
   });
 
   socket.on('cancelAutoTransfer', async (data) => {
@@ -266,9 +273,17 @@ io.on('connection', async (socket: Socket) => {
       }
 
       const hangUpConference = async () => {
-        await client.conferences(conferenceSid).update({
-          status: 'completed',
-        });
+        try {
+          const conference = client.conferences(conferenceSid);
+
+          if (conference) {
+            await conference.update({
+              status: 'completed',
+            });
+          }
+        } catch (error) {
+          console.log(error);
+        }
       };
 
       if (conferenceSid) {
@@ -311,9 +326,19 @@ io.on('connection', async (socket: Socket) => {
         }
 
         // call to every user in the web (bdc and sales rep didn't answer the call)
-        // if the web users doesn't responds in 12 seconds, then call to backup number
+        // if the web users doesn't responds in 20 seconds, then call to backup number
 
         if (!callBackup && !backupCalled) {
+          await prisma.client_calls.updateMany({
+            where: {
+              call_sid: conferenceSid,
+              isBlockedForAnswering: true,
+            },
+            data: {
+              isBlockedForAnswering: false,
+            },
+          });
+
           await sendCallToWeb(conferenceName, conferenceSid, customerPhone);
 
           setTimeout(async () => {
@@ -323,16 +348,18 @@ io.on('connection', async (socket: Socket) => {
               customerPhone,
               conferenceParticipants,
             );
-          }, 12000);
+          }, 20000);
         }
       }
 
       console.log(`Call: ${callSid}. Status: ${callStatus}`);
+
+      res.status(204).send();
     } catch (error) {
       console.log(error);
-    }
 
-    res.status(204).send();
+      res.status(500).send();
+    }
   });
 
   // get incoming call from customers
@@ -425,6 +452,54 @@ io.on('connection', async (socket: Socket) => {
     delete connectedUsers[socket.id];
   });
 
+  socket.on(
+    'call:answer',
+    async (
+      {
+        conferenceName,
+        conferenceSid,
+        userAuthEmail,
+      }: {
+        conferenceSid: string;
+        conferenceName: string;
+        userAuthEmail: string;
+      },
+      res,
+    ) => {
+      try {
+        const updatedCall = await prisma.client_calls.updateMany({
+          where: {
+            call_sid: conferenceSid,
+            isBlockedForAnswering: false,
+          },
+          data: {
+            isBlockedForAnswering: true,
+          },
+        });
+
+        if (updatedCall.count === 0) {
+          return res({
+            success: false,
+          });
+        }
+
+        io.emit('update_data', 'lastParticipant', {
+          userEmail: userAuthEmail,
+          inProgressConferenceName: conferenceName,
+          conferenceSid: conferenceSid,
+        });
+
+        return res({
+          success: true,
+        });
+      } catch (error) {
+        return res({
+          error: true,
+        });
+      }
+    },
+  );
+
   app.post('/events/seller-activity', async (req, res) => {
     try {
       const body = req.body;
@@ -433,6 +508,11 @@ io.on('connection', async (socket: Socket) => {
       console.log(error);
     }
     res.status(204).send();
+  });
+
+  app.use((err: Error, req: Request, res: Response, _next: NextFunction) => {
+    console.log(err);
+    res.status(500).send(err.message);
   });
 });
 

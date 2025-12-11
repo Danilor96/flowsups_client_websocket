@@ -42,6 +42,8 @@ export async function handlingConferenceStatus({
 
     const usersConnectedArray = Object.values(connectedUsers);
 
+    console.log('sequence: ', sequence);
+
     // first conference action sequence
     if (sequence === '1') {
       // variable for call backup phone number after bdc/sales rep transfer call
@@ -326,6 +328,14 @@ export async function handlingConferenceStatus({
         // if there is a transfer in progress, then check who pick up the call first
         // and drop the other transfer
 
+        const participantHolded = await client.conferences(conferenceSid).participants.list();
+
+        await participantHolded
+          .find((call) => call.hold === true)
+          ?.update({
+            hold: false,
+          });
+
         const usersAssignedCallSid = await prisma.client_calls.findUnique({
           where: {
             call_sid: conferenceSid,
@@ -369,7 +379,7 @@ export async function handlingConferenceStatus({
 
         const regexCorreo = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
-        if (conferenceParticipansList.length > 1 && sequence >= 2 && sequence <= 3) {
+        if (conferenceParticipansList.length > 1 && sequence >= 2 && sequence <= 5) {
           await setTheCallAsAnswered(conferenceName);
 
           const customerMobilePhone = (
@@ -443,7 +453,7 @@ export async function handlingConferenceStatus({
         // check if there are a web user that accidentally has joined the conference and
         // then disconnect it/them
 
-        if (conferenceParticipansList.length > 2 && sequence > 3) {
+        if (conferenceParticipansList.length > 2 && sequence > 5) {
           const webParticipants: string[] = [];
           let firstParticipantEmail = '';
           conferenceParticipansList.forEach(async (participantInfo) => {

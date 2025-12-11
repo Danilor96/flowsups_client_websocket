@@ -428,7 +428,7 @@ model Tasks {
   title                       String
   description                 String
   assigned_to                 Int?
-  created_by                  Int
+  created_by                  Int?
   created_at                  DateTime      @default(now())
   status                      Int
   finished_at                 DateTime?
@@ -456,7 +456,7 @@ model Tasks {
   assigned_seller             Users?        @relation("assignedSeller", fields: [assigned_seller_id], references: [id])
   assigned                    Users?        @relation("assigned", fields: [assigned_to], references: [id])
   completed                   Users?        @relation("completed", fields: [completed_by], references: [id])
-  creator                     Users         @relation("creator", fields: [created_by], references: [id], onDelete: Cascade)
+  creator                     Users?        @relation("creator", fields: [created_by], references: [id], onDelete: Cascade)
   customer                    Clients?      @relation("customer_task", fields: [customer_id], references: [id])
   Vehicles                    Vehicles?     @relation(fields: [interested_vehicle_id], references: [id])
   ReminderTime                ReminderTime? @relation(fields: [reminder_time_id], references: [id])
@@ -809,27 +809,28 @@ model Sms_status {
 }
 
 model Client_calls {
-  id                   Int            @id @default(autoincrement())
-  client_id            Int?
-  call_date            DateTime
-  call_status_id       Int
-  call_direction_id    Int
-  call_duration        String
-  call_sid             String?        @unique
-  unknow_call_number   String?
-  phone_number         String?
-  answered_by_mobile   Boolean        @default(false)
-  answered_by_web      Boolean        @default(false)
-  user_id              Int[]          @default([])
-  usersAssignedCallSid Json?
-  inboundCall          Boolean        @default(true)
-  note_id              Int?
-  followUpDate         DateTime?
-  call_direction       Call_direction @relation(fields: [call_direction_id], references: [id], onDelete: Cascade)
-  call_status          Call_statuses  @relation("status", fields: [call_status_id], references: [id])
-  client_call          Clients?       @relation("client_call", fields: [client_id], references: [id])
-  Notes                Notes?         @relation(fields: [note_id], references: [id])
-  Users                Users[]        @relation("Client_callsToUsers")
+  id                    Int            @id @default(autoincrement())
+  client_id             Int?
+  call_date             DateTime
+  call_status_id        Int
+  call_direction_id     Int
+  call_duration         String
+  call_sid              String?        @unique
+  unknow_call_number    String?
+  phone_number          String?
+  answered_by_mobile    Boolean        @default(false)
+  answered_by_web       Boolean        @default(false)
+  user_id               Int[]          @default([])
+  usersAssignedCallSid  Json?
+  inboundCall           Boolean        @default(true)
+  note_id               Int?
+  followUpDate          DateTime?
+  isBlockedForAnswering Boolean        @default(false)
+  call_direction        Call_direction @relation(fields: [call_direction_id], references: [id], onDelete: Cascade)
+  call_status           Call_statuses  @relation("status", fields: [call_status_id], references: [id])
+  client_call           Clients?       @relation("client_call", fields: [client_id], references: [id])
+  Notes                 Notes?         @relation(fields: [note_id], references: [id])
+  Users                 Users[]        @relation("Client_callsToUsers")
 }
 
 model Suspension {
@@ -1724,10 +1725,10 @@ model Daily_visit_history {
 model Task_Notes {
   id            Int      @id @default(autoincrement())
   note          String
-  created_by_id Int
+  created_by_id Int?
   created_at    DateTime
   task_id       Int
-  user          Users    @relation(fields: [created_by_id], references: [id], onDelete: Cascade)
+  user          Users?   @relation(fields: [created_by_id], references: [id], onDelete: Cascade)
   task          Tasks    @relation(fields: [task_id], references: [id], onDelete: Cascade)
 }
 
