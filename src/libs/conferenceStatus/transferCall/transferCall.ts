@@ -40,33 +40,47 @@ export async function transferCall(
     const participantsCallSid: string[] = [];
 
     if (conferenceInProgess.status !== 'completed') {
-      if (salesrepnum) {
-        const salesCallSid = await callCreation(
-          conferenceSid,
-          conferenceName,
-          salesrepnum,
-          customerNumber,
-          undefined,
-          callBackup,
-        );
+      let salesAndBdcNumbersExists = false;
 
-        if (salesCallSid) {
-          participantsCallSid.push(salesCallSid.callSid);
+      if (salesrepnum) {
+        try {
+          const salesCallSid = await callCreation(
+            conferenceSid,
+            conferenceName,
+            salesrepnum,
+            customerNumber,
+            undefined,
+            callBackup,
+          );
+
+          if (salesCallSid) {
+            salesAndBdcNumbersExists = true;
+
+            participantsCallSid.push(salesCallSid.callSid);
+          }
+        } catch (error) {
+          console.log(error);
         }
       }
 
       if (bdcnum) {
-        const bdcCallSid = await callCreation(
-          conferenceSid,
-          conferenceName,
-          bdcnum,
-          customerNumber,
-          undefined,
-          callBackup,
-        );
+        try {
+          const bdcCallSid = await callCreation(
+            conferenceSid,
+            conferenceName,
+            bdcnum,
+            customerNumber,
+            undefined,
+            callBackup,
+          );
 
-        if (bdcCallSid) {
-          participantsCallSid.push(bdcCallSid.callSid);
+          if (bdcCallSid) {
+            salesAndBdcNumbersExists = true;
+
+            participantsCallSid.push(bdcCallSid.callSid);
+          }
+        } catch (error) {
+          console.log(error);
         }
       }
 
@@ -81,7 +95,7 @@ export async function transferCall(
         });
       }
 
-      if (!bdcnum && !salesrepnum) {
+      if ((!bdcnum && !salesrepnum) || !salesAndBdcNumbersExists) {
         await voiceSystemBackupNumber(
           conferenceSid,
           conferenceName,

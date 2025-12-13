@@ -70,9 +70,9 @@ export type AppointmentData = {
 
 export type TemplateVariablesValues =
   | {
-      email: string;
+      email: string | null;
       home_phone: string | null;
-      mobile_phone: string;
+      mobile_phone: string | null;
       work_phone: string | null;
       first_name: string;
       last_name: string;
@@ -125,7 +125,7 @@ export type TemplateVariablesValues =
         } | null;
         exterior_vehicle_colors: {
           color: string;
-        };
+        } | null;
         vehicle_mileages: {
           mileage: string;
         } | null;
@@ -142,7 +142,6 @@ export type TemplateVariablesValues =
     }
   | null
   | undefined;
-
 
 export const enum SMS_STATUS_ID {
   READ = 1,

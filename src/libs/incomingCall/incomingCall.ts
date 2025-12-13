@@ -22,8 +22,7 @@ export async function handlingIncomingCall({ from, to, res }: IncomingCallData) 
     const conferenceName = await RandomNameGenerator();
 
     // check if the current caller has an active ban
-    // const callPermission = await checkCustomerMadeCalls(from.slice(-10));
-    const callPermission = true;
+    const callPermission = await checkCustomerMadeCalls(from.slice(-10));
 
     console.log('permission: ', callPermission);
 

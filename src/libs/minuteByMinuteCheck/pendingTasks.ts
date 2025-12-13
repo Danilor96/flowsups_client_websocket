@@ -32,7 +32,6 @@ export async function pendingTasks() {
             // customer_id: customerId,
             type_id: 1,
             // appointment_id: appointmentId,
-            created_at: new Date(),
             is_read: false,
             is_deleted: false,
             notification_for_managers: false,

@@ -183,7 +183,7 @@ export const dataObject = (
       interested_vehicle_asking_price:
         templateVariablesValues?.interested_vehicle?.title_license?.asking_price || '',
       interested_vehicle_color:
-        templateVariablesValues?.interested_vehicle?.exterior_vehicle_colors.color || '',
+        templateVariablesValues?.interested_vehicle?.exterior_vehicle_colors?.color || '',
       interested_vehicle_make:
         templateVariablesValues?.interested_vehicle?.vehicle_brands.brand || '',
       interested_vehicle_mileage:

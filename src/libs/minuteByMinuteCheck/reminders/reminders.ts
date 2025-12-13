@@ -65,18 +65,20 @@ export async function appointmentReminder() {
 
                   const sms = replaceVariables(reminderMessage || '', dataObj);
 
-                  await sendSms(sms, customer.mobile_phone, appointment.user_id.toString()).then(
-                    async () => {
-                      await prisma.appointments.update({
-                        where: {
-                          id: appointment.id,
-                        },
-                        data: {
-                          reminder_sent: true,
-                        },
-                      });
-                    },
-                  );
+                  if (customer.mobile_phone) {
+                    await sendSms(sms, customer.mobile_phone, appointment.user_id.toString()).then(
+                      async () => {
+                        await prisma.appointments.update({
+                          where: {
+                            id: appointment.id,
+                          },
+                          data: {
+                            reminder_sent: true,
+                          },
+                        });
+                      },
+                    );
+                  }
                 }
               }
             }
