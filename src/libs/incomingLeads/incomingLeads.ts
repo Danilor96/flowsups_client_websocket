@@ -22,7 +22,7 @@ export async function incomingLeads(adfData: ADFData) {
       data: {
         current_address: '',
         email: email || null,
-        mobile_phone: phone || null,
+        mobile_phone: phone?.replaceAll(' ', '') || null,
         first_name: first._ || '',
         last_name: last._ || '',
         name_lastname: `${first._ || ''} ${last._ || ''}`,
@@ -65,6 +65,12 @@ export async function incomingLeads(adfData: ADFData) {
     console.log(error);
   }
 }
+
+export const filterNumber = (value: string) => {
+  let valueFiltered = value?.replace(/[^-\d.]/g, '');
+
+  return valueFiltered;
+};
 
 // {
 //   adf: {
