@@ -35,6 +35,11 @@ export async function incomingLeads(adfData: ADFData) {
         });
       }
     }
+    console.log({
+      provider,
+      existsLeadSource,
+      providerName,
+    });
 
     const newUser = await prisma.clients.create({
       data: {
