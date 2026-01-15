@@ -18,6 +18,24 @@ export async function incomingLeads(adfData: ADFData) {
       },
     });
 
+    const providerName = provider?.name;
+    let existsLeadSource;
+    if(providerName && providerName.length > 0) {
+      existsLeadSource = await prisma.lead_sources.findFirst({
+        where: {
+          source: providerName.trim(),
+        },
+      });
+
+      if (!existsLeadSource) {
+        existsLeadSource = await prisma.lead_sources.create({
+          data: {
+            source: providerName.trim(),
+          },
+        });
+      }
+    }
+
     const newUser = await prisma.clients.create({
       data: {
         current_address: '',
@@ -29,7 +47,7 @@ export async function incomingLeads(adfData: ADFData) {
         social_security: '',
         lead_type_id: 1,
         client_address_id: address.id,
-        lead_source_id: 7,
+        lead_source_id: existsLeadSource?.id || 7,
         client_status_id: 1,
       },
     });
