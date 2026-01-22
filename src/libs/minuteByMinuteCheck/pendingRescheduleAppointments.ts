@@ -30,6 +30,7 @@ export async function pendingRescheduleAppointments() {
             notificationType: {
               warning: true,
             },
+            appointmentId: reAppt.id,
             notificationsForManagers: true,
             eventTypeId: 19,
           });
