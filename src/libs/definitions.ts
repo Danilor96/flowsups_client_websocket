@@ -57,7 +57,7 @@ export type AppointmentData = {
   created_at: Date;
   status_id: number;
   customer_id: number;
-  user_id: number;
+  user_id: number | null;
   end_date: Date;
   start_date: Date;
   waiting_aprove: boolean | null;
