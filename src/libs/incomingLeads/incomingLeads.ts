@@ -31,7 +31,10 @@ export async function incomingLeads(adfData: ADFData) {
     if (providerName && providerName.length > 0) {
       existsLeadSource = await prisma.lead_sources.findFirst({
         where: {
-          source: providerName.toLowerCase().trim(),
+          source: {
+            equals: providerName.trim(),
+            mode: 'insensitive',
+          },
         },
       });
 
@@ -175,54 +178,54 @@ export async function incomingLeads(adfData: ADFData) {
   }
 }
 
-const adfTest: ADFData = {
-  prospect: {
-    provider: { name: 'Facebook K Bots', service: '[]', url: '' },
-    requestdate: '2025-09-24T17:57:00',
-    vehicle: {
-      year: '2022',
-      make: 'Toyota',
-      model: 'Corolla',
-      odometer: {
-        $: {
-          units: '1',
-        },
-        _: '',
-      },
-      $: {
-        interest: '',
-        status: '',
-      },
-      trim: '',
-    },
-    customer: {
-      comments: '',
-      contact: {
-        name: [
-          {
-            _: 'Dan',
-            $: {
-              part: 'first',
-            },
-          },
-          {
-            _: 'France',
-            $: {
-              part: 'last',
-            },
-          },
-        ],
-        email: '',
-        phone: '+1 (321) 123-4567',
-      },
-    },
-    vendor: {
-      vendorname: 'FlowsUps Motors',
-    },
-  },
-};
+// const adfTest: ADFData = {
+//   prospect: {
+//     provider: { name: 'Indie', service: '[]', url: '' },
+//     requestdate: '2025-09-24T17:57:00',
+//     vehicle: {
+//       year: '2022',
+//       make: 'Toyota',
+//       model: 'Corolla',
+//       odometer: {
+//         $: {
+//           units: '1',
+//         },
+//         _: '',
+//       },
+//       $: {
+//         interest: '',
+//         status: '',
+//       },
+//       trim: '',
+//     },
+//     customer: {
+//       comments: '',
+//       contact: {
+//         name: [
+//           {
+//             _: 'Dan',
+//             $: {
+//               part: 'first',
+//             },
+//           },
+//           {
+//             _: 'France',
+//             $: {
+//               part: 'last',
+//             },
+//           },
+//         ],
+//         email: '',
+//         phone: '+1 (321) 123-4567',
+//       },
+//     },
+//     vendor: {
+//       vendorname: 'FlowsUps Motors',
+//     },
+//   },
+// };
 
-incomingLeads(adfTest);
+// incomingLeads(adfTest);
 
 // {
 //   adf: {
