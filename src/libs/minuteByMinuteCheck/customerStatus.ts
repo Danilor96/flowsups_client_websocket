@@ -3,24 +3,24 @@ import { prisma } from '../prisma/prisma';
 import { CustomersStatuses, io } from '../../websocketServer';
 
 export enum LostReasons {
-['Bad Prospect'] = 1,
-['Duplicate'] = 2,
-['English Speaker'] = 3,
-['Incomplete Details'] = 4,
-['Lost for Other Reason'] = 5,
-['No answer'] = 6,
-['No Interested'] = 7,
-['No Longer Car Shopping'] = 8,
-['No Longer Wants To Do Business With Us (Permanently Lost)'] = 9,
-['No Qualify'] = 10,
-['Out of range'] = 11,
-['Prospect Requested Complete DNC'] = 12,
-['Referral'] = 13,
-['RTS'] = 14,
-['Sales Interaction in a Deal'] = 15,
-['Sold under diferent name'] = 16,
-['Spam'] = 17,
-['Transfer to another location'] = 18,
+  BadProspect = 1,
+  Duplicate = 2,
+  EnglishSpeaker = 3,
+  IncompleteDetails = 4,
+  LostForOtherReason = 5,
+  NoAnswer = 6,
+  NoInterested = 7,
+  NoLongerCarShopping = 8,
+  NoLongerWantsToDoBusinessWithUs_PermanentlyLost = 9,
+  NoQualify = 10,
+  OutOfRange = 11,
+  ProspectRequestedCompleteDNC = 12,
+  Referral = 13,
+  RTS = 14,
+  SalesInteractionInADeal = 15,
+  SoldUnderDiferentName = 16,
+  Spam = 17,
+  TransferToAnotherLocation = 18,
 }
 
 export async function customerStatusLostChecking() {
@@ -65,7 +65,7 @@ export async function customerStatusLostChecking() {
         data: {
           client_status_id: CustomersStatuses.Lost,
           lost_date: new Date().toISOString(),
-          lost_reason_id: LostReasons['No answer']
+          lost_reason_id: LostReasons.NoAnswer,
         },
       });
 
