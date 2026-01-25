@@ -219,7 +219,7 @@ model Appointments {
   appointments_status       Appointments_status @relation("appointment_status", fields: [status_id], references: [id])
   users                     Users?              @relation("user", fields: [user_id], references: [id])
   lead_appointment          Client_has_lead[]   @relation("lead_appointment")
-  notification              Notifications?      @relation("appointment")
+  notification              Notifications[]     @relation("appointment")
   task                      Tasks[]             @relation("appointment")
 }
 
@@ -543,7 +543,7 @@ model Notes {
   id                  Int                   @id @default(autoincrement())
   note                String
   created_at          DateTime
-  created_by_id       Int
+  created_by_id       Int?
   from_id             Int?
   client_id           Int
   is_call_note        Boolean?              @default(false)
@@ -553,7 +553,7 @@ model Notes {
   Daily_visit_history Daily_visit_history[]
   deposit             Deposits[]            @relation("deposit_note")
   client_note         Clients               @relation("note", fields: [client_id], references: [id], onDelete: Cascade)
-  created_by          Users                 @relation("creator_user", fields: [created_by_id], references: [id], onDelete: Cascade)
+  created_by          Users?                @relation("creator_user", fields: [created_by_id], references: [id], onDelete: Cascade)
   from                Client_note_from?     @relation("note_from", fields: [from_id], references: [id])
 }
 
@@ -912,14 +912,14 @@ model Client_has_lead {
   dealdate             DateTime?
   client_id            Int
   lost_reason_id       Int?
-  created_by_id        Int
+  created_by_id        Int?
   created_at           DateTime
   status_id            Int
   reminder_time        Int?
   appointment_assigned Appointments?        @relation("lead_appointment", fields: [appointment_id], references: [id])
   assigned_seller      Users?               @relation("client_lead_seller", fields: [assigned_to_id], references: [id])
   client_lead          Clients              @relation("cleant_lead", fields: [client_id], references: [id], onDelete: Cascade)
-  lead_created_by      Users                @relation("lead_created_by", fields: [created_by_id], references: [id])
+  lead_created_by      Users?               @relation("lead_created_by", fields: [created_by_id], references: [id])
   client_deal          Client_detail_leads? @relation("client_lead", fields: [lead_id], references: [id])
   lost_reason          Lost_reason?         @relation("lost_reason", fields: [lost_reason_id], references: [id])
   note_assigned        Notes?               @relation("assigned_note", fields: [note_id], references: [id])
@@ -1173,7 +1173,7 @@ model Notifications {
   is_read                   Boolean                 @default(false)
   is_deleted                Boolean                 @default(false)
   notification_for_managers Boolean?
-  appointment_id            Int?                    @unique
+  appointment_id            Int?
   unregistered_customer_id  Int?
   event_type_id             Int?
   appointment               Appointments?           @relation("appointment", fields: [appointment_id], references: [id])
@@ -1232,8 +1232,8 @@ model Business_primary_website_url {
 
 model Country_phone_code {
   id      Int       @id @default(autoincrement())
-  country String
-  code    String
+  country String?
+  code    String    @unique
   clients Clients[] @relation("country_phone_code")
 }
 
