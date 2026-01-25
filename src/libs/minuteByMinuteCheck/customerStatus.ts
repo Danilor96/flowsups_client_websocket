@@ -2,6 +2,27 @@ import {} from 'date-fns';
 import { prisma } from '../prisma/prisma';
 import { CustomersStatuses, io } from '../../websocketServer';
 
+export enum LostReasons {
+['Bad Prospect'] = 1,
+['Duplicate'] = 2,
+['English Speaker'] = 3,
+['Incomplete Details'] = 4,
+['Lost for Other Reason'] = 5,
+['No answer'] = 6,
+['No Interested'] = 7,
+['No Longer Car Shopping'] = 8,
+['No Longer Wants To Do Business With Us (Permanently Lost)'] = 9,
+['No Qualify'] = 10,
+['Out of range'] = 11,
+['Prospect Requested Complete DNC'] = 12,
+['Referral'] = 13,
+['RTS'] = 14,
+['Sales Interaction in a Deal'] = 15,
+['Sold under diferent name'] = 16,
+['Spam'] = 17,
+['Transfer to another location'] = 18,
+}
+
 export async function customerStatusLostChecking() {
   try {
     // get the customers settings
@@ -44,6 +65,7 @@ export async function customerStatusLostChecking() {
         data: {
           client_status_id: CustomersStatuses.Lost,
           lost_date: new Date().toISOString(),
+          lost_reason_id: LostReasons['No answer']
         },
       });
 
