@@ -31,6 +31,8 @@ model Users {
   sales_points_total                                                Int                             @default(0)
   daily_points_target                                               Int?
   leadsId                                                           Int?
+  deleted_at                                                        DateTime?
+  deleted_by_id                                                     Int?
   appointmentCreatedBy                                              Appointments[]                  @relation("creator")
   appointments                                                      Appointments[]                  @relation("user")
   awaiting_customer                                                 Awaiting_unknow_client[]
@@ -77,6 +79,8 @@ model Users {
   sender_task                                                       Tasks[]                         @relation("creator")
   user_schedule                                                     User_schedule[]
   Customer_Report_Users_default_customer_report_idToCustomer_Report Customer_Report?                @relation("Users_default_customer_report_idToCustomer_Report", fields: [default_customer_report_id], references: [id])
+  Users                                                             Users?                          @relation("UsersToUsers", fields: [deleted_by_id], references: [id])
+  other_Users                                                       Users[]                         @relation("UsersToUsers")
   users_status                                                      User_status?                    @relation("status", fields: [status_id], references: [id])
   user_code                                                         Users_has_codes?
   Users_has_customers                                               Users_has_customers[]
@@ -195,7 +199,7 @@ model Appointments {
   id                        Int                 @id @default(autoincrement())
   status_id                 Int
   customer_id               Int
-  user_id                   Int
+  user_id                   Int?
   end_date                  DateTime
   start_date                DateTime
   waiting_aprove            Boolean?
@@ -213,7 +217,7 @@ model Appointments {
   customers                 Clients             @relation("customer", fields: [customer_id], references: [id], onDelete: Cascade)
   ReminderTime              ReminderTime?       @relation(fields: [reminder_time_id], references: [id])
   appointments_status       Appointments_status @relation("appointment_status", fields: [status_id], references: [id])
-  users                     Users               @relation("user", fields: [user_id], references: [id])
+  users                     Users?              @relation("user", fields: [user_id], references: [id])
   lead_appointment          Client_has_lead[]   @relation("lead_appointment")
   notification              Notifications?      @relation("appointment")
   task                      Tasks[]             @relation("appointment")
@@ -714,6 +718,7 @@ model Clients {
   current_data_from_webhook         Boolean                          @default(false)
   funding_list_status_id            Int?
   client_funding_returned_at        DateTime?
+  lost_reason_id                    Int?
   appointment                       Appointments[]                   @relation("customer")
   calls                             Client_calls[]                   @relation("client_call")
   buyer_client                      Client_has_cobuyer?              @relation("buyer_client")
@@ -740,6 +745,7 @@ model Clients {
   lead_source                       Lead_sources?                    @relation("lead_source", fields: [lead_source_id], references: [id])
   client_lead_temperature           Lead_temperature?                @relation("lead_temperature", fields: [lead_temperature_id], references: [id])
   lead_type                         Lead_types?                      @relation("lead_type", fields: [lead_type_id], references: [id])
+  Lost_reasons                      Lost_reasons?                    @relation(fields: [lost_reason_id], references: [id])
   sales_manager                     Users?                           @relation("sales_manager", fields: [sales_manager_id], references: [id])
   seller                            Users?                           @relation("seller", fields: [seller_id], references: [id])
   file                              Clients_has_files[]              @relation("client")
@@ -752,6 +758,7 @@ model Clients {
   Credit_app_navigation             Credit_app_navigation?
   credit_app_other_income           Credit_app_other_income[]
   credit_app_reference              Credit_app_reference[]
+  Customer_consent_logs             Customer_consent_logs[]
   client_employment                 Customer_employment[]            @relation("customer")
   daily_visit_history               Daily_visit_history[]
   deal                              Deal[]
@@ -775,31 +782,33 @@ model Credit_app_list_status {
 }
 
 model Client_sms {
-  id                                         Int                      @id @default(autoincrement())
-  message                                    String
-  date_sent                                  DateTime                 @default(now())
-  sent_by_user                               Boolean
-  client_id                                  Int?
-  status_id                                  Int
-  fileAttachment                             Json?
-  read_by                                    Int[]                    @default([])
-  delivered                                  Boolean                  @default(false)
-  message_sid                                String?                  @unique
-  sent                                       Boolean                  @default(false)
-  client_phone_number                        String                   @default("")
-  is_consent_message                         Boolean                  @default(false)
-  manual_sent                                Boolean                  @default(true)
-  failed                                     Boolean                  @default(false)
-  is_reply_to_user                           Boolean                  @default(false)
-  replied_to_user_id                         Int?
-  sender_user_id                             Int?
-  has_customer_reply                         Boolean                  @default(false)
-  client_message                             Clients?                 @relation("client_message", fields: [client_id], references: [id])
-  Users_Client_sms_replied_to_user_idToUsers Users?                   @relation("Client_sms_replied_to_user_idToUsers", fields: [replied_to_user_id], references: [id])
-  Users_Client_sms_sender_user_idToUsers     Users?                   @relation("Client_sms_sender_user_idToUsers", fields: [sender_user_id], references: [id])
-  status                                     Sms_status               @relation("status", fields: [status_id], references: [id], onDelete: Cascade)
-  unregistered_customer                      Awaiting_unknow_client[] @relation("Awaiting_unknow_clientToClient_sms")
-  user                                       Users[]                  @relation("Client_smsToUsers")
+  id                                                                                          Int                      @id @default(autoincrement())
+  message                                                                                     String
+  date_sent                                                                                   DateTime                 @default(now())
+  sent_by_user                                                                                Boolean
+  client_id                                                                                   Int?
+  status_id                                                                                   Int
+  fileAttachment                                                                              Json?
+  read_by                                                                                     Int[]                    @default([])
+  delivered                                                                                   Boolean                  @default(false)
+  message_sid                                                                                 String?                  @unique
+  sent                                                                                        Boolean                  @default(false)
+  client_phone_number                                                                         String                   @default("")
+  is_consent_message                                                                          Boolean                  @default(false)
+  manual_sent                                                                                 Boolean                  @default(true)
+  failed                                                                                      Boolean                  @default(false)
+  is_reply_to_user                                                                            Boolean                  @default(false)
+  replied_to_user_id                                                                          Int?
+  sender_user_id                                                                              Int?
+  has_customer_reply                                                                          Boolean                  @default(false)
+  client_message                                                                              Clients?                 @relation("client_message", fields: [client_id], references: [id])
+  Users_Client_sms_replied_to_user_idToUsers                                                  Users?                   @relation("Client_sms_replied_to_user_idToUsers", fields: [replied_to_user_id], references: [id])
+  Users_Client_sms_sender_user_idToUsers                                                      Users?                   @relation("Client_sms_sender_user_idToUsers", fields: [sender_user_id], references: [id])
+  status                                                                                      Sms_status               @relation("status", fields: [status_id], references: [id], onDelete: Cascade)
+  Customer_consent_logs_Customer_consent_logs_received_sms_verification_record_idToClient_sms Customer_consent_logs?   @relation("Customer_consent_logs_received_sms_verification_record_idToClient_sms")
+  Customer_consent_logs_Customer_consent_logs_sent_sms_verification_record_idToClient_sms     Customer_consent_logs?   @relation("Customer_consent_logs_sent_sms_verification_record_idToClient_sms")
+  unregistered_customer                                                                       Awaiting_unknow_client[] @relation("Awaiting_unknow_clientToClient_sms")
+  user                                                                                        Users[]                  @relation("Client_smsToUsers")
 }
 
 model Sms_status {
@@ -1109,6 +1118,7 @@ model Customer_employment {
   hourlyWage                  String?
   yearToDate                  String?
   credit_app_id               Int?                          @unique
+  has_bank_account            Boolean                       @default(false)
   client                      Clients                       @relation("customer", fields: [client_id], references: [id], onDelete: Cascade)
   Credit_app                  Credit_app?                   @relation(fields: [credit_app_id], references: [id])
   employment_status           Employment_statuses?          @relation("employment_status", fields: [employment_status_id], references: [id], onDelete: Cascade)
@@ -1966,14 +1976,16 @@ model Task_settings {
 }
 
 model Terms_and_conditions_processed {
-  id                   Int             @id @default(autoincrement())
-  description          String
-  accepted             Boolean
-  customer_id          Int
-  term_or_condition_id Int?
-  created_at           DateTime        @default(now())
-  Clients              Clients         @relation(fields: [customer_id], references: [id], onDelete: Cascade)
-  Consent_checks       Consent_checks? @relation(fields: [term_or_condition_id], references: [id])
+  id                       Int                    @id @default(autoincrement())
+  description              String
+  accepted                 Boolean
+  customer_id              Int
+  term_or_condition_id     Int?
+  created_at               DateTime               @default(now())
+  customer_consent_logs_id Int?
+  Customer_consent_logs    Customer_consent_logs? @relation(fields: [customer_consent_logs_id], references: [id])
+  Clients                  Clients                @relation(fields: [customer_id], references: [id], onDelete: Cascade)
+  Consent_checks           Consent_checks?        @relation(fields: [term_or_condition_id], references: [id])
 }
 
 model Pay_plan {
@@ -2275,6 +2287,37 @@ model other_vehicles {
   stock_no        String
   vin             String
   other_sales_log other_sales_log?
+}
+
+model Consent_status {
+  id                    Int                     @id @default(autoincrement())
+  status                String
+  Customer_consent_logs Customer_consent_logs[]
+}
+
+model Customer_consent_logs {
+  id                                                                               Int                              @id @default(autoincrement())
+  phone_number                                                                     String
+  policy_statement                                                                 String
+  customer_id                                                                      Int
+  consent_status_id                                                                Int
+  ip_address                                                                       String?
+  user_agent                                                                       String?
+  timestamp_opt_in                                                                 DateTime                         @default(now())
+  sent_sms_verification_record_id                                                  Int?                             @unique
+  received_sms_verification_record_id                                              Int?                             @unique
+  timestamp_confirmed                                                              DateTime?
+  Consent_status                                                                   Consent_status                   @relation(fields: [consent_status_id], references: [id], onDelete: Cascade)
+  Clients                                                                          Clients                          @relation(fields: [customer_id], references: [id])
+  Client_sms_Customer_consent_logs_received_sms_verification_record_idToClient_sms Client_sms?                      @relation("Customer_consent_logs_received_sms_verification_record_idToClient_sms", fields: [received_sms_verification_record_id], references: [id])
+  Client_sms_Customer_consent_logs_sent_sms_verification_record_idToClient_sms     Client_sms?                      @relation("Customer_consent_logs_sent_sms_verification_record_idToClient_sms", fields: [sent_sms_verification_record_id], references: [id])
+  Terms_and_conditions_processed                                                   Terms_and_conditions_processed[]
+}
+
+model Lost_reasons {
+  id      Int       @id @default(autoincrement())
+  reason  String
+  Clients Clients[]
 }
 
 enum ListViewTypes {
