@@ -99,6 +99,7 @@ export async function pendingAppointments() {
           assignedToId: appt.customers.seller_id ? [appt.customers.seller_id] : [],
           notificationsForManagers: true,
           eventTypeId: 26,
+          appointmentId: appt.id,
         });
       });
     }
