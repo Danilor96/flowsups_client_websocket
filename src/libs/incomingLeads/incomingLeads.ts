@@ -2,6 +2,7 @@ import { Prisma } from '@prisma/client';
 import { io } from '../../websocketServer';
 import { prisma } from '../prisma/prisma';
 import { ADFData } from './types';
+import { assignUserFromRoundRobin } from '../roundRobin/roundRobin';
 
 export async function incomingLeads(adfData: ADFData) {
   let countryCodeId: number | null = null;
@@ -70,7 +71,7 @@ export async function incomingLeads(adfData: ADFData) {
       countryCodeId = countryPhoneCode.id;
     }
 
-    const newUser = await prisma.clients.create({
+    const newCustomer = await prisma.clients.create({
       data: {
         current_address: '',
         email: email || null,
@@ -87,26 +88,30 @@ export async function incomingLeads(adfData: ADFData) {
       },
     });
 
-    const lead = await prisma.leads.create({
+    await prisma.leads.create({
       data: {
-        customer_id: newUser.id,
+        customer_id: newCustomer.id,
         customer_status_id: 1,
       },
     });
 
-    const event = await prisma?.events.create({
+    if (newCustomer.mobile_phone) {
+      await assignUserFromRoundRobin(newCustomer.mobile_phone, true);
+    }
+
+    await prisma?.events.create({
       data: {
         description: `Customer created from email`,
         updated_at: new Date(),
-        client_id: newUser.id,
+        client_id: newCustomer.id,
       },
     });
 
     await prisma?.notifications.create({
       data: {
-        message: `New customer created: ${newUser.first_name ?? ''} ${newUser.last_name ?? ''}`,
+        message: `New customer created: ${newCustomer.first_name ?? ''} ${newCustomer.last_name ?? ''}`,
         type_id: 1,
-        customer_id: newUser.id,
+        customer_id: newCustomer.id,
         notification_for_managers: true,
       },
     });
