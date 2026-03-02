@@ -74,7 +74,7 @@ export async function assignUserFromRoundRobin(
     if (roundRobinSettings && roundRobinSettings.ready_for_leads) {
       // variable to set the first user in the order of the round robin list
 
-      let firstInRoundRobinOrder: {
+      let firstUserInRoundRobinOrder: {
         id: number;
         round_robin_order: number | null;
       } | null = null;
@@ -86,29 +86,31 @@ export async function assignUserFromRoundRobin(
       // cause that the main function don't assign/reassign users from round robin)
 
       if (activeAndReadyForLeadRoundRobinUsers && activeAndReadyForLeadRoundRobinUsers.length > 0) {
-        firstInRoundRobinOrder = activeAndReadyForLeadRoundRobinUsers.reduce((prev, current) => {
-          if (current.round_robin_order === null) return prev;
+        firstUserInRoundRobinOrder = activeAndReadyForLeadRoundRobinUsers.reduce(
+          (prev, current) => {
+            if (current.round_robin_order === null) return prev;
 
-          if (prev.round_robin_order === null) return prev;
+            if (prev.round_robin_order === null) return prev;
 
-          return prev.round_robin_order < current.round_robin_order ? prev : current;
-        });
+            return prev.round_robin_order < current.round_robin_order ? prev : current;
+          },
+        );
       }
 
       // check if the current requested customer is a registered customer or not:
       // - if the customer isn't registered then assigns the user to awaiting unknown customer table
       // - if the customer is registered then assigns the user to regular customer table
 
-      if (!customerAlreadyRegistered && firstInRoundRobinOrder) {
+      if (!customerAlreadyRegistered && firstUserInRoundRobinOrder) {
         const assignUserToUnknowCustomer = await prisma.awaiting_unknow_client.upsert({
           where: {
             mobile_phone_number: customerPhoneNumber,
           },
           update: {
-            user_id: firstInRoundRobinOrder.id,
+            user_id: firstUserInRoundRobinOrder.id,
           },
           create: {
-            user_id: firstInRoundRobinOrder.id,
+            user_id: firstUserInRoundRobinOrder.id,
           },
           include: {
             user: {
@@ -124,13 +126,13 @@ export async function assignUserFromRoundRobin(
         if (createTaskWithUserAssignation && userEmail) {
           await createTaskWithNotification(
             customerPhoneNumber,
-            firstInRoundRobinOrder.id,
+            firstUserInRoundRobinOrder.id,
             userEmail,
             undefined,
             assignUserToUnknowCustomer?.id,
           );
         }
-      } else if (firstInRoundRobinOrder) {
+      } else if (firstUserInRoundRobinOrder) {
         const registeredCustomerId = await prisma.clients.findFirst({
           where: {
             OR: [{ mobile_phone: customerPhoneNumber }, { home_phone: customerPhoneNumber }],
@@ -146,14 +148,14 @@ export async function assignUserFromRoundRobin(
               id: registeredCustomerId.id,
             },
             data: {
-              seller_id: firstInRoundRobinOrder.id,
+              seller_id: firstUserInRoundRobinOrder.id,
               Leads: {
                 updateMany: {
                   where: {
-                    has_ended: false,
+                    is_active: true,
                   },
                   data: {
-                    sales_rep_id: registeredCustomerId.id,
+                    sales_rep_id: firstUserInRoundRobinOrder.id,
                   },
                 },
               },
@@ -173,7 +175,7 @@ export async function assignUserFromRoundRobin(
           if (createTaskWithUserAssignation && userEmail) {
             await createTaskWithNotification(
               customerPhoneNumber,
-              firstInRoundRobinOrder.id,
+              firstUserInRoundRobinOrder.id,
               userEmail,
               registeredCustomerId.id,
             );
@@ -183,9 +185,9 @@ export async function assignUserFromRoundRobin(
 
       // reassign new orders
 
-      if (firstInRoundRobinOrder) {
+      if (firstUserInRoundRobinOrder) {
         const firstUserIndex = activeAndReadyForLeadRoundRobinUsers.findIndex(
-          (user) => user.round_robin_order === firstInRoundRobinOrder.round_robin_order,
+          (user) => user.round_robin_order === firstUserInRoundRobinOrder.round_robin_order,
         );
 
         const newArray = [...activeAndReadyForLeadRoundRobinUsers];
@@ -233,7 +235,6 @@ async function createTaskWithNotification(
         phoneNumber,
       )}. Please log this lead in the system as soon as possible.`,
       title: 'Lead Assigned',
-      created_by: 1,
       status: 1,
       assigned_to: roundRobinUserId,
     },

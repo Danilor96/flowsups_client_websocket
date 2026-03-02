@@ -428,16 +428,16 @@ model Vehicles {
 }
 
 model Tasks {
-  id                          Int           @id @default(autoincrement())
+  id                          Int               @id @default(autoincrement())
   title                       String
   description                 String
   assigned_to                 Int?
   created_by                  Int?
-  created_at                  DateTime      @default(now())
+  created_at                  DateTime          @default(now())
   status                      Int
   finished_at                 DateTime?
   updated_at                  DateTime?
-  manager_task                Boolean       @default(false)
+  manager_task                Boolean           @default(false)
   customer_id                 Int?
   deadline                    DateTime
   completed_by                Int?
@@ -447,24 +447,26 @@ model Tasks {
   assigned_finance_manager_id Int?
   assigned_manager_id         Int?
   assigned_seller_id          Int?
-  reminder_sent               Boolean       @default(false)
+  reminder_sent               Boolean           @default(false)
   reminder_time_id            Int?
   interested_vehicle_id       Int?
   related_task_id             Int?
-  is_funding_task             Boolean?      @default(false)
+  is_funding_task             Boolean?          @default(false)
+  Client_has_lead             Client_has_lead[]
+  Notifications               Notifications[]
   notes                       Task_Notes[]
-  appointment                 Appointments? @relation("appointment", fields: [appointment_id], references: [id])
-  assigned_bdc                Users?        @relation("assignedBdc", fields: [assigned_bdc_id], references: [id])
-  assigned_finance_manager    Users?        @relation("assignedFinanceManager", fields: [assigned_finance_manager_id], references: [id])
-  assigned_manager            Users?        @relation("assignedManager", fields: [assigned_manager_id], references: [id])
-  assigned_seller             Users?        @relation("assignedSeller", fields: [assigned_seller_id], references: [id])
-  assigned                    Users?        @relation("assigned", fields: [assigned_to], references: [id])
-  completed                   Users?        @relation("completed", fields: [completed_by], references: [id])
-  creator                     Users?        @relation("creator", fields: [created_by], references: [id], onDelete: Cascade)
-  customer                    Clients?      @relation("customer_task", fields: [customer_id], references: [id])
-  Vehicles                    Vehicles?     @relation(fields: [interested_vehicle_id], references: [id])
-  ReminderTime                ReminderTime? @relation(fields: [reminder_time_id], references: [id])
-  task_status                 Task_status   @relation("task_status", fields: [status], references: [id], onDelete: Cascade)
+  appointment                 Appointments?     @relation("appointment", fields: [appointment_id], references: [id])
+  assigned_bdc                Users?            @relation("assignedBdc", fields: [assigned_bdc_id], references: [id])
+  assigned_finance_manager    Users?            @relation("assignedFinanceManager", fields: [assigned_finance_manager_id], references: [id])
+  assigned_manager            Users?            @relation("assignedManager", fields: [assigned_manager_id], references: [id])
+  assigned_seller             Users?            @relation("assignedSeller", fields: [assigned_seller_id], references: [id])
+  assigned                    Users?            @relation("assigned", fields: [assigned_to], references: [id])
+  completed                   Users?            @relation("completed", fields: [completed_by], references: [id])
+  creator                     Users?            @relation("creator", fields: [created_by], references: [id], onDelete: Cascade)
+  customer                    Clients?          @relation("customer_task", fields: [customer_id], references: [id])
+  Vehicles                    Vehicles?         @relation(fields: [interested_vehicle_id], references: [id])
+  ReminderTime                ReminderTime?     @relation(fields: [reminder_time_id], references: [id])
+  task_status                 Task_status       @relation("task_status", fields: [status], references: [id], onDelete: Cascade)
 }
 
 model Task_status {
@@ -566,7 +568,7 @@ model Ad_id {
 model Client_has_cobuyer {
   id                Int                         @id @default(autoincrement())
   relationship_id   Int
-  buyer_client_id   Int                         @unique
+  buyer_client_id   Int
   cobuyer_client_id Int
   buyer             Clients                     @relation("buyer_client", fields: [buyer_client_id], references: [id], onDelete: Cascade)
   cobuyer           Clients                     @relation("cobuyer_client", fields: [cobuyer_client_id], references: [id], onDelete: Cascade)
@@ -692,7 +694,7 @@ model Clients {
   nickname                          String?
   salutation                        String?
   suffix                            String?
-  client_address_id                 Int
+  client_address_id                 Int?
   client_language_id                Int?
   deleted                           Boolean?                         @default(false)
   lead_temperature_id               Int?
@@ -721,7 +723,7 @@ model Clients {
   lost_reason_id                    Int?
   appointment                       Appointments[]                   @relation("customer")
   calls                             Client_calls[]                   @relation("client_call")
-  buyer_client                      Client_has_cobuyer?              @relation("buyer_client")
+  buyer_client                      Client_has_cobuyer[]             @relation("buyer_client")
   cobuyer_client                    Client_has_cobuyer[]             @relation("cobuyer_client")
   client_lead                       Client_has_lead[]                @relation("cleant_lead")
   message                           Client_sms[]                     @relation("client_message")
@@ -729,7 +731,7 @@ model Clients {
   Client_vehicle_wishlist           Client_vehicle_wishlist[]
   ad                                Ad_id?                           @relation("ad_id", fields: [ad_id], references: [id])
   bdc                               Users?                           @relation("bdc", fields: [bdc_id], references: [id])
-  client_address                    Client_address                   @relation("client_address", fields: [client_address_id], references: [id])
+  client_address                    Client_address?                  @relation("client_address", fields: [client_address_id], references: [id])
   language                          Languages?                       @relation("client_language", fields: [client_language_id], references: [id])
   client_status                     Client_status?                   @relation("client_status", fields: [client_status_id], references: [id])
   client_type                       Client_types?                    @relation("client_type", fields: [client_type_id], references: [id])
@@ -916,6 +918,7 @@ model Client_has_lead {
   created_at           DateTime
   status_id            Int
   reminder_time        Int?
+  task_id              Int?
   appointment_assigned Appointments?        @relation("lead_appointment", fields: [appointment_id], references: [id])
   assigned_seller      Users?               @relation("client_lead_seller", fields: [assigned_to_id], references: [id])
   client_lead          Clients              @relation("cleant_lead", fields: [client_id], references: [id], onDelete: Cascade)
@@ -925,6 +928,7 @@ model Client_has_lead {
   note_assigned        Notes?               @relation("assigned_note", fields: [note_id], references: [id])
   ReminderTime         ReminderTime?        @relation(fields: [reminder_time], references: [id])
   lead_status          Lead_status          @relation("lead_status", fields: [status_id], references: [id], onDelete: Cascade)
+  Tasks                Tasks?               @relation(fields: [task_id], references: [id])
 }
 
 model Lead_status {
@@ -1176,9 +1180,11 @@ model Notifications {
   appointment_id            Int?
   unregistered_customer_id  Int?
   event_type_id             Int?
+  task_id                   Int?
   appointment               Appointments?           @relation("appointment", fields: [appointment_id], references: [id])
   customers                 Clients?                @relation("customers_noti", fields: [customer_id], references: [id])
   Events_types              Events_types?           @relation(fields: [event_type_id], references: [id])
+  Tasks                     Tasks?                  @relation(fields: [task_id], references: [id])
   type                      Type_notification       @relation("noti_type", fields: [type_id], references: [id], onDelete: Cascade)
   unregistered_customer     Awaiting_unknow_client? @relation(fields: [unregistered_customer_id], references: [id], onDelete: Cascade)
   user                      Users?                  @relation("users_noti", fields: [user_id], references: [id])
@@ -2098,6 +2104,7 @@ model Leads {
   sold_created_at                       DateTime?
   customer_funding_returned_at          DateTime?
   isSplitSold                           Boolean                  @default(false)
+  is_selected                           Boolean                  @default(true)
   Daily_visit_history                   Daily_visit_history[]
   Deal                                  Deal?
   AmountPerDate                         AmountPerDate?           @relation(fields: [amountPerDate_id], references: [id])
