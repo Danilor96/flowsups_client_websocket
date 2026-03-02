@@ -237,17 +237,18 @@ async function createTaskWithNotification(
       title: 'Lead Assigned',
       status: 1,
       assigned_to: roundRobinUserId,
+      customer_id: registeredCustomerId,
     },
   });
 
-  await createNotification({
-    message: `A new lead is now assigned to you: ${formatPhoneNumber(phoneNumber)}.`,
-    notificationType: {
-      warning: true,
+  await prisma.notifications.create({
+    data: {
+      message: `A new lead is now assigned to you: ${formatPhoneNumber(phoneNumber)}.`,
+      user_id: roundRobinUserId,
+      type_id: 1,
+      notification_for_managers: true,
+      customer_id: registeredCustomerId,
     },
-    assignedToId: [roundRobinUserId],
-    customerId: registeredCustomerId,
-    unregisteredCustomerId: unregisteredCustomerId,
   });
 
   io.to(userEmail).emit('update_data', 'tasks');
