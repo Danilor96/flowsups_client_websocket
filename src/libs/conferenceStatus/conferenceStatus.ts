@@ -173,34 +173,33 @@ export async function handlingConferenceStatus({
             } else {
               // if the assigned web user is not connected, then reassigns customer to another user
 
-              // let newAssignedUser = await assignUserFromRoundRobin(from);
+              let newAssignedUser = await assignUserFromRoundRobin(from);
 
-              // let i = 0;
+              let i = 0;
 
-              // while (i < usersConnectedArray.length) {
-              //   if (newAssignedUser && isConnected(newAssignedUser)) break;
+              while (i < usersConnectedArray.length) {
+                if (newAssignedUser && isConnected(newAssignedUser)) break;
 
-              //   newAssignedUser = await assignUserFromRoundRobin(from);
+                newAssignedUser = await assignUserFromRoundRobin(from);
 
-              //   i++;
-              // }
+                i++;
+              }
 
-              // if (newAssignedUser) {
-              //   sendTo(newAssignedUser, 'joinConference', {
-              //     conferenceName,
-              //     conferenceSid,
-              //     phoneNumber: from,
-              //   });
-              // }
-              // else {
-              // if there is not a new user assigned, then calls to every web users
+              if (newAssignedUser) {
+                sendTo(newAssignedUser, 'joinConference', {
+                  conferenceName,
+                  conferenceSid,
+                  phoneNumber: from,
+                });
+              } else {
+                // if there is not a new user assigned, then calls to every web users
 
-              io.emit('update_data', 'joinConference', {
-                conferenceName,
-                conferenceSid,
-                phoneNumber: from,
-              });
-              // }
+                io.emit('update_data', 'joinConference', {
+                  conferenceName,
+                  conferenceSid,
+                  phoneNumber: from,
+                });
+              }
             }
           } else {
             // if there is no user assigned, then calls to every web users
@@ -292,8 +291,8 @@ export async function handlingConferenceStatus({
               call_duration: startConfDate.answered_by_web
                 ? callDuration.toString()
                 : startConfDate.answered_by_mobile
-                  ? callDuration.toString()
-                  : '0',
+                ? callDuration.toString()
+                : '0',
               call_status_id: 1,
             },
           });
