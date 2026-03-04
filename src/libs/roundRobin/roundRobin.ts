@@ -1,7 +1,7 @@
 import { differenceInDays, differenceInMinutes, endOfToday } from 'date-fns';
 import { prisma } from '../prisma/prisma';
 import { formatPhoneNumber } from '../formats/phoneNumber';
-import { CustomersStatuses, io } from '../../websocketServer';
+import { io } from '../../websocketServer';
 import { createNotification } from '../notification/createNotification';
 
 export async function assignUserFromRoundRobin(
@@ -139,7 +139,6 @@ export async function assignUserFromRoundRobin(
           },
           select: {
             id: true,
-            seller_id: true,
           },
         });
 
@@ -147,11 +146,6 @@ export async function assignUserFromRoundRobin(
           const assignUserToRegisteredCustomer = await prisma.clients.update({
             where: {
               id: registeredCustomerId.id,
-              ...(registeredCustomerId.seller_id
-                ? {
-                    client_status_id: CustomersStatuses.New,
-                  }
-                : undefined),
             },
             data: {
               seller_id: firstUserInRoundRobinOrder.id,
@@ -159,12 +153,6 @@ export async function assignUserFromRoundRobin(
                 updateMany: {
                   where: {
                     is_active: true,
-                    customer_id: registeredCustomerId.id,
-                    ...(registeredCustomerId.seller_id
-                      ? {
-                          customer_status_id: CustomersStatuses.New,
-                        }
-                      : undefined),
                   },
                   data: {
                     sales_rep_id: firstUserInRoundRobinOrder.id,
