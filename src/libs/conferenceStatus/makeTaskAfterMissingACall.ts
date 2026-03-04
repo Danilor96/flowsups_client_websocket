@@ -27,31 +27,31 @@ export async function makeTaskAfterMissingACall(conferenceSid: string) {
     });
 
     if (conferenceCustomerData && conferenceCustomerData.client_call?.mobile_phone) {
-      const registeredCustomer = conferenceCustomerData.unknow_call_number ? false : true;
+      // const registeredCustomer = conferenceCustomerData.unknow_call_number ? false : true;
 
-      const usersConnectedArray = Object.values(connectedUsers);
+      // const usersConnectedArray = Object.values(connectedUsers);
 
-      const isConnected = (email: string) => {
-        return usersConnectedArray.includes(email);
-      };
+      // const isConnected = (email: string) => {
+      //   return usersConnectedArray.includes(email);
+      // };
 
-      let newAssignedUser = await assignUserFromRoundRobin(
-        conferenceCustomerData.client_call.mobile_phone,
-        registeredCustomer,
-      );
+      // let newAssignedUser = await assignUserFromRoundRobin(
+      //   conferenceCustomerData.client_call.mobile_phone,
+      //   registeredCustomer,
+      // );
 
-      let i = 0;
+      // let i = 0;
 
-      while (i < usersConnectedArray.length) {
-        if (newAssignedUser && isConnected(newAssignedUser)) break;
+      // while (i < usersConnectedArray.length) {
+      //   if (newAssignedUser && isConnected(newAssignedUser)) break;
 
-        newAssignedUser = await assignUserFromRoundRobin(
-          conferenceCustomerData.client_call.mobile_phone,
-          registeredCustomer,
-        );
+      //   newAssignedUser = await assignUserFromRoundRobin(
+      //     conferenceCustomerData.client_call.mobile_phone,
+      //     registeredCustomer,
+      //   );
 
-        i++;
-      }
+      //   i++;
+      // }
 
       const customer = `${conferenceCustomerData?.client_call?.first_name || ''} ${
         conferenceCustomerData?.client_call?.last_name || ''
@@ -61,72 +61,76 @@ export async function makeTaskAfterMissingACall(conferenceSid: string) {
         ? formatPhoneNumber(conferenceCustomerData?.client_call?.mobile_phone)
         : '';
 
-      if (newAssignedUser) {
-        const assignedUser = await prisma.users.findUnique({
-          where: {
-            email: newAssignedUser,
-          },
-          select: {
-            id: true,
-          },
-        });
+      // if (newAssignedUser) {
+      //   const assignedUser = await prisma.users.findUnique({
+      //     where: {
+      //       email: newAssignedUser,
+      //     },
+      //     select: {
+      //       id: true,
+      //     },
+      //   });
 
-        const task = await prisma.tasks.create({
-          data: {
-            description: `To call ${customer || 'Unregistered customer'} ${
-              customerMobilePhoneNumber || conferenceCustomerData.unknow_call_number
-            }`,
-            title: 'Missing call',
-            deadline: new Date(),
-            status: 1,
-            assigned_to: assignedUser?.id,
-            customer_id: conferenceCustomerData?.client_call?.id,
-            notes: {
-              create: {
-                created_at: new Date(),
-                note: `To call ${customer} ${customerMobilePhoneNumber}`,
-              },
+      //   const task = await prisma.tasks.create({
+      //     data: {
+      //       description: `To call ${customer || 'Unregistered customer'} ${
+      //         customerMobilePhoneNumber || conferenceCustomerData.unknow_call_number
+      //       }`,
+      //       title: 'Missing call',
+      //       deadline: new Date(),
+      //       status: 1,
+      //       assigned_to: assignedUser?.id,
+      //       customer_id: conferenceCustomerData?.client_call?.id,
+      //       notes: {
+      //         create: {
+      //           created_at: new Date(),
+      //           note: `To call ${customer} ${customerMobilePhoneNumber}`,
+      //         },
+      //       },
+      //     },
+      //   });
+
+      //   await createNotification({
+      //     message: `There is a missing call from ${customer} ${customerMobilePhoneNumber}`,
+      //     notificationType: {
+      //       warning: true,
+      //     },
+      //     assignedToId: assignedUser?.id ? [assignedUser.id] : null,
+      //     notificationsForManagers: true,
+      //   });
+      // }
+      // else {
+      await createNotification({
+        message: `There is a missing call from ${customer} ${customerMobilePhoneNumber}`,
+        notificationType: {
+          warning: true,
+        },
+        exclusiveManagerNotification: true,
+        notificationsForManagers: true,
+        assignedToId: conferenceCustomerData.client_call.seller_id
+          ? [conferenceCustomerData.client_call.seller_id]
+          : undefined,
+      });
+
+      const task = await prisma.tasks.create({
+        data: {
+          description: `To call ${customer || 'Unregistered customer'} ${
+            customerMobilePhoneNumber || conferenceCustomerData.unknow_call_number
+          }`,
+          title: 'Missing call',
+          deadline: new Date(),
+          status: 1,
+          assigned_to_all_managers: true,
+          customer_id: conferenceCustomerData?.client_call?.id,
+          notes: {
+            create: {
+              created_at: new Date(),
+              note: `To call ${customer} ${customerMobilePhoneNumber}`,
             },
           },
-        });
-
-        await createNotification({
-          message: `There is a missing call from ${customer} ${customerMobilePhoneNumber}`,
-          notificationType: {
-            warning: true,
-          },
-          assignedToId: assignedUser?.id ? [assignedUser.id] : null,
-          notificationsForManagers: true,
-        });
-      } else {
-        await createNotification({
-          message: `There is a missing call from ${customer} ${customerMobilePhoneNumber}`,
-          notificationType: {
-            warning: true,
-          },
-          exclusiveManagerNotification: true,
-          notificationsForManagers: true,
-        });
-
-        const task = await prisma.tasks.create({
-          data: {
-            description: `To call ${customer || 'Unregistered customer'} ${
-              customerMobilePhoneNumber || conferenceCustomerData.unknow_call_number
-            }`,
-            title: 'Missing call',
-            deadline: new Date(),
-            status: 1,
-            assigned_to_all_managers: true,
-            customer_id: conferenceCustomerData?.client_call?.id,
-            notes: {
-              create: {
-                created_at: new Date(),
-                note: `To call ${customer} ${customerMobilePhoneNumber}`,
-              },
-            },
-          },
-        });
-      }
+        },
+      });
+      // }
 
       io.emit('update_data', 'tasks');
     } else if (conferenceCustomerData && !conferenceCustomerData.client_id) {
