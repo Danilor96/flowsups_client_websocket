@@ -3,6 +3,7 @@ import { prisma } from '../prisma/prisma';
 import { formatPhoneNumber } from '../formats/phoneNumber';
 import { io } from '../../websocketServer';
 import { createNotification } from '../notification/createNotification';
+import { TASK_STATUS_ID } from '../definitions';
 
 export async function assignUserFromRoundRobin(
   customerPhoneNumber: string,
@@ -228,31 +229,83 @@ async function createTaskWithNotification(
   registeredCustomerId?: number,
   unregisteredCustomerId?: number,
 ) {
-  await prisma.tasks.create({
-    data: {
-      deadline: endOfToday(),
-      description: `A new lead is now assigned to you: ${formatPhoneNumber(
-        phoneNumber,
-      )}. Please log this lead in the system as soon as possible.`,
-      title: 'Lead Assigned',
-      status: 1,
-      assigned_to: roundRobinUserId,
-      customer_id: registeredCustomerId,
-    },
-  });
+  try {
+    if (registeredCustomerId) {
+      const task = await prisma.round_robin_tasks.findUnique({
+        where: {
+          customer_id: registeredCustomerId,
+        },
+        select: {
+          task_id: true,
+          Tasks: {
+            select: {
+              status: true,
+            },
+          },
+        },
+      });
 
-  await prisma.notifications.create({
-    data: {
-      message: `A new lead is now assigned to you: ${formatPhoneNumber(phoneNumber)}.`,
-      user_id: roundRobinUserId,
-      type_id: 1,
-      notification_for_managers: true,
-      customer_id: registeredCustomerId,
-    },
-  });
+      const pendingOrLateTask = [TASK_STATUS_ID.PENDING, TASK_STATUS_ID.LATE];
 
-  io.to(userEmail).emit('update_data', 'tasks');
-  io.to(userEmail).emit('update_data', 'notifications');
+      if (task && task.task_id && pendingOrLateTask.includes(task.Tasks.status)) {
+        await prisma.tasks.update({
+          where: {
+            id: task.task_id,
+          },
+          data: {
+            deadline: endOfToday(),
+            assigned_to: roundRobinUserId,
+            status: TASK_STATUS_ID.PENDING,
+          },
+        });
+
+        io.to(userEmail).emit('update_data', 'tasks');
+        io.to(userEmail).emit('update_data', 'notifications');
+
+        return;
+      }
+    }
+
+    const task = await prisma.tasks.create({
+      data: {
+        deadline: endOfToday(),
+        description: `A new lead is now assigned to you: ${formatPhoneNumber(
+          phoneNumber,
+        )}. Please log this lead in the system as soon as possible.`,
+        title: 'Lead Assigned',
+        status: TASK_STATUS_ID.PENDING,
+        assigned_to: roundRobinUserId,
+        customer_id: registeredCustomerId,
+      },
+      select: {
+        id: true,
+      },
+    });
+
+    if (registeredCustomerId) {
+      await prisma.round_robin_tasks.create({
+        data: {
+          task_id: task.id,
+          customer_id: registeredCustomerId,
+        },
+      });
+    }
+
+    await prisma.notifications.create({
+      data: {
+        message: `A new lead is now assigned to you: ${formatPhoneNumber(phoneNumber)}.`,
+        user_id: roundRobinUserId,
+        type_id: 1,
+        notification_for_managers: true,
+        customer_id: registeredCustomerId,
+      },
+    });
+
+    io.to(userEmail).emit('update_data', 'tasks');
+    io.to(userEmail).emit('update_data', 'notifications');
+  } catch (error) {
+    console.log(error);
+  }
 }
 
 const timeSpan = [5, 10, 15, 30, 60, 90, 120];
