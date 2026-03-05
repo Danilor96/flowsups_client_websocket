@@ -149,3 +149,10 @@ export const enum SMS_STATUS_ID {
   REPLIED = 3,
   UNREPLIED = 4,
 }
+
+export enum TASK_STATUS_ID {
+  PENDING = 1,
+  COMPLETED = 2,
+  CANCELED = 3,
+  LATE = 4,
+}
