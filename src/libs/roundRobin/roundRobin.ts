@@ -259,6 +259,16 @@ async function createTaskWithNotification(
           },
         });
 
+        await prisma.notifications.create({
+          data: {
+            message: `A new lead is now assigned to you: ${formatPhoneNumber(phoneNumber)}.`,
+            user_id: roundRobinUserId,
+            type_id: 1,
+            notification_for_managers: true,
+            customer_id: registeredCustomerId,
+          },
+        });
+
         io.to(userEmail).emit('update_data', 'tasks');
         io.to(userEmail).emit('update_data', 'notifications');
 
