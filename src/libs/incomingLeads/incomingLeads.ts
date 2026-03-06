@@ -3,6 +3,7 @@ import { io } from '../../websocketServer';
 import { prisma } from '../prisma/prisma';
 import { ADFData } from './types';
 import { assignUserFromRoundRobin } from '../roundRobin/roundRobin';
+import { NOTIFICATION_EVENT_TYPE_ID, NOTIFICATION_TYPE_ID } from '../definitions';
 
 export async function incomingLeads(adfData: ADFData) {
   let countryCodeId: number | null = null;
@@ -172,10 +173,11 @@ export async function incomingLeads(adfData: ADFData) {
         await prisma.notifications.create({
           data: {
             message: mssg,
-            type_id: 4,
+            type_id: NOTIFICATION_TYPE_ID.CUSTOMER,
             user_id: note.client_note.seller_id,
             notification_for_managers: true,
             customer_id: note.client_id,
+            event_type_id: NOTIFICATION_EVENT_TYPE_ID.LEAD_DUPLICATED,
           },
         });
       }
