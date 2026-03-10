@@ -194,24 +194,6 @@ io.on('connection', async (socket: Socket) => {
     }
   }
 
-  app.post('/getCurrentCallStatus', async (req, res) => {
-    const callSid = req.body.CallSid;
-    const parentCallSid = req.body.ParentCallSid;
-    const callStatus = req.body.CallStatus;
-    const callDuration = req.body.CallDuration ?? '0';
-
-    console.log(`Call SID: ${callSid}, Status: ${callStatus}. Parent Call SID: ${parentCallSid}`);
-
-    await handlingOutgoingCallStatus({
-      callSid,
-      parentCallSid,
-      callStatus,
-      callDuration,
-    });
-
-    res.status(204).send();
-  });
-
   // get current conference status
 
   app.post('/getCurrentConferenceStatus/:conferenceName', async (req, res) => {
@@ -514,6 +496,24 @@ io.on('connection', async (socket: Socket) => {
     console.log(err);
     res.status(500).send(err.message);
   });
+});
+
+app.post('/getCurrentCallStatus', async (req, res) => {
+  const callSid = req.body.CallSid;
+  const parentCallSid = req.body.ParentCallSid;
+  const callStatus = req.body.CallStatus;
+  const callDuration = req.body.CallDuration ?? '0';
+
+  console.log(`Call SID: ${callSid}, Status: ${callStatus}. Parent Call SID: ${parentCallSid}`);
+
+  await handlingOutgoingCallStatus({
+    callSid,
+    parentCallSid,
+    callStatus,
+    callDuration,
+  });
+
+  res.status(204).send();
 });
 
 // checking all pending tasks, appointments and statuses

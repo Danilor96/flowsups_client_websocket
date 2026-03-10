@@ -73,12 +73,21 @@ export async function handlingOutgoingCallStatus({
         break;
     }
 
+    console.log({
+      socketEmit,
+      callSid,
+      parentCallSid,
+      toClientAnswered,
+      disconnectOutgoingCall,
+    });
+
     socketEmit &&
       io.emit('update_data', socketEmit, {
         callSid,
         parentCallSid,
         toClientAnswered,
         disconnectOutgoingCall,
+        test: 'Este es un test del manejador de las llamadas salientes',
       });
 
     let callExists: {
@@ -162,7 +171,7 @@ export async function handlingOutgoingCallStatus({
         }
       }
     }
-    
+
     if (callExists && callStatus === 'in-progress') {
       const userIds = callExists.user_id;
       if (userIds && userIds.length > 0) {
