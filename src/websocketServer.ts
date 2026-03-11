@@ -42,6 +42,7 @@ import errorhandler from 'errorhandler';
 
 export enum CustomersStatuses {
   New = 1,
+  Contact_Attempt = 13,
   Contacted = 2,
   CreditApp = 3,
   Delivery = 4,
@@ -503,6 +504,7 @@ app.post('/getCurrentCallStatus', async (req, res) => {
   const parentCallSid = req.body.ParentCallSid;
   const callStatus = req.body.CallStatus;
   const callDuration = req.body.CallDuration ?? '0';
+  const to = req.body.To;
 
   console.log(`Call SID: ${callSid}, Status: ${callStatus}. Parent Call SID: ${parentCallSid}`);
 
@@ -511,6 +513,7 @@ app.post('/getCurrentCallStatus', async (req, res) => {
     parentCallSid,
     callStatus,
     callDuration,
+    to,
   });
 
   res.status(204).send();
