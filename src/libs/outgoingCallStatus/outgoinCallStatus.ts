@@ -1,5 +1,5 @@
 import { prisma } from '../prisma/prisma';
-import { io, client } from '../../websocketServer';
+import { io, client, CustomersStatuses } from '../../websocketServer';
 import { addUserThatHasRespondedToTransferCall } from './addUserThatHasRespondedToTransferCall';
 import { ActivityType, salesPointsAssignService } from '../salesPointsServices/salesPointServices';
 
@@ -8,6 +8,7 @@ interface OutogingCallData {
   parentCallSid: any;
   callSid: any;
   callDuration: any;
+  to: string;
 }
 
 export async function handlingOutgoingCallStatus({
@@ -15,6 +16,7 @@ export async function handlingOutgoingCallStatus({
   parentCallSid,
   callSid,
   callDuration,
+  to,
 }: OutogingCallData) {
   try {
     let callStatusId, socketEmit, toClientAnswered, disconnectOutgoingCall;
@@ -25,6 +27,27 @@ export async function handlingOutgoingCallStatus({
         break;
 
       case 'ringing':
+        prisma.leads.updateMany({
+          where: {
+            Clients: {
+              OR: [
+                {
+                  mobile_phone: to.slice(-10),
+                },
+                {
+                  home_phone: to.slice(-10),
+                },
+              ],
+            },
+            is_active: true,
+            customer_status_id: {
+              in: [CustomersStatuses.New, CustomersStatuses.Lost],
+            },
+          },
+          data: {
+            customer_status_id: CustomersStatuses.Contact_Attempt,
+          },
+        });
         break;
 
       case 'in-progress':
@@ -73,21 +96,12 @@ export async function handlingOutgoingCallStatus({
         break;
     }
 
-    console.log({
-      socketEmit,
-      callSid,
-      parentCallSid,
-      toClientAnswered,
-      disconnectOutgoingCall,
-    });
-
     socketEmit &&
       io.emit('update_data', socketEmit, {
         callSid,
         parentCallSid,
         toClientAnswered,
         disconnectOutgoingCall,
-        test: 'Este es un test del manejador de las llamadas salientes',
       });
 
     let callExists: {
