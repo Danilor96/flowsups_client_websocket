@@ -358,46 +358,6 @@ io.on('connection', async (socket: Socket) => {
     });
   });
 
-  // get messages from customers
-
-  app.post('/getMessage', async (req, res) => {
-    // if the user has the status "new" then change it to "contacted"
-
-    const from = req.body.From.replace(/\D/g, '');
-    console.log('handlo]]ing incoming sms: ', from);
-
-    const messageSid: string = req.body.MessageSid;
-    const message = req.body.Body;
-    const numMedia = parseInt(req.body.NumMedia);
-    const media = req.body.MediaUrl0;
-    const customerId = req.body.From;
-
-    let files: { url?: string; name: string }[] | undefined = undefined;
-
-    if (numMedia > 0) {
-      const mediaPromises = Array.from({ length: numMedia }, (_, i) => {
-        const mediaUrl = req.body[`MediaUrl${i}`];
-        const mediaType = req.body[`MediaContentType${i}`];
-        if (!mediaUrl || !mediaType) return Promise.resolve(null);
-
-        return incomingFileSave(mediaUrl, mediaType, customerId)
-          .then((fileUrl) => ({
-            url: fileUrl,
-            name: `${messageSid}_${i}.${mediaType}`,
-          }))
-          .catch((err) => {
-            console.error(`Error saving media ${i}:`, err);
-            return null;
-          });
-      });
-
-      const results = await Promise.all(mediaPromises);
-      files = results.filter((result) => result !== null);
-    }
-
-    await handlingIncomingSms({ from, message, file: files });
-  });
-
   // sent sms status
 
   app.post('/smsStatus', async (req, res) => {
@@ -497,6 +457,46 @@ io.on('connection', async (socket: Socket) => {
     console.log(err);
     res.status(500).send(err.message);
   });
+});
+
+// get messages from customers
+
+app.post('/getMessage', async (req, res) => {
+  // if the user has the status "new" then change it to "contacted"
+
+  const from = req.body.From.replace(/\D/g, '');
+  console.log('handlo]]ing incoming sms: ', from);
+
+  const messageSid: string = req.body.MessageSid;
+  const message = req.body.Body;
+  const numMedia = parseInt(req.body.NumMedia);
+  const media = req.body.MediaUrl0;
+  const customerId = req.body.From;
+
+  let files: { url?: string; name: string }[] | undefined = undefined;
+
+  if (numMedia > 0) {
+    const mediaPromises = Array.from({ length: numMedia }, (_, i) => {
+      const mediaUrl = req.body[`MediaUrl${i}`];
+      const mediaType = req.body[`MediaContentType${i}`];
+      if (!mediaUrl || !mediaType) return Promise.resolve(null);
+
+      return incomingFileSave(mediaUrl, mediaType, customerId)
+        .then((fileUrl) => ({
+          url: fileUrl,
+          name: `${messageSid}_${i}.${mediaType}`,
+        }))
+        .catch((err) => {
+          console.error(`Error saving media ${i}:`, err);
+          return null;
+        });
+    });
+
+    const results = await Promise.all(mediaPromises);
+    files = results.filter((result) => result !== null);
+  }
+
+  await handlingIncomingSms({ from, message, file: files });
 });
 
 app.post('/getCurrentCallStatus', async (req, res) => {
