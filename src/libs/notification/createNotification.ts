@@ -35,6 +35,8 @@ export async function createNotification({
 
     const notiPreference = notificationsPreferences.find((el) => el.event_type_id === eventTypeId);
 
+    console.log({ assignedToId, notiPreference });
+
     if (notiPreference && assignedToId && assignedToId.length > 0) {
       for (let i = 0; i < assignedToId.length; i++) {
         const el = assignedToId[i];
@@ -62,28 +64,35 @@ export async function createNotification({
               in: [1, 2, 3, 4],
             },
           },
+          deleted_at: null,
+        },
+        select: {
+          id: true,
         },
       });
 
-      for (let i = 0; i < managerUsers.length; i++) {
-        const user = managerUsers[i];
+      const notificationsToCreate = [];
+      const now = new Date();
 
-        const userId = user.id;
+      for (const user of managerUsers) {
+        managerUsersIds.push(user.id);
+        notificationsToCreate.push({
+          message: message,
+          user_id: user.id,
+          customer_id: customerId,
+          type_id: notiType,
+          appointment_id: appointmentId,
+          created_at: now.toISOString(),
+          is_read: false,
+          is_deleted: false,
+          notification_for_managers: false,
+          unregistered_customer_id: unregisteredCustomerId,
+        });
+      }
 
-        managerUsersIds.push(userId);
-
-        const notification = await prisma.notifications.create({
-          data: {
-            message: message,
-            user_id: userId,
-            customer_id: customerId,
-            type_id: notiType,
-            appointment_id: appointmentId,
-            is_read: false,
-            is_deleted: false,
-            notification_for_managers: false,
-            unregistered_customer_id: unregisteredCustomerId,
-          },
+      if (notificationsToCreate.length > 0) {
+        await prisma.notifications.createMany({
+          data: notificationsToCreate,
         });
       }
 
@@ -98,7 +107,7 @@ export async function createNotification({
       for (let i = 0; i < assignedToId.length; i++) {
         const userId = assignedToId[i];
 
-        const notification = await prisma.notifications.create({
+        await prisma.notifications.create({
           data: {
             message: message,
             user_id: userId,
