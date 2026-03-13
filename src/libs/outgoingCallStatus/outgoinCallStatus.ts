@@ -106,7 +106,7 @@ export async function handlingOutgoingCallStatus({
 
       console.log({ mobHom: to.slice(-10), customer });
 
-      prisma.leads.updateMany({
+      await prisma.leads.updateMany({
         where: {
           customer_id: customer?.id,
           is_active: true,
