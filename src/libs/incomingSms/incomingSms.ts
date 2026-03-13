@@ -18,7 +18,7 @@ export async function handlingIncomingSms({ from, message, file }: IncomingSmsDa
 
   const today = new Date(todayIsos);
 
-  let userId: number | null | undefined = null;
+  let userId: number[] | null | undefined = null;
   let customerId: number | null | undefined = null;
   let unregisteredCustomerId: number | null = null;
   let appointmentAccepted = '';
@@ -80,6 +80,16 @@ export async function handlingIncomingSms({ from, message, file }: IncomingSmsDa
         where: {
           client_id: registeredCustomerData.id,
         },
+        select: {
+          id: true,
+          sent_by_user: true,
+          sender_user_id: true,
+          user: {
+            select: {
+              id: true,
+            },
+          },
+        },
         orderBy: {
           date_sent: 'desc',
         },
@@ -124,12 +134,12 @@ export async function handlingIncomingSms({ from, message, file }: IncomingSmsDa
         });
       }
 
-      userId = data?.client_message?.seller_id;
+      userId = data?.client_message?.seller_id ? [data?.client_message?.seller_id] : [];
       customerId = registeredCustomerData.id;
 
       // set the status from customer settings if this customers has status lost
 
-      if (registeredCustomerData.client_status_id === 12) {
+      if (registeredCustomerData.client_status_id === CustomersStatuses.Lost) {
         const customersSettings = await prisma.customer_settings.findFirst();
 
         if (customersSettings) {
@@ -144,6 +154,16 @@ export async function handlingIncomingSms({ from, message, file }: IncomingSmsDa
               data: {
                 client_status_id: newStatusId,
                 last_activity: new Date(),
+                Leads: {
+                  updateMany: {
+                    where: {
+                      is_active: true,
+                    },
+                    data: {
+                      customer_status_id: newStatusId,
+                    },
+                  },
+                },
               },
             });
           }
@@ -218,7 +238,7 @@ export async function handlingIncomingSms({ from, message, file }: IncomingSmsDa
             });
           }
 
-          userId = data.client_message?.seller_id;
+          userId = data.client_message?.seller_id ? [data.client_message?.seller_id] : null;
         } else {
           // if the unregistered customer hasn't a user assigned, then assigned it from round robin and
           // save the sms
@@ -273,7 +293,7 @@ export async function handlingIncomingSms({ from, message, file }: IncomingSmsDa
             });
 
             unregisteredCustomerId = updatedAwaitingCustomer.id;
-            userId = data?.client_message?.seller_id;
+            userId = data?.client_message?.seller_id ? [data?.client_message?.seller_id] : null;
           } else {
             // if there is no a round robin user, then save the sms without a related user
 
@@ -346,7 +366,7 @@ export async function handlingIncomingSms({ from, message, file }: IncomingSmsDa
             },
           });
 
-          userId = sms?.client_message?.seller_id;
+          userId = sms?.client_message?.seller_id ? [sms?.client_message?.seller_id] : null;
         } else {
           // create the sms without a related user
 
@@ -379,17 +399,23 @@ export async function handlingIncomingSms({ from, message, file }: IncomingSmsDa
           });
         }
 
-        userId = sms?.client_message?.seller_id;
+        userId = sms?.client_message?.seller_id ? [sms?.client_message?.seller_id] : null;
         unregisteredCustomerId = unregisteredCustomer.id;
       }
     }
 
+    const prevContactedStatus = [
+      CustomersStatuses.New,
+      CustomersStatuses.Lost,
+      CustomersStatuses.Contact_Attempt,
+    ];
+
     if (
       registeredCustomerData &&
       registeredCustomerData.client_status_id &&
-      registeredCustomerData.client_status_id === 1
+      prevContactedStatus.includes(registeredCustomerData.client_status_id)
     ) {
-      const userStatus = await prisma.clients.update({
+      await prisma.clients.update({
         where: {
           id: registeredCustomerData.id,
         },
@@ -466,7 +492,7 @@ export async function handlingIncomingSms({ from, message, file }: IncomingSmsDa
             id: registeredCustomerData.id,
           },
           data: {
-            client_status_id: 6,
+            client_status_id: CustomersStatuses.Appointment,
             last_activity: new Date(),
           },
         });
@@ -545,10 +571,11 @@ export async function handlingIncomingSms({ from, message, file }: IncomingSmsDa
       notificationType: {
         customer: true,
       },
-      assignedToId: userId ? [userId] : [],
+      assignedToId: userId ? userId : [],
       unregisteredCustomerId: unregisteredCustomerId || undefined,
       customerId: customerId || undefined,
       eventTypeId: 25,
+      notificationsForManagers: true,
     });
 
     if (!smsForAppointment) {
@@ -557,8 +584,6 @@ export async function handlingIncomingSms({ from, message, file }: IncomingSmsDa
         unregisteredCustomerId: unregisteredCustomerId || undefined,
       });
     }
-
-    await prisma.$disconnect();
 
     io.emit('update_data', 'customerMessage', {
       appointment: appointmentAccepted,
