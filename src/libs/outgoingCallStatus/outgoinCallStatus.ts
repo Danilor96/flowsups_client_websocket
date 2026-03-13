@@ -19,7 +19,7 @@ export async function handlingOutgoingCallStatus({
   to,
 }: OutogingCallData) {
   try {
-    let callStatusId, socketEmit, toClientAnswered, disconnectOutgoingCall;
+    let callStatusId, socketEmit, toClientAnswered, disconnectOutgoingCall, contactAttempt;
 
     switch (callStatus) {
       case 'initiated':
@@ -27,27 +27,6 @@ export async function handlingOutgoingCallStatus({
         break;
 
       case 'ringing':
-        prisma.leads.updateMany({
-          where: {
-            Clients: {
-              OR: [
-                {
-                  mobile_phone: to.slice(-10),
-                },
-                {
-                  home_phone: to.slice(-10),
-                },
-              ],
-            },
-            is_active: true,
-            customer_status_id: {
-              in: [CustomersStatuses.New, CustomersStatuses.Lost],
-            },
-          },
-          data: {
-            customer_status_id: CustomersStatuses.Contact_Attempt,
-          },
-        });
         break;
 
       case 'in-progress':
@@ -62,6 +41,8 @@ export async function handlingOutgoingCallStatus({
 
         socketEmit = 'callDisconnect';
         disconnectOutgoingCall = '1';
+
+        contactAttempt = true;
 
         break;
 
@@ -83,6 +64,8 @@ export async function handlingOutgoingCallStatus({
         socketEmit = 'callDisconnect';
         disconnectOutgoingCall = '1';
 
+        contactAttempt = true;
+
         break;
 
       case 'completed':
@@ -103,6 +86,37 @@ export async function handlingOutgoingCallStatus({
         toClientAnswered,
         disconnectOutgoingCall,
       });
+
+    if (contactAttempt) {
+      const customer = await prisma.clients.findFirst({
+        where: {
+          OR: [
+            {
+              mobile_phone: to.slice(-10),
+            },
+            {
+              home_phone: to.slice(-10),
+            },
+          ],
+        },
+        select: {
+          id: true,
+        },
+      });
+
+      prisma.leads.updateMany({
+        where: {
+          customer_id: customer?.id,
+          is_active: true,
+          customer_status_id: {
+            in: [CustomersStatuses.New, CustomersStatuses.Lost],
+          },
+        },
+        data: {
+          customer_status_id: CustomersStatuses.Contact_Attempt,
+        },
+      });
+    }
 
     let callExists: {
       id: number;
@@ -131,7 +145,7 @@ export async function handlingOutgoingCallStatus({
     }
 
     if (callExists && callStatusId) {
-      const callData = await prisma.client_calls.update({
+      await prisma.client_calls.update({
         where: {
           id: callExists.id,
         },
