@@ -35,8 +35,6 @@ export async function createNotification({
 
     const notiPreference = notificationsPreferences.find((el) => el.event_type_id === eventTypeId);
 
-    console.log({ assignedToId, notiPreference });
-
     if (notiPreference && assignedToId && assignedToId.length > 0) {
       for (let i = 0; i < assignedToId.length; i++) {
         const el = assignedToId[i];
