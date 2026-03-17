@@ -49,6 +49,7 @@ export type Sms = {
   }[];
   client_message: {
     seller_id: number | null;
+    bdc_id: number | null;
   } | null;
 };
 

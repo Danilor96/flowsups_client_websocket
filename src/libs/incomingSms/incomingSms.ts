@@ -48,6 +48,7 @@ export async function handlingIncomingSms({ from, message, file }: IncomingSmsDa
         id: true,
         first_name: true,
         last_name: true,
+        bdc_id: true,
         seller: {
           select: {
             id: true,
@@ -118,6 +119,7 @@ export async function handlingIncomingSms({ from, message, file }: IncomingSmsDa
           client_message: {
             select: {
               seller_id: true,
+              bdc_id: true,
             },
           },
         },
@@ -134,7 +136,9 @@ export async function handlingIncomingSms({ from, message, file }: IncomingSmsDa
         });
       }
 
-      userId = data?.client_message?.seller_id ? [data?.client_message?.seller_id] : [];
+      userId = [];
+      if (data?.client_message?.seller_id) userId.push(data.client_message.seller_id);
+      if (data?.client_message?.bdc_id) userId.push(data.client_message.bdc_id);
       customerId = registeredCustomerData.id;
 
       // set the status from customer settings if this customers has status lost
@@ -222,6 +226,7 @@ export async function handlingIncomingSms({ from, message, file }: IncomingSmsDa
               client_message: {
                 select: {
                   seller_id: true,
+                  bdc_id: true,
                 },
               },
             },
@@ -238,7 +243,9 @@ export async function handlingIncomingSms({ from, message, file }: IncomingSmsDa
             });
           }
 
-          userId = data.client_message?.seller_id ? [data.client_message?.seller_id] : null;
+          userId = [];
+          if (data.client_message?.seller_id) userId.push(data.client_message.seller_id);
+          if (data.client_message?.bdc_id) userId.push(data.client_message.bdc_id);
         } else {
           // if the unregistered customer hasn't a user assigned, then assigned it from round robin and
           // save the sms
@@ -287,13 +294,16 @@ export async function handlingIncomingSms({ from, message, file }: IncomingSmsDa
                 client_message: {
                   select: {
                     seller_id: true,
+                    bdc_id: true,
                   },
                 },
               },
             });
 
             unregisteredCustomerId = updatedAwaitingCustomer.id;
-            userId = data?.client_message?.seller_id ? [data?.client_message?.seller_id] : null;
+            userId = [];
+            if (data?.client_message?.seller_id) userId.push(data.client_message.seller_id);
+            if (data?.client_message?.bdc_id) userId.push(data.client_message.bdc_id);
           } else {
             // if there is no a round robin user, then save the sms without a related user
 
@@ -361,12 +371,15 @@ export async function handlingIncomingSms({ from, message, file }: IncomingSmsDa
               client_message: {
                 select: {
                   seller_id: true,
+                  bdc_id: true,
                 },
               },
             },
           });
 
-          userId = sms?.client_message?.seller_id ? [sms?.client_message?.seller_id] : null;
+          userId = [];
+          if (sms?.client_message?.seller_id) userId.push(sms.client_message.seller_id);
+          if (sms?.client_message?.bdc_id) userId.push(sms.client_message.bdc_id);
         } else {
           // create the sms without a related user
 
@@ -393,13 +406,16 @@ export async function handlingIncomingSms({ from, message, file }: IncomingSmsDa
               client_message: {
                 select: {
                   seller_id: true,
+                  bdc_id: true,
                 },
               },
             },
           });
         }
 
-        userId = sms?.client_message?.seller_id ? [sms?.client_message?.seller_id] : null;
+        userId = [];
+        if (sms?.client_message?.seller_id) userId.push(sms.client_message.seller_id);
+        if (sms?.client_message?.bdc_id) userId.push(sms.client_message.bdc_id);
         unregisteredCustomerId = unregisteredCustomer.id;
       }
     }
@@ -439,7 +455,7 @@ export async function handlingIncomingSms({ from, message, file }: IncomingSmsDa
     // create a new lead register
 
     if (registeredCustomerData?.id) {
-      const lead = await prisma.client_has_lead.create({
+      await prisma.client_has_lead.create({
         data: {
           created_at: today,
           assigned_to_id: registeredCustomerData?.seller?.id || 1,
