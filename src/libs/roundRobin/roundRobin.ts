@@ -16,6 +16,7 @@ export async function assignUserFromRoundRobin(
       where: {
         round_robin: true,
         ready_for_leads: true,
+        deleted_at: null,
       },
       select: {
         id: true,
